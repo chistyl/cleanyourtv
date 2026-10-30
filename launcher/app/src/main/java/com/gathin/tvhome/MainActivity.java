@@ -4025,7 +4025,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         reloadApps(false);
                     }).show();
         });
-        boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", true);
+        boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", false);
         addSettingsMenuRow(rows, popup, allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
             appPrefs.edit().putBoolean("hide_all_names", !allNamesHidden).apply();
             reloadApps(false);
