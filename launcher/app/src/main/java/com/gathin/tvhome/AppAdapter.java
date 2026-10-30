@@ -331,13 +331,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 if (icon == null) icon = ri.loadIcon(pm);
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
-                float iconScale = custom.getFloat("icon_scale_" + pkg, 0.50f);
+                int iconAdjustment = custom.getInt("icon_scale_adjust_" + pkg, 0);
+                float iconScale = Math.max(0.10f, Math.min(1.60f, 0.50f * (1f + iconAdjustment / 100f)));
                 // A user-selected tile colour must be visible even for apps that normally have a full-size TV banner.
                 boolean customTileArtwork = true;
-                banner = customTileArtwork ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
-                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground, 0.50f) : loadBanner(pm, ri);
+                banner = bundledBanner(appBanners.get(pkg));
+                if (banner == null) banner = loadBanner(pm, ri);
                 // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
-                if (banner == null) banner = iconBanner(icon, tileBackground, 0.50f);
+                if (banner == null) banner = iconBanner(icon, Color.WHITE, iconScale);
                 icon = null;
             } else {
                 banner = bundledBanner(appBanners.get(pkg));
@@ -432,7 +433,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Apps without a TV banner: larger original icon centred on a solid, user-selectable colour. */
     private Drawable iconBanner(Drawable icon, int backgroundColor, float iconScale) {
         int w = 640, h = 360;
-        int side = Math.max(72, Math.min(576, Math.round(360 * Math.max(0.20f, Math.min(0.90f, iconScale)))));
+        int side = Math.max(36, Math.min(640, Math.round(240 * Math.max(0.10f, Math.min(1.60f, iconScale)))));
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         canvas.drawColor(backgroundColor);
