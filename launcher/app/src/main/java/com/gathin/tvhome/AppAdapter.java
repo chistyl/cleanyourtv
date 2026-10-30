@@ -368,7 +368,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     /** Apps without a TV banner: larger original icon centred on a solid, user-selectable colour. */
     private Drawable iconBanner(Drawable icon, int backgroundColor) {
-        int w = 640, h = 360, side = 190;
+        int w = 640, h = 360, side = 320;
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         canvas.drawColor(backgroundColor);
