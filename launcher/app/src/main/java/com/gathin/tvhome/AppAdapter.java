@@ -248,7 +248,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.dockTitle = cfg.dockTitle;
         this.dockRow = cfg.dockRow;
         this.singleRow = cfg.singleRow;
-        this.restNameAlpha = cfg.alwaysShowNames ? 0.75f : 0f;
+        this.restNameAlpha = 1f;
         this.cinematic = cfg.cinematicHome;
         this.launchActions = cfg.launchActions;
         this.iconTiles = new HashSet<>(Arrays.asList(ctx.getResources().getStringArray(R.array.icon_tiles)));
@@ -333,8 +333,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
                 float iconScale = custom.getFloat("icon_scale_" + pkg, 0.50f);
                 // A user-selected tile colour must be visible even for apps that normally have a full-size TV banner.
-                boolean customTileArtwork = customIcon != null || custom.contains("background_" + pkg)
-                        || custom.contains("icon_scale_" + pkg);
+                boolean customTileArtwork = true;
                 banner = customTileArtwork ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
                 if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground, 0.50f) : loadBanner(pm, ri);
                 // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
@@ -566,11 +565,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
         boolean hideAllNames = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE)
                 .getBoolean("hide_all_names", false);
-        h.name.setVisibility(hideAllNames || e.name.isEmpty() ? View.GONE
-                : (dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
+        h.name.setVisibility(hideAllNames || e.name.isEmpty() ? View.GONE : View.VISIBLE);
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
-        h.name.setAlpha(focused ? 1f : restNameAlpha);
+        h.name.setAlpha(1f);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
         h.card.setTranslationY(focused && advancedEffects && !dockKind ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
