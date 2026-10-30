@@ -3646,7 +3646,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         java.util.LinkedHashSet<String> folders = new java.util.LinkedHashSet<>(
                 prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
         folders.add("系統");
-        String[] options = {"新增資料夾", "管理資料夾 APP", "重新命名資料夾", "移除資料夾"};
+        String[] options = {"新增資料夾", "管理資料夾 APP", "管理「系統」APP", "重新命名資料夾", "移除資料夾"};
         new AlertDialog.Builder(this).setTitle("資料夾管理").setItems(options, (d, which) -> {
             if (which == 0) {
                 android.widget.EditText name = new android.widget.EditText(this);
@@ -3666,6 +3666,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         }).show();
             } else if (which == 1) {
                 showFolderAppAssignment();
+            } else if (which == 2) {
+                showSystemFolderAssignment();
             } else {
                 java.util.ArrayList<String> editable = new java.util.ArrayList<>(folders);
                 editable.remove("系統");
@@ -3673,11 +3675,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     Toast.makeText(this, "目前沒有可管理的一般資料夾", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                new AlertDialog.Builder(this).setTitle(which == 2 ? "選擇要重新命名的資料夾" : "選擇要移除的資料夾")
+                new AlertDialog.Builder(this).setTitle(which == 3 ? "選擇要重新命名的資料夾" : "選擇要移除的資料夾")
                         .setItems(editable.toArray(new String[0]), (x, index) -> {
                             String oldName = editable.get(index);
                             java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
-                            if (which == 2) {
+                            if (which == 3) {
                                 android.widget.EditText name = new android.widget.EditText(this);
                                 name.setSingleLine(true);
                                 name.setText(oldName);
@@ -3759,6 +3761,38 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             Intent launch=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER).setComponent(new ComponentName(ri.activityInfo.packageName,ri.activityInfo.name)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try { startActivity(launch); } catch(ActivityNotFoundException ignored) {}
         }).setNegativeButton("關閉",null).show();
+    }
+
+    /** 管理系統資料夾：勾選的系統 APP 留在「系統」，取消勾選則移回桌面。 */
+    private void showSystemFolderAssignment() {
+        List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        java.util.TreeMap<String, ResolveInfo> candidates = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : installed) {
+            if (ri.activityInfo == null || !ri.activityInfo.exported || ri.activityInfo.packageName.equals(getPackageName())) continue;
+            candidates.put(ri.activityInfo.packageName, ri);
+        }
+        java.util.ArrayList<String> packages = new java.util.ArrayList<>(candidates.keySet());
+        String[] labels = new String[packages.size()];
+        boolean[] checked = new boolean[packages.size()];
+        java.util.Set<String> excluded = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
+                .getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
+        for (int i=0;i<packages.size();i++) {
+            ResolveInfo ri = candidates.get(packages.get(i));
+            labels[i] = String.valueOf(ri.loadLabel(getPackageManager()));
+            try {
+                int flags = getPackageManager().getApplicationInfo(packages.get(i), 0).flags;
+                checked[i] = (flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0 && !excluded.contains(packages.get(i));
+            } catch (PackageManager.NameNotFoundException ignored) { }
+        }
+        new AlertDialog.Builder(this).setTitle("勾選要放入「系統」資料夾的 APP")
+                .setMultiChoiceItems(labels, checked, (dialog, which, value) -> checked[which] = value)
+                .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
+                    java.util.HashSet<String> excludedNow = new java.util.HashSet<>();
+                    for (int i=0;i<packages.size();i++) if (!checked[i]) excludedNow.add(packages.get(i));
+                    getSharedPreferences("tv_app_customizations", MODE_PRIVATE).edit().putStringSet("system_folder_excluded", excludedNow).apply();
+                    reloadApps(false);
+                }).show();
     }
 
     @Override
