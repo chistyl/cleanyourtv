@@ -3743,17 +3743,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             appPrefs.edit().putBoolean("hide_" + pkg, !nameHidden).apply();
             reloadApps(false);
         });
-        addSettingsMenuRow(rows, popup, "更換背景色", () -> {
-            final String[] colorNames = {"白色（預設）", "淺灰色", "深灰色", "黑色", "淺藍色", "淺綠色", "奶油色", "粉色"};
-            final int[] colorValues = {0xFFFFFFFF, 0xFFECEFF1, 0xFF424242, 0xFF000000,
-                    0xFFE3F2FD, 0xFFE8F5E9, 0xFFFFF8E1, 0xFFFCE4EC};
-            new AlertDialog.Builder(this).setTitle("選擇 APP 背景色")
-                    .setSingleChoiceItems(colorNames, -1, (dialog, which) -> {
-                        appPrefs.edit().putInt("background_" + pkg, colorValues[which]).apply();
-                        dialog.dismiss();
-                        reloadApps(false);
-                    }).setNegativeButton("取消", null).show();
-        });
         addSettingsMenuRow(rows, popup, "更換圖標", () -> {
             pendingIconPackage = pkg;
             Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -3765,6 +3754,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 pendingIconPackage = null;
                 Toast.makeText(this, "找不到可用的圖片選擇器", Toast.LENGTH_LONG).show();
             }
+        });
+        addSettingsMenuRow(rows, popup, "更換背景色", () -> {
+            final String[] colorNames = {"白色（預設）", "淺灰色", "深灰色", "黑色", "淺藍色", "淺綠色", "奶油色", "粉色"};
+            final int[] colorValues = {0xFFFFFFFF, 0xFFECEFF1, 0xFF424242, 0xFF000000,
+                    0xFFE3F2FD, 0xFFE8F5E9, 0xFFFFF8E1, 0xFFFCE4EC};
+            new AlertDialog.Builder(this).setTitle("選擇 APP 背景色")
+                    .setSingleChoiceItems(colorNames, -1, (dialog, which) -> {
+                        appPrefs.edit().putInt("background_" + pkg, colorValues[which]).apply();
+                        dialog.dismiss();
+                        reloadApps(false);
+                    }).setNegativeButton("取消", null).show();
         });
         if (appPrefs.contains("label_" + pkg) || appPrefs.contains("hide_" + pkg) || appPrefs.contains("icon_" + pkg) || appPrefs.contains("background_" + pkg)) {
             addSettingsMenuRow(rows, popup, "還原 APP 原始設定", () -> {
