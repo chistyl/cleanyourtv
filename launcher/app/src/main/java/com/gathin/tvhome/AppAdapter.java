@@ -316,10 +316,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 if (icon == null) icon = ri.loadIcon(pm);
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
-                banner = customIcon != null ? iconBanner(icon, tileBackground) : bundledBanner(appBanners.get(pkg));
-                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground) : loadBanner(pm, ri);
+                float iconScale = custom.getFloat("icon_scale_" + pkg, 0.50f);
+                banner = customIcon != null ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
+                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground, 0.50f) : loadBanner(pm, ri);
                 // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
-                if (banner == null) banner = iconBanner(icon, tileBackground);
+                if (banner == null) banner = iconBanner(icon, tileBackground, 0.50f);
                 icon = null;
             } else {
                 banner = bundledBanner(appBanners.get(pkg));
@@ -367,8 +368,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     /** Apps without a TV banner: larger original icon centred on a solid, user-selectable colour. */
-    private Drawable iconBanner(Drawable icon, int backgroundColor) {
-        int w = 640, h = 360, side = 320;
+    private Drawable iconBanner(Drawable icon, int backgroundColor, float iconScale) {
+        int w = 640, h = 360;
+        int side = Math.max(72, Math.min(576, Math.round(360 * Math.max(0.20f, Math.min(0.90f, iconScale)))));
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         canvas.drawColor(backgroundColor);
@@ -499,7 +501,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
-        h.name.setVisibility(e.name.isEmpty() ? View.GONE : (dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
+        boolean hideAllNames = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE)
+                .getBoolean("hide_all_names", false);
+        h.name.setVisibility(hideAllNames || e.name.isEmpty() ? View.GONE
+                : (dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
