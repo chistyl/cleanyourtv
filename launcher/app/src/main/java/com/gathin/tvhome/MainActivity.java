@@ -107,6 +107,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     private static final int APP_ICON_PICK_REQUEST = 143;
+    private static final int WALLPAPER_PICK_REQUEST = 144;
     private String pendingIconPackage;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
@@ -1102,6 +1103,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 pendingIconPackage = null;
                 reloadApps(false);
             }
+        }
+        if (requestCode == WALLPAPER_PICK_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (SecurityException ignored) { }
+            getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit()
+                    .putString("custom_wallpaper_uri", uri.toString()).apply();
+            recreate();
         }
         if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getBooleanExtra(LauncherSettingsActivity.EXTRA_REORDER, false)) {
@@ -3614,7 +3623,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showWallpaperPicker() {
-        Toast.makeText(this, "桌布選擇功能接續開發中", Toast.LENGTH_SHORT).show();
+        String[] choices = {"選擇圖片", "還原預設桌布"};
+        new AlertDialog.Builder(this).setTitle("更換桌布").setItems(choices, (dialog, which) -> {
+            if (which == 0) {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                try { startActivityForResult(pick, WALLPAPER_PICK_REQUEST); }
+                catch (ActivityNotFoundException e) {
+                    Toast.makeText(this, "找不到圖片選擇器", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply();
+                recreate();
+            }
+        }).show();
     }
 
     private void showFolderManagementComingSoon() {
