@@ -3666,6 +3666,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         }).show();
             } else if (which == 1) {
                 showFolderAppAssignment();
+            } else if (which == 1) {
+                showFolderAppAssignment();
             } else {
                 java.util.ArrayList<String> editable = new java.util.ArrayList<>(folders);
                 editable.remove("系統");
@@ -3677,7 +3679,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         .setItems(editable.toArray(new String[0]), (x, index) -> {
                             String oldName = editable.get(index);
                             java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
-                            if (which == 1) {
+                            if (which == 2) {
                                 android.widget.EditText name = new android.widget.EditText(this);
                                 name.setSingleLine(true);
                                 name.setText(oldName);
