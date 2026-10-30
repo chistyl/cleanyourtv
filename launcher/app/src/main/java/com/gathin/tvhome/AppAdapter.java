@@ -317,7 +317,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (icon == null) icon = ri.loadIcon(pm);
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
                 float iconScale = custom.getFloat("icon_scale_" + pkg, 0.50f);
-                banner = customIcon != null ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
+                // A user-selected tile colour must be visible even for apps that normally have a full-size TV banner.
+                boolean customTileArtwork = customIcon != null || custom.contains("background_" + pkg);
+                banner = customTileArtwork ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
                 if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground, 0.50f) : loadBanner(pm, ri);
                 // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
                 if (banner == null) banner = iconBanner(icon, tileBackground, 0.50f);
