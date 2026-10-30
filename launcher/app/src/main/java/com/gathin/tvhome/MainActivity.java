@@ -3646,7 +3646,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         java.util.LinkedHashSet<String> folders = new java.util.LinkedHashSet<>(
                 prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
         folders.add("系統");
-        String[] options = {"新增資料夾", "重新命名資料夾", "移除資料夾"};
+        String[] options = {"新增資料夾", "管理資料夾 APP", "重新命名資料夾", "移除資料夾"};
         new AlertDialog.Builder(this).setTitle("資料夾管理").setItems(options, (d, which) -> {
             if (which == 0) {
                 android.widget.EditText name = new android.widget.EditText(this);
@@ -3695,6 +3695,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                             }
                         }).show();
             }
+        }).show();
+    }
+
+    private void showFolderAppAssignment() {
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        List<String> folders = new ArrayList<>(prefs.getStringSet("home_folders", java.util.Collections.<String>emptySet()));
+        if (folders.isEmpty()) { Toast.makeText(this, "請先新增資料夾", Toast.LENGTH_SHORT).show(); return; }
+        new AlertDialog.Builder(this).setTitle("選擇資料夾").setItems(folders.toArray(new String[0]), (d, which) -> {
+            String folder = folders.get(which);
+            List<ResolveInfo> found = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+            java.util.LinkedHashMap<String,String> labels = new java.util.LinkedHashMap<>();
+            for (ResolveInfo ri : found) if (ri.activityInfo != null && ri.activityInfo.exported && !ri.activityInfo.packageName.equals(getPackageName()))
+                labels.put(ri.activityInfo.packageName, String.valueOf(ri.loadLabel(getPackageManager())));
+            List<String> packages = new ArrayList<>(labels.keySet());
+            boolean[] checked = new boolean[packages.size()];
+            Set<String> members = prefs.getStringSet("folder_apps_" + folder, java.util.Collections.<String>emptySet());
+            for (int i=0;i<packages.size();i++) checked[i] = members.contains(packages.get(i));
+            new AlertDialog.Builder(this).setTitle("勾選要放入「" + folder + "」的 APP")
+                .setMultiChoiceItems(labels.values().toArray(new String[0]), checked, (dialog, index, value) -> checked[index] = value)
+                .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, button) -> {
+                    java.util.LinkedHashSet<String> chosen = new java.util.LinkedHashSet<>();
+                    for (int i=0;i<packages.size();i++) if (checked[i]) chosen.add(packages.get(i));
+                    SharedPreferences.Editor edit = prefs.edit().putStringSet("folder_apps_" + folder, chosen);
+                    for (String other : folders) if (!other.equals(folder)) {
+                        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>(prefs.getStringSet("folder_apps_" + other, java.util.Collections.<String>emptySet()));
+                        set.removeAll(chosen);
+                        edit.putStringSet("folder_apps_" + other, set);
+                    }
+                    edit.apply();
+                    reloadApps(false);
+                }).show();
         }).show();
     }
 
