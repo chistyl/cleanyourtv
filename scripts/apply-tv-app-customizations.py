@@ -1,4 +1,5 @@
 from pathlib import Path
+print('Applying CleanYourTV per-app customization changes...')
 base=Path('launcher/app/src/main/java/com/gathin/tvhome')
 p=base/'AppAdapter.java'; s=p.read_text()
 s=s.replace('import android.content.Context;','import android.content.Context;\nimport android.content.SharedPreferences;')
