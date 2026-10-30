@@ -3976,14 +3976,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** Adjust the size of the selected custom icon (20%–90% of its tile artwork area). */
+        /** Icon size adjustment from -50% to +200%; zero is the default size. */
     private void showAppIconSizeDialog(String pkg, SharedPreferences prefs) {
-        int current = Math.round(prefs.getFloat("icon_scale_" + pkg, 0.50f) * 100f);
+        int current = prefs.getInt("icon_scale_adjust_" + pkg, 0);
         SeekBar size = new SeekBar(this);
-        size.setMax(70);
-        size.setProgress(Math.max(0, Math.min(70, current - 20)));
+        size.setMax(250);
+        size.setProgress(Math.max(0, Math.min(250, current + 50)));
         TextView value = new TextView(this);
         value.setGravity(Gravity.CENTER);
-        value.setText("圖標大小：" + current + "%");
+        value.setText("圖標大小：" + (size.getProgress() - 50) + "%");
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(28, 16, 28, 8);
@@ -3991,7 +3992,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.addView(size);
         size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                value.setText("圖標大小：" + (progress + 20) + "%");
+                value.setText("圖標大小：" + (progress - 50) + "%");
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
@@ -3999,11 +4000,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         new AlertDialog.Builder(this).setTitle("調整圖標大小")
                 .setView(panel).setNegativeButton("取消", null)
                 .setNeutralButton("恢復預設", (dialog, which) -> {
-                    prefs.edit().remove("icon_scale_" + pkg).apply();
+                    prefs.edit().remove("icon_scale_adjust_" + pkg).remove("icon_scale_" + pkg).apply();
                     reloadApps(false);
                 })
                 .setPositiveButton("套用", (dialog, which) -> {
-                    prefs.edit().putFloat("icon_scale_" + pkg, (size.getProgress() + 20) / 100f).apply();
+                    prefs.edit().putInt("icon_scale_adjust_" + pkg, size.getProgress() - 50).apply();
                     reloadApps(false);
                 }).show();
     }
