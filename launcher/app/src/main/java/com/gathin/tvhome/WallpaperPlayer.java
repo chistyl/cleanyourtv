@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.content.Context;
+import android.net.Uri;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -91,7 +92,7 @@ final class WallpaperPlayer {
         names = config.wallpaperCaptions && config.wallpaperEnabled && !files.isEmpty()
                 ? WallpaperCaptions.read(files.get(0).getParentFile()) : Collections.emptyMap();
         caption = names.isEmpty() ? null : makeCaption(context, root);
-        if (config.wallpaperEnabled && !files.isEmpty()) {
+        if (preferences.getString("custom_wallpaper_uri", null) != null || (config.wallpaperEnabled && !files.isEmpty())) {
             root.addView(image, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             showFirst();
@@ -104,6 +105,17 @@ final class WallpaperPlayer {
      * Only the later changes of a rotation decode in the background.
      */
     private void showFirst() {
+        String customUri = preferences.getString("custom_wallpaper_uri", null);
+        if (customUri != null) {
+            Bitmap custom = decodeUri(Uri.parse(customUri));
+            if (custom != null) {
+                show(custom);
+                displayed = "custom";
+                showCaption(false);
+                return;
+            }
+            preferences.edit().remove("custom_wallpaper_uri").apply();
+        }
         String previous = preferences.getString("image", "");
         List<File> playable = playable();
         File first = WallpaperRotation.find(playable, previous);
@@ -112,29 +124,39 @@ final class WallpaperPlayer {
             Bitmap bitmap = decode(first);
             if (bitmap != null) {
                 show(bitmap);
-                // The picture covers the whole screen: the root's plain colour under it is overdraw.
-                root.setBackground(null);
                 displayed = first.getName();
                 showCaption(false);
-                if (!displayed.equals(previous)) {
-                    preferences.edit().putString("image", displayed)
-                            .putLong("changed", System.currentTimeMillis()).apply();
-                }
+                if (!displayed.equals(previous)) preferences.edit().putString("image", displayed)
+                        .putLong("changed", System.currentTimeMillis()).apply();
                 return;
             }
-            files.remove(first);   // unreadable or over 4K: try another, or keep the plain colour
+            files.remove(first);
             playable = playable();
             first = WallpaperRotation.pick(playable, previous, order, random);
         }
     }
 
-    void start() {
-        active = true;
-        update();
-    }
-
-    void stop() {
-        active = false;
+    private Bitmap decodeUri(Uri uri) {
+        try (java.io.InputStream in = root.getContext().getContentResolver().openInputStream(uri)) {
+            if (in == null) return null;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(in, null, opts);
+            if (opts.outWidth <= 0 || opts.outHeight <= 0) return null;
+            int sample = WallpaperSize.sampleSize(opts.outWidth, opts.outHeight, width, height);
+            try (java.io.InputStream imageIn = root.getContext().getContentResolver().openInputStream(uri)) {
+                opts.inJustDecodeBounds = false;
+                opts.inSampleSize = sample;
+                opts.inPreferredConfig = bitmapConfig;
+                Bitmap decoded = BitmapFactory.decodeStream(imageIn, null, opts);
+                if (decoded == null) return null;
+                if (dimColor != 0) new Canvas(decoded).drawColor(dimColor);
+                Bitmap gpu = decoded.copy(Bitmap.Config.HARDWARE, false);
+                if (gpu == null) return decoded;
+                decoded.recycle();
+                return gpu;
+            }
+        } catch (Exception | OutOfMemoryError failure) { return null; }
     }
 
     /** Drops the wallpaper texture when Home is hidden and Android asks the process to free memory. */
