@@ -4007,6 +4007,46 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (reordering || openPopup != null) return;
         String key = adapter.keyAt(position);
         String pkg = adapter.packageAt(position);
+        if ("system-folder".equals(key) || (key != null && key.startsWith("folder:"))) {
+            SharedPreferences folderPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+            boolean hidden = folderPrefs.getBoolean("hide_all_names", false);
+            View folderPanel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+            LinearLayout folderRows = folderPanel.findViewById(R.id.rows);
+            PopupWindow folderPopup = glassPopup(folderPanel, (int) (220 * density));
+            if (key.startsWith("folder:")) {
+                String oldName = key.substring("folder:".length());
+                addSettingsMenuRow(folderRows, folderPopup, "修改資料夾名稱", () -> {
+                    EditText edit = new EditText(this);
+                    edit.setSingleLine(true);
+                    edit.setText(oldName);
+                    new AlertDialog.Builder(this).setTitle("修改資料夾名稱").setView(edit)
+                            .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
+                                String newName = edit.getText().toString().trim();
+                                if (newName.isEmpty() || "系統".equals(newName)) {
+                                    Toast.makeText(this, "資料夾名稱不可使用", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                java.util.Set<String> folders = folderPrefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
+                                java.util.HashSet<String> updated = new java.util.HashSet<>(folders);
+                                updated.remove(oldName); updated.add(newName);
+                                java.util.Set<String> members = folderPrefs.getStringSet("folder_apps_" + oldName, java.util.Collections.<String>emptySet());
+                                folderPrefs.edit().putStringSet("home_folders", updated)
+                                        .putStringSet("folder_apps_" + newName, new java.util.HashSet<>(members))
+                                        .remove("folder_apps_" + oldName).apply();
+                                reloadApps(false);
+                            }).show();
+                });
+            }
+            addSettingsMenuRow(folderRows, folderPopup, hidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
+                folderPrefs.edit().putBoolean("hide_all_names", !hidden).apply();
+                reloadApps(false);
+            });
+            folderPanel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            folderPopup.setWidth(Math.max((int) (220 * density), folderPanel.getMeasuredWidth()));
+            dropIn(folderPopup, folderPanel, card, Gravity.START);
+            folderRows.getChildAt(0).requestFocus();
+            return;
+        }
         // Empty dock slots and the Default-home tile carry the launcher's own package: no menu for them.
         if (key == null || pkg == null || pkg.equals(getPackageName())) return;
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
