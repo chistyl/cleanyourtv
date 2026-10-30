@@ -3666,8 +3666,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         }).show();
             } else if (which == 1) {
                 showFolderAppAssignment();
-            } else if (which == 1) {
-                showFolderAppAssignment();
             } else {
                 java.util.ArrayList<String> editable = new java.util.ArrayList<>(folders);
                 editable.remove("系統");
@@ -3688,7 +3686,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                             String value = name.getText().toString().trim();
                                             if (!value.isEmpty() && !value.equals("系統")) {
                                                 updated.remove(oldName); updated.add(value);
-                                                prefs.edit().putStringSet("home_folders", updated).apply();
+                                                java.util.Set<String> oldMembers = prefs.getStringSet("folder_apps_" + oldName, java.util.Collections.<String>emptySet());
+                                                prefs.edit().putStringSet("home_folders", updated)
+                                                        .putStringSet("folder_apps_" + value, new java.util.HashSet<>(oldMembers))
+                                                        .remove("folder_apps_" + oldName).apply();
                                                 Toast.makeText(this, "資料夾名稱已更新", Toast.LENGTH_SHORT).show();
                                             }
                                         }).show();
