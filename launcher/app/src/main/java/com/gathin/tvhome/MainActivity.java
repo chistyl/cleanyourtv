@@ -4007,14 +4007,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (reordering || openPopup != null) return;
         String key = adapter.keyAt(position);
         String pkg = adapter.packageAt(position);
-        if ("system-folder".equals(key) || (key != null && key.startsWith("folder:"))) {
+        if (key != null && (key.contains("/system-folder") || key.contains("/folder:"))) {
             SharedPreferences folderPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
             boolean hidden = folderPrefs.getBoolean("hide_all_names", false);
             View folderPanel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
             LinearLayout folderRows = folderPanel.findViewById(R.id.rows);
             PopupWindow folderPopup = glassPopup(folderPanel, (int) (220 * density));
-            if (key.startsWith("folder:")) {
-                String oldName = key.substring("folder:".length());
+            if (key.contains("/folder:")) {
+                String oldName = key.substring(key.indexOf("/folder:") + "/folder:".length());
                 addSettingsMenuRow(folderRows, folderPopup, "修改資料夾名稱", () -> {
                     EditText edit = new EditText(this);
                     edit.setSingleLine(true);
