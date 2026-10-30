@@ -2,8 +2,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
@@ -54,7 +54,7 @@
         android:layout_width="180dp"
         android:layout_height="22dp"
         android:layout_gravity="center_horizontal|top"
-        android:layout_marginTop="108dp"
+        android:layout_marginTop="105dp"
         android:includeFontPadding="false"
         android:gravity="center"
         android:singleLine="true"
