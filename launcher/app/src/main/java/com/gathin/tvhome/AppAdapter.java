@@ -333,7 +333,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
                 float iconScale = custom.getFloat("icon_scale_" + pkg, 0.50f);
                 // A user-selected tile colour must be visible even for apps that normally have a full-size TV banner.
-                boolean customTileArtwork = customIcon != null || custom.contains("background_" + pkg);
+                boolean customTileArtwork = customIcon != null || custom.contains("background_" + pkg)
+                        || custom.contains("icon_scale_" + pkg);
                 banner = customTileArtwork ? iconBanner(icon, tileBackground, iconScale) : bundledBanner(appBanners.get(pkg));
                 if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground, 0.50f) : loadBanner(pm, ri);
                 // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
@@ -373,12 +374,26 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     ctx.getDrawable(R.drawable.ic_home_settings), null, 0));
         }
         SharedPreferences folderPrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
-        for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet()))
-            if (!"系統".equals(folder)) fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder), null, ctx.getDrawable(android.R.drawable.ic_menu_agenda), null, 0));
-        // The built-in system folder is pinned as the final desktop tile.
-        fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統",
-                new ComponentName(ctx, "system-folder"), null,
-                ctx.getDrawable(android.R.drawable.ic_menu_agenda), null, 0));
+        for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet())) {
+            if (!"系統".equals(folder)) {
+                Set<String> members = folderPrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet());
+                fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder),
+                        folderPreview(members), null, null, 0));
+            }
+        }
+        Set<String> systemMembers = new HashSet<>();
+        for (ResolveInfo ri : found) {
+            if (ri.activityInfo == null) continue;
+            String pkg = ri.activityInfo.packageName;
+            try {
+                int flags = pm.getApplicationInfo(pkg, 0).flags;
+                if ((flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                        && !folderPrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet()).contains(pkg))
+                    systemMembers.add(pkg);
+            } catch (PackageManager.NameNotFoundException ignored) { }
+        }
+        fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
+                folderPreview(systemMembers), null, null, 0));
         docked = 0;
         while (docked < fresh.size() && isDocked(fresh.get(docked))) docked++;
         emptySlots = dockRow && !reordering ? DockSlots.empty(docked, dockSize, fresh.size(), fillDock) : 0;
@@ -389,6 +404,30 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         items.clear();
         items.addAll(fresh);
         notifyDataSetChanged();
+    }
+
+    /** Compose a folder tile from up to four app icons inside it. */
+    private Drawable folderPreview(Set<String> packages) {
+        int size = 640;
+        Bitmap bitmap = Bitmap.createBitmap(size, 360, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(Color.rgb(42, 48, 58));
+        canvas.drawRoundRect(70, 28, 570, 332, 42, 42, paint);
+        int cell = 116, gap = 24;
+        int[][] positions = {{192, 66}, {332, 66}, {192, 196}, {332, 196}};
+        int index = 0;
+        for (String pkg : packages) {
+            if (index >= 4) break;
+            try {
+                Drawable icon = ctx.getPackageManager().getApplicationIcon(pkg);
+                int x = positions[index][0], y = positions[index][1];
+                icon.setBounds(x, y, x + cell, y + cell);
+                icon.draw(canvas);
+                index++;
+            } catch (Exception ignored) { }
+        }
+        return new BitmapDrawable(ctx.getResources(), bitmap);
     }
 
     /** Apps without a TV banner: larger original icon centred on a solid, user-selectable colour. */
@@ -526,7 +565,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
         boolean hideAllNames = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE)
-                .getBoolean("hide_all_names", true);
+                .getBoolean("hide_all_names", false);
         h.name.setVisibility(hideAllNames || e.name.isEmpty() ? View.GONE
                 : (dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
         h.inDock = dockKind;
