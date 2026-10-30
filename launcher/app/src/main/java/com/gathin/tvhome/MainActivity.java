@@ -4044,6 +4044,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                             }).show();
                 });
             }
+            if (key.contains("/system-folder")) {
+                addSettingsMenuRow(folderRows, folderPopup, "管理系統資料夾 APP", this::showSystemFolderAssignment);
+            }
             if (key.contains("/folder:")) {
                 addSettingsMenuRow(folderRows, folderPopup, "刪除資料夾", () -> {
                     new AlertDialog.Builder(this).setTitle("刪除資料夾")
