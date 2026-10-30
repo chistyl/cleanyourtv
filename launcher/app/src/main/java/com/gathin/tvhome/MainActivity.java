@@ -3642,7 +3642,60 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showFolderManagementComingSoon() {
-        Toast.makeText(this, "資料夾管理功能接續開發中", Toast.LENGTH_SHORT).show();
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        java.util.LinkedHashSet<String> folders = new java.util.LinkedHashSet<>(
+                prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
+        folders.add("系統");
+        String[] options = {"新增資料夾", "重新命名資料夾", "移除資料夾"};
+        new AlertDialog.Builder(this).setTitle("資料夾管理").setItems(options, (d, which) -> {
+            if (which == 0) {
+                android.widget.EditText name = new android.widget.EditText(this);
+                name.setSingleLine(true);
+                name.setHint("輸入資料夾名稱");
+                new AlertDialog.Builder(this).setTitle("新增資料夾").setView(name)
+                        .setNegativeButton("取消", null).setPositiveButton("建立", (x, y) -> {
+                            String value = name.getText().toString().trim();
+                            if (value.isEmpty() || value.equals("系統")) {
+                                Toast.makeText(this, "請輸入其他資料夾名稱", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
+                            updated.add(value);
+                            prefs.edit().putStringSet("home_folders", updated).apply();
+                            Toast.makeText(this, "已建立資料夾：" + value, Toast.LENGTH_SHORT).show();
+                        }).show();
+            } else {
+                java.util.ArrayList<String> editable = new java.util.ArrayList<>(folders);
+                editable.remove("系統");
+                if (editable.isEmpty()) {
+                    Toast.makeText(this, "目前沒有可管理的一般資料夾", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                new AlertDialog.Builder(this).setTitle(which == 1 ? "選擇要重新命名的資料夾" : "選擇要移除的資料夾")
+                        .setItems(editable.toArray(new String[0]), (x, index) -> {
+                            String oldName = editable.get(index);
+                            java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
+                            if (which == 1) {
+                                android.widget.EditText name = new android.widget.EditText(this);
+                                name.setSingleLine(true);
+                                name.setText(oldName);
+                                new AlertDialog.Builder(this).setTitle("重新命名").setView(name)
+                                        .setNegativeButton("取消", null).setPositiveButton("儲存", (z, k) -> {
+                                            String value = name.getText().toString().trim();
+                                            if (!value.isEmpty() && !value.equals("系統")) {
+                                                updated.remove(oldName); updated.add(value);
+                                                prefs.edit().putStringSet("home_folders", updated).apply();
+                                                Toast.makeText(this, "資料夾名稱已更新", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }).show();
+                            } else {
+                                updated.remove(oldName);
+                                prefs.edit().putStringSet("home_folders", updated).apply();
+                                Toast.makeText(this, "已移除資料夾；APP 不會被刪除", Toast.LENGTH_SHORT).show();
+                            }
+                        }).show();
+            }
+        }).show();
     }
 
     private void showSystemFolderComingSoon() {
