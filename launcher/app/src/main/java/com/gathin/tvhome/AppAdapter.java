@@ -315,10 +315,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     } catch (Exception ignored) { }
                 }
                 if (icon == null) icon = ri.loadIcon(pm);
-                banner = customIcon != null ? iconBanner(icon) : bundledBanner(appBanners.get(pkg));
-                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon) : loadBanner(pm, ri);
-                // Apps without a real TV banner use their original mark centred on a naturally extended colour field.
-                if (banner == null) banner = iconBanner(icon);
+                int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
+                banner = customIcon != null ? iconBanner(icon, tileBackground) : bundledBanner(appBanners.get(pkg));
+                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon, tileBackground) : loadBanner(pm, ri);
+                // Apps without a TV banner use a larger centred original icon on a solid white/custom background.
+                if (banner == null) banner = iconBanner(icon, tileBackground);
                 icon = null;
             } else {
                 banner = bundledBanner(appBanners.get(pkg));
@@ -365,26 +366,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    /** icon_tiles: the app's icon centred on a dark banner-shaped tile, for apps whose own banner crops badly. */
-    private Drawable iconBanner(Drawable icon) {
-        int w = 640, h = 360, side = 148;
+    /** Apps without a TV banner: larger original icon centred on a solid, user-selectable colour. */
+    private Drawable iconBanner(Drawable icon, int backgroundColor) {
+        int w = 640, h = 360, side = 190;
         Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
-        int base = dominantColor(icon);
-        float[] hsv = new float[3];
-        Color.colorToHSV(base, hsv);
-        hsv[1] = Math.min(0.58f, Math.max(0.22f, hsv[1] * 0.78f));
-        hsv[2] = Math.min(0.48f, Math.max(0.22f, hsv[2] * 0.72f));
-        int top = Color.HSVToColor(hsv);
-        hsv[2] *= 0.72f;
-        int bottom = Color.HSVToColor(hsv);
-        Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bg.setShader(new android.graphics.LinearGradient(0, 0, w, h, top, bottom, Shader.TileMode.CLAMP));
-        canvas.drawRect(0, 0, w, h, bg);
-        Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
-        glow.setShader(new android.graphics.RadialGradient(w * .5f, h * .5f, h * .72f,
-                new int[]{0x44FFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
-        canvas.drawRect(0, 0, w, h, glow);
+        canvas.drawColor(backgroundColor);
         Drawable mark = icon.getConstantState() != null ? icon.getConstantState().newDrawable().mutate() : icon;
         mark.setBounds((w - side) / 2, (h - side) / 2, (w + side) / 2, (h + side) / 2);
         mark.draw(canvas);
