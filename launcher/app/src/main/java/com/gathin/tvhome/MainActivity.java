@@ -3710,6 +3710,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override
+    public void onOpenFolder(String folderName) {
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        Set<String> members = prefs.getStringSet("folder_apps_" + folderName, java.util.Collections.<String>emptySet());
+        List<ResolveInfo> all = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        List<ResolveInfo> matches = new ArrayList<>();
+        for (ResolveInfo ri : all) if (ri.activityInfo != null && members.contains(ri.activityInfo.packageName)) matches.add(ri);
+        String[] labels = new String[matches.size()];
+        for (int i=0;i<matches.size();i++) labels[i]=String.valueOf(matches.get(i).loadLabel(getPackageManager()));
+        new AlertDialog.Builder(this).setTitle(folderName).setItems(labels,(d,which)->{
+            ResolveInfo ri=matches.get(which);
+            Intent launch=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER).setComponent(new ComponentName(ri.activityInfo.packageName,ri.activityInfo.name)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(launch); } catch(ActivityNotFoundException ignored) {}
+        }).setNegativeButton("關閉",null).show();
+    }
+
+    @Override
     public void onOpenSystemFolder() {
         List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
                 new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
