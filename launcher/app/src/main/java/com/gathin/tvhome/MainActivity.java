@@ -69,6 +69,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -3695,6 +3696,88 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         onTileLongPress(position, card);
     }
 
+    /** Custom RGB picker for an app tile's background. */
+    private void showAppBackgroundColorDialog(String pkg, SharedPreferences prefs) {
+        int initial = prefs.getInt("background_" + pkg, Color.WHITE);
+        int[] rgb = {Color.red(initial), Color.green(initial), Color.blue(initial)};
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(24, 12, 24, 4);
+        View preview = new View(this);
+        LinearLayout.LayoutParams previewLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * density));
+        previewLp.bottomMargin = (int) (12 * density);
+        panel.addView(preview, previewLp);
+        String[] channels = {"紅色", "綠色", "藍色"};
+        SeekBar[] bars = new SeekBar[3];
+        Runnable update = () -> preview.setBackgroundColor(Color.rgb(rgb[0], rgb[1], rgb[2]));
+        for (int i = 0; i < 3; i++) {
+            TextView label = new TextView(this);
+            label.setText(channels[i] + "：" + rgb[i]);
+            panel.addView(label);
+            final int channel = i;
+            SeekBar bar = new SeekBar(this);
+            bar.setMax(255);
+            bar.setProgress(rgb[i]);
+            bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
+                    rgb[channel] = value;
+                    label.setText(channels[channel] + "：" + value);
+                    update.run();
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+                @Override public void onStopTrackingTouch(SeekBar seekBar) { }
+            });
+            bars[i] = bar;
+            panel.addView(bar);
+        }
+        update.run();
+        new AlertDialog.Builder(this).setTitle("自訂 APP 背景色")
+                .setView(panel)
+                .setNegativeButton("取消", null)
+                .setNeutralButton("恢復白色", (dialog, which) -> {
+                    prefs.edit().putInt("background_" + pkg, Color.WHITE).apply();
+                    reloadApps(false);
+                })
+                .setPositiveButton("套用", (dialog, which) -> {
+                    prefs.edit().putInt("background_" + pkg, Color.rgb(rgb[0], rgb[1], rgb[2])).apply();
+                    reloadApps(false);
+                }).show();
+    }
+
+    /** Adjust the size of the selected custom icon (20%–90% of its tile artwork area). */
+    private void showAppIconSizeDialog(String pkg, SharedPreferences prefs) {
+        int current = Math.round(prefs.getFloat("icon_scale_" + pkg, 0.50f) * 100f);
+        SeekBar size = new SeekBar(this);
+        size.setMax(70);
+        size.setProgress(Math.max(0, Math.min(70, current - 20)));
+        TextView value = new TextView(this);
+        value.setGravity(Gravity.CENTER);
+        value.setText("圖標大小：" + current + "%");
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(28, 16, 28, 8);
+        panel.addView(value);
+        panel.addView(size);
+        size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                value.setText("圖標大小：" + (progress + 20) + "%");
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
+        });
+        new AlertDialog.Builder(this).setTitle("調整圖標大小")
+                .setView(panel).setNegativeButton("取消", null)
+                .setNeutralButton("恢復預設", (dialog, which) -> {
+                    prefs.edit().remove("icon_scale_" + pkg).apply();
+                    reloadApps(false);
+                })
+                .setPositiveButton("套用", (dialog, which) -> {
+                    prefs.edit().putFloat("icon_scale_" + pkg, (size.getProgress() + 20) / 100f).apply();
+                    reloadApps(false);
+                }).show();
+    }
+
     @Override
     public void onTileLongPress(int position, View card) {
         if (reordering || openPopup != null) return;
@@ -3721,9 +3804,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         reloadApps(false);
                     }).show();
         });
-        boolean nameHidden = appPrefs.getBoolean("hide_" + pkg, false);
-        addSettingsMenuRow(rows, popup, nameHidden ? "顯示 APP 名稱" : "隱藏 APP 名稱", () -> {
-            appPrefs.edit().putBoolean("hide_" + pkg, !nameHidden).apply();
+        boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", false);
+        addSettingsMenuRow(rows, popup, allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
+            appPrefs.edit().putBoolean("hide_all_names", !allNamesHidden).apply();
             reloadApps(false);
         });
         addSettingsMenuRow(rows, popup, "更換圖標", () -> {
@@ -3738,20 +3821,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 Toast.makeText(this, "找不到可用的圖片選擇器", Toast.LENGTH_LONG).show();
             }
         });
-        addSettingsMenuRow(rows, popup, "更換背景色", () -> {
-            final String[] colorNames = {"白色（預設）", "淺灰色", "深灰色", "黑色", "淺藍色", "淺綠色", "奶油色", "粉色"};
-            final int[] colorValues = {0xFFFFFFFF, 0xFFECEFF1, 0xFF424242, 0xFF000000,
-                    0xFFE3F2FD, 0xFFE8F5E9, 0xFFFFF8E1, 0xFFFCE4EC};
-            new AlertDialog.Builder(this).setTitle("選擇 APP 背景色")
-                    .setSingleChoiceItems(colorNames, -1, (dialog, which) -> {
-                        appPrefs.edit().putInt("background_" + pkg, colorValues[which]).apply();
-                        dialog.dismiss();
-                        reloadApps(false);
-                    }).setNegativeButton("取消", null).show();
-        });
-        if (appPrefs.contains("label_" + pkg) || appPrefs.contains("hide_" + pkg) || appPrefs.contains("icon_" + pkg) || appPrefs.contains("background_" + pkg)) {
+        addSettingsMenuRow(rows, popup, "調整圖標大小", () -> showAppIconSizeDialog(pkg, appPrefs));
+        addSettingsMenuRow(rows, popup, "更換背景色／自訂色彩", () -> showAppBackgroundColorDialog(pkg, appPrefs));
+        if (appPrefs.contains("label_" + pkg) || appPrefs.contains("hide_" + pkg)
+                || appPrefs.contains("icon_" + pkg) || appPrefs.contains("icon_scale_" + pkg)
+                || appPrefs.contains("background_" + pkg)) {
             addSettingsMenuRow(rows, popup, "還原 APP 原始設定", () -> {
-                appPrefs.edit().remove("label_" + pkg).remove("hide_" + pkg).remove("icon_" + pkg).remove("background_" + pkg).apply();
+                appPrefs.edit().remove("label_" + pkg).remove("hide_" + pkg).remove("icon_" + pkg)
+                        .remove("icon_scale_" + pkg).remove("background_" + pkg).apply();
                 reloadApps(false);
             });
         }
