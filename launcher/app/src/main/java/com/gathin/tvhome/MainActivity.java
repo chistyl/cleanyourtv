@@ -1848,6 +1848,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- top shelf -------------------------------------------------------------------------------
 
     private void showHero(int position, float dockTopInRoot) {
+        boolean hideAllNames = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
+                .getBoolean("hide_all_names", false);
+        heroName.setVisibility(hideAllNames ? View.INVISIBLE : View.VISIBLE);
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - hero.getHeight();
