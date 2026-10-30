@@ -796,11 +796,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ((TextView) btnSettings).setText(R.string.launcher_settings);
             ((TextView) btnSettings).setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_home_settings_pill, 0, 0, 0);
         }
-        btnSettings.setOnClickListener(v -> {
-            if (launcherSettingsButton) startActivityForResult(
-                    new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
-            else open(systemIntent(Settings.ACTION_SETTINGS));
-        });
+        btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
@@ -3577,29 +3573,56 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View anchor = findViewById(R.id.btnSettings);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
-        PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        if (!launcherSettingsButton) addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
-                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        // Firmware that ships its own settings app next to the AOSP one (Xiaomi China is one): the
-        // vendor app holds pages the AOSP settings has no row for, such as Account & Security with
-        // the ADB switch. Offered here only while one of them is installed.
-        if (SystemSettings.vendorIntent(this) != null) {
-            addSettingsMenuRow(rows, popup, R.string.native_settings, () -> {
-                Intent vendor = SystemSettings.vendorIntent(this);
-                if (vendor != null) open(vendor);
-            });
-        }
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
-        if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
-        addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
-        // A launcher may not restart the TV itself; the Home key helper can open the system power menu instead.
-        if (HomeKeyService.canOpenPowerMenu()) addSettingsMenuRow(rows, popup, R.string.power_menu, HomeKeyService::openPowerMenu);
+        PopupWindow popup = glassPopup(panel, (int) (220 * density));
+        addSettingsMenuRow(rows, popup, "系統設定", () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        addSettingsMenuRow(rows, popup, "APP 設定", this::showHomeAppVisibilityDialog);
+        addSettingsMenuRow(rows, popup, "更換桌布", this::showWallpaperPicker);
+        addSettingsMenuRow(rows, popup, "資料夾管理", this::showFolderManagementComingSoon);
+        addSettingsMenuRow(rows, popup, "系統", this::showSystemFolderComingSoon);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
-        // Hebrew puts Settings at the left of the header: grow the menu inward from it.
+        popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
                 ? Gravity.START : Gravity.END);
-        rows.getChildAt(0).requestFocus();
+        if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
+    }
+
+    /** APP 設定：勾選顯示於桌面，取消勾選即隱藏。 */
+    private void showHomeAppVisibilityDialog() {
+        List<ResolveInfo> apps = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        if (apps == null || apps.isEmpty()) apps = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
+        final Map<String, String> labels = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : apps) {
+            if (ri.activityInfo == null || !ri.activityInfo.exported
+                    || ri.activityInfo.packageName.equals(getPackageName())) continue;
+            labels.put(ri.activityInfo.packageName, String.valueOf(ri.loadLabel(getPackageManager())));
+        }
+        final List<String> packages = new ArrayList<>(labels.keySet());
+        final String[] names = new String[packages.size()];
+        final boolean[] checked = new boolean[packages.size()];
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        for (int i = 0; i < packages.size(); i++) {
+            names[i] = labels.get(packages.get(i));
+            checked[i] = !prefs.getBoolean("home_hidden_" + packages.get(i), false);
+        }
+        new AlertDialog.Builder(this).setTitle("APP 設定（勾選表示於桌面）")
+                .setMultiChoiceItems(names, checked, (dialog, which, show) ->
+                        prefs.edit().putBoolean("home_hidden_" + packages.get(which), !show).apply())
+                .setPositiveButton("完成", (dialog, which) -> reloadApps(false))
+                .setNegativeButton("取消", (dialog, which) -> reloadApps(false)).show();
+    }
+
+    private void showWallpaperPicker() {
+        Toast.makeText(this, "桌布選擇功能接續開發中", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showFolderManagementComingSoon() {
+        Toast.makeText(this, "資料夾管理功能接續開發中", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showSystemFolderComingSoon() {
+        Toast.makeText(this, "系統資料夾功能接續開發中", Toast.LENGTH_SHORT).show();
     }
 
     /** A tile configured with launch_actions "input:<id>" (config.xml): switch to that TV input directly,
