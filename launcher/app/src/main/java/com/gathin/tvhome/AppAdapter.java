@@ -292,7 +292,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
+            SharedPreferences homePrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
             if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported
+                    || homePrefs.getBoolean("home_hidden_" + pkg, false)
                     || !LibraryApps.visible(tvPackages.contains(pkg), hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Cards.Card card = cardByPkg.get(pkg);
