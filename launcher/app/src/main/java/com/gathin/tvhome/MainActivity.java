@@ -3796,58 +3796,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, String title, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
-        row.findViewById(R.id.dot).setVisibility(View.GONE);
-        row.findViewById(R.id.status).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        row.setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        final boolean[] pressed = {false};
-        row.setOnKeyListener((v, code, event) -> {
-            if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                if (event.getRepeatCount() == 0) pressed[0] = true;
-                return true;
-            }
-            if (event.getAction() == KeyEvent.ACTION_UP && pressed[0]) {
-                pressed[0] = false;
-                action.run();
-                popup.dismiss();
-                return true;
-            }
-            return false;
-        });
-        rows.addView(row);
+        addSettingsMenuRowView(rows, popup, title, action);
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addSettingsMenuRowView(rows, popup, getString(title), action);
+    }
+
+    /**
+     * Use the platform's normal focused-click handling for TV remotes. Intercepting DPAD_CENTER
+     * in an OnKeyListener can consume DOWN/UP before Android performs the click on some TV firmware.
+     */
+    private void addSettingsMenuRowView(LinearLayout rows, PopupWindow popup, String title, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);
         row.findViewById(R.id.status).setVisibility(View.GONE);
         ((TextView) row.findViewById(R.id.title)).setText(title);
+        row.setFocusable(true);
+        row.setFocusableInTouchMode(true);
+        row.setClickable(true);
         row.setOnClickListener(v -> {
             popup.dismiss();
             action.run();
-        });
-        // The OK-up after opening the menu must not activate its first row.
-        final boolean[] pressed = {false};
-        row.setOnKeyListener((v, code, event) -> {
-            if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                if (event.getRepeatCount() == 0) pressed[0] = true;
-                return true;
-            }
-            boolean activate = pressed[0];
-            pressed[0] = false;
-            if (activate) {
-                popup.dismiss();
-                action.run();
-            }
-            return true;
         });
         rows.addView(row);
     }
