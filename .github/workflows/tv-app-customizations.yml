@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'launcher/app/src/main/java/com/gathin/tvhome/**'
+      - 'launcher/app/src/main/res/values/config.xml'
       - '.github/workflows/tv-app-customizations.yml'
 permissions:
   contents: read
