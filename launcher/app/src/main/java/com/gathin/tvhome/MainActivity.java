@@ -3664,6 +3664,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                             prefs.edit().putStringSet("home_folders", updated).apply();
                             Toast.makeText(this, "已建立資料夾：" + value, Toast.LENGTH_SHORT).show();
                         }).show();
+            } else if (which == 1) {
+                showFolderAppAssignment();
             } else {
                 java.util.ArrayList<String> editable = new java.util.ArrayList<>(folders);
                 editable.remove("系統");
@@ -3671,7 +3673,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     Toast.makeText(this, "目前沒有可管理的一般資料夾", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                new AlertDialog.Builder(this).setTitle(which == 1 ? "選擇要重新命名的資料夾" : "選擇要移除的資料夾")
+                new AlertDialog.Builder(this).setTitle(which == 2 ? "選擇要重新命名的資料夾" : "選擇要移除的資料夾")
                         .setItems(editable.toArray(new String[0]), (x, index) -> {
                             String oldName = editable.get(index);
                             java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
