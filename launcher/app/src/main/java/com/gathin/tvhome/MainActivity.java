@@ -3705,23 +3705,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        if (dockRow && position < adapter.movableCount()) {
-            boolean inDock = position < COLUMNS;
-            addSettingsMenuRow(rows, popup, inDock ? R.string.tile_replace_in_dock : R.string.tile_add_to_dock,
-                    () -> startDockEditFor(key, inDock));
-        }
-        if (position < adapter.movableCount()) addSettingsMenuRow(rows, popup, R.string.tile_move, () -> {
-            if (!beginReorder()) return;
-            int at = adapter.positionOf(key);   // beginReorder can rebuild the tiles
-            if (at < 0) return;
-            focusTile(at);
-            pickUp(at);
-            Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
-        });
-        if (appLibraryEnabled) addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {
-            if (LibraryApps.save(this, pkg, false)) reloadApps(false);
-            else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
-        });
         SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         String savedLabel = appPrefs.getString("label_" + pkg, adapter.labelAt(position));
         addSettingsMenuRow(rows, popup, "修改 APP 名稱", () -> {
@@ -3772,6 +3755,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 reloadApps(false);
             });
         }
+        if (dockRow && position < adapter.movableCount()) {
+            boolean inDock = position < COLUMNS;
+            addSettingsMenuRow(rows, popup, inDock ? R.string.tile_replace_in_dock : R.string.tile_add_to_dock,
+                    () -> startDockEditFor(key, inDock));
+        }
+        if (position < adapter.movableCount()) addSettingsMenuRow(rows, popup, R.string.tile_move, () -> {
+            if (!beginReorder()) return;
+            int at = adapter.positionOf(key);   // beginReorder can rebuild the tiles
+            if (at < 0) return;
+            focusTile(at);
+            pickUp(at);
+            Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+        });
+        if (appLibraryEnabled) addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {
+            if (LibraryApps.save(this, pkg, false)) reloadApps(false);
+            else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+        });
         // Some firmware has no App info page at all; a row that only toasts "can't open" helps nobody.
         Intent info = SystemSettings.appInfo(this, pkg);
         if (info != null) addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(info));
