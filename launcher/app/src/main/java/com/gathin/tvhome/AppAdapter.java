@@ -70,10 +70,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         /** A tile whose launch_actions entry is "input:<id>": switch to that TV input instead of opening an app. */
         void onOpenInput(String inputId);
         void onOpenSystemFolder();
+        void onOpenFolder(String folderName);
     }
 
     static final class Entry {
-        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3, SYSTEM_FOLDER = 4;
+        static final int APP = 0, HOME_SETTINGS = 1, CARD = 2, EMPTY = 3, SYSTEM_FOLDER = 4, USER_FOLDER = 5;
 
         final int kind;
         final String label;
@@ -294,7 +295,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             SharedPreferences homePrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
-            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported
+            boolean inFolder = false;
+            for (String folder : homePrefs.getStringSet("home_folders", Collections.<String>emptySet()))
+                if (homePrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()).contains(pkg)) { inFolder = true; break; }
+            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder
                     || homePrefs.getBoolean("home_hidden_" + pkg, false)
                     || !LibraryApps.visible(tvPackages.contains(pkg), hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
@@ -360,6 +364,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     new ComponentName(ctx, HomeSettingsActivity.class), null,
                     ctx.getDrawable(R.drawable.ic_home_settings), null, 0));
         }
+        SharedPreferences folderPrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+        for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet()))
+            if (!"系統".equals(folder)) fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder), null, ctx.getDrawable(android.R.drawable.ic_menu_agenda), null, 0));
         // The built-in system folder is pinned as the final desktop tile.
         fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統",
                 new ComponentName(ctx, "system-folder"), null,
@@ -566,6 +573,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             listener.onOpenSystemFolder();
             return;
         }
+        if (e.kind == Entry.USER_FOLDER) { listener.onOpenFolder(e.component.getClassName().substring("folder:".length())); return; }
         if (e.kind == Entry.HOME_SETTINGS) {
             ctx.startActivity(new Intent(ctx, HomeSettingsActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
