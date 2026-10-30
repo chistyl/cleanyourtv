@@ -3,6 +3,7 @@ package com.gathin.tvhome;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -51,6 +52,7 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.TextUtils;
+import android.text.InputType;
 import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -63,6 +65,7 @@ import android.view.Window;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -102,6 +105,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
 
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
+    private static final int APP_ICON_PICK_REQUEST = 143;
+    private String pendingIconPackage;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** The system input switcher, forwarded here by InputsRequestActivity while handle_view_inputs is on. */
@@ -1090,6 +1095,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == APP_ICON_PICK_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (SecurityException ignored) { }
+            if (pendingIconPackage != null) {
+                getSharedPreferences("tv_app_customizations", MODE_PRIVATE).edit()
+                        .putString("icon_" + pendingIconPackage, uri.toString()).apply();
+                pendingIconPackage = null;
+                reloadApps(false);
+            }
+        }
         if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getBooleanExtra(LauncherSettingsActivity.EXTRA_REORDER, false)) {
             getIntent().putExtra(LauncherSettingsActivity.EXTRA_REORDER, true);
@@ -3706,6 +3722,45 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (LibraryApps.save(this, pkg, false)) reloadApps(false);
             else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
         });
+        SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        String savedLabel = appPrefs.getString("label_" + pkg, adapter.labelAt(position));
+        addSettingsMenuRow(rows, popup, "修改 APP 名稱", () -> {
+            EditText edit = new EditText(this);
+            edit.setSingleLine(true);
+            edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            edit.setText(savedLabel);
+            edit.setSelection(edit.getText().length());
+            new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
+                    .setNegativeButton("取消", null)
+                    .setPositiveButton("儲存", (dialog, which) -> {
+                        String value = edit.getText().toString().trim();
+                        if (!value.isEmpty()) appPrefs.edit().putString("label_" + pkg, value).apply();
+                        reloadApps(false);
+                    }).show();
+        });
+        boolean nameHidden = appPrefs.getBoolean("hide_" + pkg, false);
+        addSettingsMenuRow(rows, popup, nameHidden ? "顯示 APP 名稱" : "隱藏 APP 名稱", () -> {
+            appPrefs.edit().putBoolean("hide_" + pkg, !nameHidden).apply();
+            reloadApps(false);
+        });
+        addSettingsMenuRow(rows, popup, "更換圖標", () -> {
+            pendingIconPackage = pkg;
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            pick.addCategory(Intent.CATEGORY_OPENABLE);
+            pick.setType("image/*");
+            pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            try { startActivityForResult(pick, APP_ICON_PICK_REQUEST); }
+            catch (ActivityNotFoundException ex) {
+                pendingIconPackage = null;
+                Toast.makeText(this, "找不到可用的圖片選擇器", Toast.LENGTH_LONG).show();
+            }
+        });
+        if (appPrefs.contains("label_" + pkg) || appPrefs.contains("hide_" + pkg) || appPrefs.contains("icon_" + pkg)) {
+            addSettingsMenuRow(rows, popup, "還原 APP 原始設定", () -> {
+                appPrefs.edit().remove("label_" + pkg).remove("hide_" + pkg).remove("icon_" + pkg).apply();
+                reloadApps(false);
+            });
+        }
         // Some firmware has no App info page at all; a row that only toasts "can't open" helps nobody.
         Intent info = SystemSettings.appInfo(this, pkg);
         if (info != null) addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(info));

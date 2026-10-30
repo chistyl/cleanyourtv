@@ -4,17 +4,22 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Outline;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.provider.Settings;
@@ -42,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.InputStream;
 
 /**
  * App tiles. The first {@link MainActivity#COLUMNS} positions are the pinned dock (favourites, fixed order,
@@ -293,18 +299,32 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
             // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
             // redraw the tile name as something else (#117).
+            SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            String customLabel = custom.getString("label_" + pkg, null);
             String label = card != null ? card.label : Cards.cleanLabel(
-                    appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+                    customLabel != null ? customLabel : (appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm))), pkg);
+            if (custom.getBoolean("hide_" + pkg, false)) label = "";
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = null;
-            // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
-            if (!(uniformTiles && card == null)) {
+            Drawable icon = null;
+            if (card == null) {
+                String customIcon = custom.getString("icon_" + pkg, null);
+                if (customIcon != null) {
+                    try (InputStream in = ctx.getContentResolver().openInputStream(Uri.parse(customIcon))) {
+                        if (in != null) icon = new BitmapDrawable(ctx.getResources(), BitmapFactory.decodeStream(in));
+                    } catch (Exception ignored) { }
+                }
+                if (icon == null) icon = ri.loadIcon(pm);
+                banner = customIcon != null ? iconBanner(icon) : bundledBanner(appBanners.get(pkg));
+                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(icon) : loadBanner(pm, ri);
+                // Apps without a real TV banner use their original mark centred on a naturally extended colour field.
+                if (banner == null) banner = iconBanner(icon);
+                icon = null;
+            } else {
                 banner = bundledBanner(appBanners.get(pkg));
-                if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(ri.loadIcon(pm)) : loadBanner(pm, ri);
+                if (banner == null) banner = loadBanner(pm, ri);
+                icon = banner == null ? ri.loadIcon(pm) : null;
             }
-            // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
-            // banner skips loading and decoding it.
-            Drawable icon = banner == null ? ri.loadIcon(pm) : null;
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
@@ -347,13 +367,28 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     /** icon_tiles: the app's icon centred on a dark banner-shaped tile, for apps whose own banner crops badly. */
     private Drawable iconBanner(Drawable icon) {
-        int w = 320, h = 180, side = 104;
-        android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
-        android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
-        canvas.drawColor(0xFF15202B);
-        icon.setBounds((w - side) / 2, (h - side) / 2, (w + side) / 2, (h + side) / 2);
-        icon.draw(canvas);
-        return new android.graphics.drawable.BitmapDrawable(ctx.getResources(), bmp);
+        int w = 640, h = 360, side = 148;
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bmp);
+        int base = dominantColor(icon);
+        float[] hsv = new float[3];
+        Color.colorToHSV(base, hsv);
+        hsv[1] = Math.min(0.58f, Math.max(0.22f, hsv[1] * 0.78f));
+        hsv[2] = Math.min(0.48f, Math.max(0.22f, hsv[2] * 0.72f));
+        int top = Color.HSVToColor(hsv);
+        hsv[2] *= 0.72f;
+        int bottom = Color.HSVToColor(hsv);
+        Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bg.setShader(new android.graphics.LinearGradient(0, 0, w, h, top, bottom, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, w, h, bg);
+        Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        glow.setShader(new android.graphics.RadialGradient(w * .5f, h * .5f, h * .72f,
+                new int[]{0x44FFFFFF, 0x00FFFFFF}, null, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, w, h, glow);
+        Drawable mark = icon.getConstantState() != null ? icon.getConstantState().newDrawable().mutate() : icon;
+        mark.setBounds((w - side) / 2, (h - side) / 2, (w + side) / 2, (h + side) / 2);
+        mark.draw(canvas);
+        return new BitmapDrawable(ctx.getResources(), bmp);
     }
 
     /** A banner_* drawable bundled with the launcher, or null for none or a name that is not one. */
@@ -477,7 +512,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
-        h.name.setVisibility(dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
+        h.name.setVisibility(e.name.isEmpty() ? View.GONE : (dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
