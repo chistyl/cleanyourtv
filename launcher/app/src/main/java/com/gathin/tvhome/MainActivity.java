@@ -3709,6 +3709,38 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         openInput(inputId);
     }
 
+    @Override
+    public void onOpenSystemFolder() {
+        List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        java.util.TreeMap<String, ResolveInfo> systemApps = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : installed) {
+            if (ri.activityInfo == null || !ri.activityInfo.exported
+                    || ri.activityInfo.packageName.equals(getPackageName())) continue;
+            try {
+                android.content.pm.ApplicationInfo info = getPackageManager().getApplicationInfo(ri.activityInfo.packageName, 0);
+                if ((info.flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM
+                        | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0)
+                    systemApps.put(ri.activityInfo.packageName, ri);
+            } catch (PackageManager.NameNotFoundException ignored) { }
+        }
+        List<ResolveInfo> apps = new ArrayList<>(systemApps.values());
+        if (apps.isEmpty()) {
+            Toast.makeText(this, "目前沒有可顯示的系統 APP", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] labels = new String[apps.size()];
+        for (int i = 0; i < apps.size(); i++) labels[i] = String.valueOf(apps.get(i).loadLabel(getPackageManager()));
+        new AlertDialog.Builder(this).setTitle("系統").setItems(labels, (dialog, which) -> {
+            ResolveInfo ri = apps.get(which);
+            Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                    .setComponent(new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            try { startActivity(launch); }
+            catch (ActivityNotFoundException e) { Toast.makeText(this, "無法開啟此 APP", Toast.LENGTH_SHORT).show(); }
+        }).show();
+    }
+
     /**
      * Hold OK on a tile: a glass menu next to it. Move starts reorder mode with this tile already picked up;
      * Remove from Home takes the shortcut off (only with the app library on, where one press adds it back);
