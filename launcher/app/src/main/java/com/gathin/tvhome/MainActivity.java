@@ -3800,13 +3800,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
                 new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
         java.util.TreeMap<String, ResolveInfo> systemApps = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        java.util.Set<String> excluded = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
+                .getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
         for (ResolveInfo ri : installed) {
             if (ri.activityInfo == null || !ri.activityInfo.exported
                     || ri.activityInfo.packageName.equals(getPackageName())) continue;
             try {
                 android.content.pm.ApplicationInfo info = getPackageManager().getApplicationInfo(ri.activityInfo.packageName, 0);
                 if ((info.flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM
-                        | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0)
+                        | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                        && !excluded.contains(ri.activityInfo.packageName))
                     systemApps.put(ri.activityInfo.packageName, ri);
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
