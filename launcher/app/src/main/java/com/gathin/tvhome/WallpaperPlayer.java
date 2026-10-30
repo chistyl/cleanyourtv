@@ -170,6 +170,24 @@ final class WallpaperPlayer {
         root.setBackgroundColor(backgroundColor);
     }
 
+    void start() {
+        active = true;
+        update();
+    }
+
+    void stop() {
+        active = false;
+    }
+
+    /** Drops the wallpaper texture when Home is hidden and Android asks the process to free memory. */
+    void releaseForMemoryPressure() {
+        if (current == null) return;
+        image.setImageDrawable(null);
+        current = null;
+        displayed = "";
+        root.setBackgroundColor(backgroundColor);
+    }
+
     /** The pictures the rotation picks from now: wallpaper_moods' group for the time of day, or the whole collection. */
     private List<File> playable() {
         if (moods.isEmpty()) return files;
