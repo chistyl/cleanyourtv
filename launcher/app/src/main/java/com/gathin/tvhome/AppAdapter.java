@@ -295,10 +295,18 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             SharedPreferences homePrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            boolean inSystemFolder = false;
+            Set<String> systemExclusions = homePrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet());
+            try {
+                android.content.pm.ApplicationInfo appInfo = ctx.getPackageManager().getApplicationInfo(pkg, 0);
+                boolean isSystem = (appInfo.flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM
+                        | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                inSystemFolder = isSystem && !systemExclusions.contains(pkg);
+            } catch (PackageManager.NameNotFoundException ignored) { }
             boolean inFolder = false;
             for (String folder : homePrefs.getStringSet("home_folders", Collections.<String>emptySet()))
                 if (homePrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()).contains(pkg)) { inFolder = true; break; }
-            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder
+            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder || inSystemFolder
                     || homePrefs.getBoolean("home_hidden_" + pkg, false)
                     || !LibraryApps.visible(tvPackages.contains(pkg), hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
