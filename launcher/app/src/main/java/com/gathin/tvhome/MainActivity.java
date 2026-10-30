@@ -3588,6 +3588,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (220 * density));
         addSettingsMenuRow(rows, popup, "系統設定", () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         addSettingsMenuRow(rows, popup, "APP 設定", this::showHomeAppVisibilityDialog);
+        addSettingsMenuRow(rows, popup, getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
+                .getBoolean("hide_all_names", false) ? "顯示 APP 名稱（全域）" : "隱藏 APP 名稱（全域）", () -> {
+            SharedPreferences p = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+            p.edit().putBoolean("hide_all_names", !p.getBoolean("hide_all_names", false)).apply();
+            reloadApps(false);
+        });
         addSettingsMenuRow(rows, popup, "更換桌布", this::showWallpaperPicker);
         addSettingsMenuRow(rows, popup, "資料夾管理", this::showFolderManagementComingSoon);
         addSettingsMenuRow(rows, popup, "系統", this::showSystemFolderComingSoon);
@@ -4032,6 +4038,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                 java.util.Set<String> members = folderPrefs.getStringSet("folder_apps_" + oldName, java.util.Collections.<String>emptySet());
                                 folderPrefs.edit().putStringSet("home_folders", updated)
                                         .putStringSet("folder_apps_" + newName, new java.util.HashSet<>(members))
+                                        .remove("folder_apps_" + oldName).apply();
+                                reloadApps(false);
+                            }).show();
+                });
+            }
+            if (key.contains("/folder:")) {
+                addSettingsMenuRow(folderRows, folderPopup, "刪除資料夾", () -> {
+                    new AlertDialog.Builder(this).setTitle("刪除資料夾")
+                            .setMessage("刪除資料夾後，裡面的 APP 會移回桌面，不會解除安裝。")
+                            .setNegativeButton("取消", null).setPositiveButton("刪除", (dialog, which) -> {
+                                String oldName = key.substring(key.indexOf("/folder:") + "/folder:".length());
+                                java.util.Set<String> folders = folderPrefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
+                                java.util.HashSet<String> updated = new java.util.HashSet<>(folders);
+                                updated.remove(oldName);
+                                folderPrefs.edit().putStringSet("home_folders", updated)
                                         .remove("folder_apps_" + oldName).apply();
                                 reloadApps(false);
                             }).show();
