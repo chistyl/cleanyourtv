@@ -3833,7 +3833,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 forecast.addView(dayColumn, columnLp);
             } catch (Exception ignored) { }
         }
-        weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-2, -2));
+        weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
         weeklyWeatherView.setVisibility(View.VISIBLE);
     }
 
