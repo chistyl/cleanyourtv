@@ -4122,7 +4122,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).show();
     }
 
-    /** Icon size adjustment: -50% to +200% around a 125% default scale, with a live sample preview. */
+    /** Icon size adjustment: -50% to +200% around a 125% default scale, with a visible live preview. */
     private void showAppIconSizeDialog(String pkg, SharedPreferences prefs) {
         int current = prefs.getInt("icon_scale_adjust_" + pkg, 0);
         SeekBar size = new SeekBar(this);
@@ -4135,31 +4135,46 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ImageView preview = new ImageView(this);
         preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
         try {
-            preview.setImageDrawable(getPackageManager().getApplicationIcon(pkg));
+            String customIcon = prefs.getString("icon_" + pkg, null);
+            if (customIcon != null) {
+                try (java.io.InputStream in = getContentResolver().openInputStream(Uri.parse(customIcon))) {
+                    if (in != null) preview.setImageDrawable(android.graphics.drawable.Drawable.createFromStream(in, null));
+                } catch (Exception ignored) { }
+            }
+            if (preview.getDrawable() == null) preview.setImageDrawable(getPackageManager().getApplicationIcon(pkg));
         } catch (PackageManager.NameNotFoundException ignored) { }
-        int previewBase = (int) (112 * density);
-        LinearLayout previewFrame = new LinearLayout(this);
-        previewFrame.setGravity(Gravity.CENTER);
-        previewFrame.setPadding(0, (int) (10 * density), 0, (int) (10 * density));
-        previewFrame.addView(preview, new LinearLayout.LayoutParams(previewBase, previewBase));
+
+        int stageSize = (int)(336 * density);
+        int previewBase = (int)(112 * density);
+        FrameLayout previewStage = new FrameLayout(this);
+        previewStage.setClipChildren(false);
+        previewStage.setClipToPadding(false);
+        LinearLayout.LayoutParams stageLp = new LinearLayout.LayoutParams(stageSize, stageSize);
+        stageLp.gravity = Gravity.CENTER_HORIZONTAL;
+        previewStage.setLayoutParams(stageLp);
+        FrameLayout.LayoutParams imageLp = new FrameLayout.LayoutParams(previewBase, previewBase, Gravity.CENTER);
+        previewStage.addView(preview, imageLp);
 
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(28, 16, 28, 8);
-        panel.addView(value);
-        panel.addView(previewFrame);
-        panel.addView(size);
+        panel.setGravity(Gravity.CENTER_HORIZONTAL);
+        panel.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
+        panel.setClipChildren(false);
+        panel.addView(value, new LinearLayout.LayoutParams(-1, -2));
+        panel.addView(previewStage);
+        panel.addView(size, new LinearLayout.LayoutParams(-1, -2));
 
         Runnable updatePreview = () -> {
             int adjustment = size.getProgress() - 50;
-            float scale = Math.max(0.10f, Math.min(3.75f, 1.25f * (1f + adjustment / 100f)));
-            int side = Math.max((int) (28 * density), Math.round(previewBase * scale / 1.25f));
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) preview.getLayoutParams();
+            float scale = 1.25f * (1f + adjustment / 100f);
+            int side = Math.max((int)(28*density), Math.min(stageSize, Math.round(previewBase * scale / 1.25f)));
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) preview.getLayoutParams();
             lp.width = side;
             lp.height = side;
+            lp.gravity = Gravity.CENTER;
             preview.setLayoutParams(lp);
-            int shownPercent = Math.round(125f * (1f + adjustment / 100f));
-            value.setText("圖標比例：" + shownPercent + "%（調整 " + (adjustment > 0 ? "+" : "") + adjustment + "%）");
+            value.setText("調整幅度：" + (adjustment > 0 ? "+" : "") + adjustment
+                    + "%　｜　實際圖標比例：" + Math.round(125f * (1f + adjustment / 100f)) + "%");
         };
         size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -4169,7 +4184,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
         });
         updatePreview.run();
-        new AlertDialog.Builder(this).setTitle("調整圖標大小")
+        new AlertDialog.Builder(this).setTitle("調整圖標大小（-50% ～ +200%）")
                 .setView(panel).setNegativeButton("取消", null)
                 .setNeutralButton("恢復預設 125%", (dialog, which) -> {
                     prefs.edit().remove("icon_scale_adjust_" + pkg).remove("icon_scale_" + pkg).apply();
