@@ -380,12 +380,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     ctx.getDrawable(R.drawable.ic_home_settings), null, 0));
         }
         SharedPreferences folderPrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+        List<String> visibleFolders = new ArrayList<>();
         for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet())) {
-            if (!"系統".equals(folder)) {
-                Set<String> members = folderPrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet());
-                fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder),
-                        folderPreview(members), null, null, 0));
-            }
+            if (!"系統".equals(folder) && !folderPrefs.getBoolean("home_hidden_folder_" + folder, false)) visibleFolders.add(folder);
+        }
+        // General folders follow the saved desktop order; the built-in System folder is always appended last.
+        Collections.sort(visibleFolders, (a, b) -> Order.compare(savedRanks,
+                new ComponentName(ctx, "folder:" + a).flattenToShortString(),
+                new ComponentName(ctx, "folder:" + b).flattenToShortString()));
+        for (String folder : visibleFolders) {
+            Set<String> members = new HashSet<>(folderPrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()));
+            members.removeIf(pkg -> folderPrefs.getBoolean("home_hidden_" + pkg, false));
+            fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder),
+                    folderPreview(members), null, null, 0));
         }
         Set<String> systemMembers = new HashSet<>(folderPrefs.getStringSet("system_folder_added", Collections.<String>emptySet()));
         Set<String> systemExcluded = folderPrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet());
@@ -398,8 +405,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         && !systemExcluded.contains(pkg)) systemMembers.add(pkg);
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
-        fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
-                folderPreview(systemMembers), null, null, 0));
+        systemMembers.removeIf(pkg -> folderPrefs.getBoolean("home_hidden_" + pkg, false));
+        if (!folderPrefs.getBoolean("home_hidden_folder_系統", false)) {
+            fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
+                    folderPreview(systemMembers), null, null, 0));
+        }
+        // Apply saved desktop order across apps and user folders. The built-in System folder is pinned last.
+        Collections.sort(fresh, (a, b) -> {
+            if (a.kind == Entry.SYSTEM_FOLDER) return b.kind == Entry.SYSTEM_FOLDER ? 0 : 1;
+            if (b.kind == Entry.SYSTEM_FOLDER) return -1;
+            return Order.compare(savedRanks, a.component.flattenToShortString(), b.component.flattenToShortString());
+        });
         docked = 0;
         while (docked < fresh.size() && isDocked(fresh.get(docked))) docked++;
         emptySlots = dockRow && !reordering ? DockSlots.empty(docked, dockSize, fresh.size(), fillDock) : 0;
@@ -412,26 +428,60 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    /** Compose a folder tile from up to four app icons inside it. */
+    /** Compose a rounded 16:9 TV folder thumbnail; empty folders display a centred plus. */
     private Drawable folderPreview(Set<String> packages) {
-        int size = 640;
-        Bitmap bitmap = Bitmap.createBitmap(size, 360, Bitmap.Config.ARGB_8888);
+        int size = 640, height = 360;
+        Bitmap bitmap = Bitmap.createBitmap(size, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(Color.rgb(42, 48, 58));
-        canvas.drawRoundRect(70, 28, 570, 332, 42, 42, paint);
-        int cell = 116, gap = 24;
-        int[][] positions = {{192, 66}, {332, 66}, {192, 196}, {332, 196}};
-        int index = 0;
+        paint.setColor(Color.rgb(28, 28, 30));
+        canvas.drawRoundRect(70, 28, 570, 332, 34, 34, paint);
+        if (packages == null || packages.isEmpty()) {
+            paint.setColor(Color.WHITE); paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTypeface(android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD));
+            paint.setTextSize(150); canvas.drawText("+", size / 2f, height / 2f + 52, paint);
+            return new BitmapDrawable(ctx.getResources(), bitmap);
+        }
+        SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+        Map<String, ResolveInfo> resolved = new HashMap<>();
+        List<ResolveInfo> launchables = ctx.getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        for (ResolveInfo ri : launchables) if (ri.activityInfo != null) resolved.put(ri.activityInfo.packageName, ri);
+        int[][] positions = {{112, 62}, {332, 62}, {112, 190}, {332, 190}};
+        int cellW = 196, cellH = 110, index = 0;
         for (String pkg : packages) {
             if (index >= 4) break;
+            int x = positions[index][0], y = positions[index][1];
+            paint.setColor(custom.getInt("background_" + pkg, Color.WHITE));
+            canvas.drawRoundRect(x, y, x + cellW, y + cellH, 18, 18, paint);
+            int save = canvas.save();
+            android.graphics.Path rounded = new android.graphics.Path();
+            rounded.addRoundRect(x, y, x + cellW, y + cellH, 18, 18, android.graphics.Path.Direction.CW);
+            canvas.clipPath(rounded);
             try {
-                Drawable icon = ctx.getPackageManager().getApplicationIcon(pkg);
-                int x = positions[index][0], y = positions[index][1];
-                icon.setBounds(x, y, x + cell, y + cell);
-                icon.draw(canvas);
-                index++;
+                ResolveInfo ri = resolved.get(pkg);
+                Drawable banner = null;
+                boolean forceIcon = custom.getString("icon_" + pkg, null) != null || custom.getBoolean(
+                        "icon_scale_override_" + pkg, custom.contains("icon_scale_adjust_" + pkg));
+                if (ri != null && !forceIcon) banner = loadBanner(ctx.getPackageManager(), ri);
+                if (banner != null) {
+                    banner.setBounds(x, y, x + cellW, y + cellH); banner.draw(canvas);
+                } else {
+                    Drawable icon = null;
+                    String customUri = custom.getString("icon_" + pkg, null);
+                    if (customUri != null) {
+                        try (InputStream in = ctx.getContentResolver().openInputStream(Uri.parse(customUri))) {
+                            if (in != null) icon = Drawable.createFromStream(in, null);
+                        } catch (Exception ignored) { }
+                    }
+                    if (icon == null) icon = ctx.getPackageManager().getApplicationIcon(pkg);
+                    int side = 66;
+                    icon.setBounds(x + (cellW-side)/2, y + (cellH-side)/2, x + (cellW+side)/2, y + (cellH+side)/2);
+                    icon.draw(canvas);
+                }
             } catch (Exception ignored) { }
+            canvas.restoreToCount(save);
+            index++;
         }
         return new BitmapDrawable(ctx.getResources(), bitmap);
     }
@@ -586,9 +636,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
-        if (uniformTiles && e.banner == null) {
-            if (e.backdrop == null) e.backdrop = backdrop(e.icon, ambientColorAt(position));
-            h.card.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, e.backdrop));
+        if (e.banner == null && e.kind == Entry.APP) {
+            SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            if (custom.contains("background_" + e.pkg)) {
+                int chosen = custom.getInt("background_" + e.pkg, 0xFF2A303A);
+                GradientDrawable selected = new GradientDrawable();
+                selected.setColor(chosen);
+                selected.setCornerRadius(16f * ctx.getResources().getDisplayMetrics().density);
+                selected.setStroke(Math.max(1, Math.round(ctx.getResources().getDisplayMetrics().density)), 0x24FFFFFF);
+                h.card.setBackground(selected);
+            } else if (uniformTiles) {
+                if (e.backdrop == null) e.backdrop = backdrop(e.icon, ambientColorAt(position));
+                h.card.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, e.backdrop));
+            }
         }
         if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
@@ -710,7 +770,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Tiles that can be moved: everything but the "Default home" tile, which always stays last. */
     int movableCount() {
         int n = items.size();
-        return n > 0 && items.get(n - 1).kind == Entry.HOME_SETTINGS ? n - 1 : n;
+        // The built-in System folder is always the final desktop tile and cannot be carried away.
+        if (n > 0 && items.get(n - 1).kind == Entry.SYSTEM_FOLDER) n--;
+        if (n > 0 && items.get(n - 1).kind == Entry.HOME_SETTINGS) n--;
+        return n;
     }
 
     /** Keys of the movable tiles in their current order, for Order (empty dock slots are not tiles). */
@@ -782,6 +845,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     int ambientColorAt(int position) {
         if (position < 0 || position >= items.size()) return 0xFF444444;
         Entry e = items.get(position);
+        if (e.kind == Entry.APP && e.banner == null) {
+            SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            if (custom.contains("background_" + e.pkg)) return custom.getInt("background_" + e.pkg, 0xFF2A303A);
+        }
         if (e.ambient == 0) {
             e.ambient = uniformTiles && e.banner == null ? dominantColor(e.icon) : vividColor(e.banner != null ? e.banner : e.icon);
         }
@@ -1039,6 +1106,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
             });
             card.setClipToOutline(true);
+            // Android TV's default focus highlight is a square rectangle; this card draws its own rounded focus state.
+            card.setDefaultFocusHighlightEnabled(false);
 
             card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;

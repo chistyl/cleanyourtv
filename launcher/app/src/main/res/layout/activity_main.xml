@@ -297,8 +297,25 @@
                             android:letterSpacing="0.14"
                             android:textAllCaps="true"
                             android:visibility="gone" />
+
                     </LinearLayout>
                 </LinearLayout>
+
+                <TextView
+                    android:id="@+id/weeklyWeather"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:background="@drawable/v17_weather_card"
+                    android:textColor="#F2FFFFFF"
+                    android:textSize="13sp"
+                    android:fontFamily="@string/font_regular"
+                    android:lineSpacingExtra="4dp"
+                    android:visibility="gone" />
 
             </LinearLayout>
 
@@ -326,7 +343,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:layout_alignBottom="@id/leftBlock"
+                android:layout_alignBottom="@id/date"
                 android:layout_marginBottom="6dp"
                 android:clipChildren="false"
                 android:clipToPadding="false"

@@ -20,8 +20,6 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
-    /** Extra band below the tiles for their names (always_show_names), in px. */
-    private final float namesRoom;
     /** Light glass like the top bar's pills (config.xml dock_glass): a white tint that fades downwards. */
     private final boolean lightGlass;
     /** Padding all round the tiles equal to the gap between them (config.xml dock_even_padding). */
@@ -37,7 +35,6 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
 
     /**
      * @param translucent the cinematic shelf's band: the artwork and the glow show through it.
-     * @param names       the dock tiles show their names, so the band reaches down over them.
      * @param opacity     the plain band's opacity in percent (dock_opacity), so a wallpaper can show through it.
      * @param lightGlass  a light frosted band like the pills, for a sky or wallpaper behind it.
      * @param evenPadding the band's padding is the gap between the tiles on all four sides (dock_even_padding).
@@ -45,13 +42,12 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
      * @param singleRow   every app sits in the dock's row (single_row); the band covers the dock apps only, unless bandAll.
      * @param bandAll     with singleRow, the band runs behind every app in the row (dock_band_all).
      */
-    DockDecoration(int dockSize, float density, boolean translucent, boolean names, int opacity, boolean lightGlass,
+    DockDecoration(int dockSize, float density, boolean translucent, int opacity, boolean lightGlass,
                    boolean evenPadding, boolean bandVisible, boolean singleRow, boolean bandAll) {
         this.dockSize = dockSize;
         this.singleRow = singleRow;
         this.bandAll = singleRow && bandAll;
         this.density = density;
-        this.namesRoom = names ? 22 * density : 0;
         this.lightGlass = lightGlass;
         this.evenPadding = evenPadding;
         this.bandVisible = bandVisible;
@@ -138,7 +134,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             rect.left = Math.max(rect.left, density);
             rect.right = Math.min(rect.right, parent.getWidth() - density);
         }
-        rect.bottom += namesRoom;
+        // Dock labels are hidden for these first pinned tiles; the same inset on all four sides
+        // keeps the black slab visually balanced above and below.
         if (lightGlass && (rect.top != shaderTop || rect.bottom != shaderBottom)) {
             // The pills' glass (pill_bg: white, 18% fading to 8%), a little fainter over this much larger area.
             band.setShader(new LinearGradient(0, rect.top, 0, rect.bottom, 0x24FFFFFF, 0x0DFFFFFF,
