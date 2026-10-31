@@ -4574,7 +4574,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 tile.setFocusable(true); tile.setClickable(true);
                 tile.setDefaultFocusHighlightEnabled(false);
                 tile.setPadding((int)(3*density), (int)(5*density), (int)(3*density), (int)(4*density));
-                tile.setFocusableInTouchMode(false);
+                tile.setFocusableInTouchMode(true);
 
                 int savedBackground = prefs.getInt("background_" + packageName, Color.WHITE);
                 FrameLayout tvCard = new FrameLayout(this);
@@ -4649,7 +4649,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout add = new LinearLayout(this);
                 add.setOrientation(LinearLayout.VERTICAL); add.setGravity(Gravity.CENTER_HORIZONTAL);
                 add.setFocusable(true); add.setClickable(true);
-                add.setFocusableInTouchMode(false);
+                add.setFocusableInTouchMode(true);
                 add.setDefaultFocusHighlightEnabled(false);
                 add.setPadding((int)(3*density), (int)(5*density), (int)(3*density), (int)(4*density));
                 FrameLayout addCard = new FrameLayout(this);
@@ -4708,7 +4708,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             item.setOnKeyListener((v, keyCode, event) -> {
                 int action = event.getAction();
                 if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
-                        || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                        || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER || keyCode == KeyEvent.KEYCODE_BUTTON_A
+                        || keyCode == KeyEvent.KEYCODE_SPACE) {
                     if (action == KeyEvent.ACTION_UP) {
                         v.performClick();
                         return true;
