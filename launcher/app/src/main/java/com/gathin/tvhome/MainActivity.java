@@ -4088,7 +4088,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 add.setBackground(addBackground);
                 add.setOnFocusChangeListener((v, focused) -> {
                     GradientDrawable focusBackground = new GradientDrawable();
-                    focusBackground.setColor(focused ? 0x33FFFFFF : Color.TRANSPARENT);
+                    focusBackground.setColor(focused ? 0xFF566171 : 0xFF343A45);
                     focusBackground.setCornerRadius(12f * density);
                     v.setBackground(focusBackground);
                 });
