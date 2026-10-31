@@ -3770,7 +3770,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (systemFolder) {
             List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
                     new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
-            java.util.HashSet<String> current = new java.util.HashSet<>();
+            java.util.HashSet<String> current = new java.util.HashSet<>(prefs.getStringSet(
+                    "system_folder_added", java.util.Collections.<String>emptySet()));
             Set<String> excluded = prefs.getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
             for (ResolveInfo ri : installed) {
                 if (ri.activityInfo == null || !ri.activityInfo.exported || ri.activityInfo.packageName.equals(getPackageName())) continue;
