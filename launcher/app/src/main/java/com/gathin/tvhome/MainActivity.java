@@ -3777,6 +3777,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout forecast = new LinearLayout(this);
         forecast.setOrientation(LinearLayout.HORIZONTAL);
         forecast.setGravity(Gravity.CENTER_VERTICAL);
+        forecast.setWeightSum(7f);
         int count = Math.min(7, dates.length());
         for (int i = 0; i < count; i++) {
             try {
@@ -3786,7 +3787,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout dayColumn = new LinearLayout(this);
                 dayColumn.setOrientation(LinearLayout.VERTICAL);
                 dayColumn.setGravity(Gravity.CENTER);
-                dayColumn.setPadding((int)(7*density), (int)(5*density), (int)(7*density), (int)(5*density));
+                dayColumn.setPadding((int)(2*density), (int)(5*density), (int)(2*density), (int)(5*density));
 
                 TextView dateView = new TextView(this);
                 dateView.setText(day);
@@ -3797,7 +3798,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(42);
+                iconView.setTextSize(38);
                 iconView.setGravity(Gravity.CENTER);
                 LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(-1, -2);
                 iconLp.topMargin = (int)(2*density);
@@ -3828,7 +3829,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 precipitation.setGravity(Gravity.CENTER);
                 dayColumn.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
 
-                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams((int)(124*density), -2);
+                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams(0, -2, 1f);
                 forecast.addView(dayColumn, columnLp);
             } catch (Exception ignored) { }
         }
@@ -4602,16 +4603,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         Math.round(folderTileDp * 9f / 16f * density));
                 tile.addView(tvCard, cardLp);
                 // 焦點只保留遙控器導覽，不改變 TV 卡片外型、比例、邊框或大小。
+                android.graphics.drawable.GradientDrawable tileFocusFrame = new android.graphics.drawable.GradientDrawable();
+                tileFocusFrame.setColor(Color.TRANSPARENT);
+                tileFocusFrame.setCornerRadius(22f * density);
+                tileFocusFrame.setStroke(0, Color.TRANSPARENT);
+                tile.setBackground(tileFocusFrame);
                 tile.setOnFocusChangeListener((v, focused) -> {
-                    // High-contrast TV focus: obvious scale, amber outline and tinted card.
-                    float scale = focused ? 1.12f : 1f;
-                    tvCard.setScaleX(scale);
-                    tvCard.setScaleY(scale);
-                    tvCard.setTranslationZ(focused ? 24f * density : 0f);
-                    tvCard.setElevation(focused ? 24f * density : 0f);
-                    cardSurface.setColor(focused ? 0xFF263B55 : savedBackground);
-                    cardSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
-                            focused ? 0xFFFFD54F : 0x24FFFFFF);
+                    // 焦點只顯示在 APP 卡片外框，不改變圖示、卡片比例、圓角或底色。
+                    tileFocusFrame.setStroke(Math.max(1, (int)(focused ? 4*density : 0)),
+                            focused ? 0xFFFFD54F : Color.TRANSPARENT);
+                    tile.setElevation(focused ? 10f * density : 0f);
                 });
                 tile.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
@@ -4672,15 +4673,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout.LayoutParams addLabelLp = new LinearLayout.LayoutParams(-1, (int)(30*density));
                 addLabelLp.topMargin = (int)(3*density);
                 add.addView(addLabelSpacer, addLabelLp);
+                android.graphics.drawable.GradientDrawable addFocusFrame = new android.graphics.drawable.GradientDrawable();
+                addFocusFrame.setColor(Color.TRANSPARENT);
+                addFocusFrame.setCornerRadius(22f * density);
+                addFocusFrame.setStroke(0, Color.TRANSPARENT);
+                add.setBackground(addFocusFrame);
                 add.setOnFocusChangeListener((v, focused) -> {
-                    float scale = focused ? 1.12f : 1f;
-                    addCard.setScaleX(scale);
-                    addCard.setScaleY(scale);
-                    addCard.setTranslationZ(focused ? 24f * density : 0f);
-                    addCard.setElevation(focused ? 24f * density : 0f);
-                    addSurface.setColor(focused ? 0xFF536B86 : 0xFF343B47);
-                    addSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
-                            focused ? 0xFFFFD54F : 0x24FFFFFF);
+                    // ＋卡片同樣只顯示外框，保持原本圖示與卡片造型。
+                    addFocusFrame.setStroke(Math.max(1, (int)(focused ? 4*density : 0)),
+                            focused ? 0xFFFFD54F : Color.TRANSPARENT);
+                    add.setElevation(focused ? 10f * density : 0f);
                 });
                 add.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
