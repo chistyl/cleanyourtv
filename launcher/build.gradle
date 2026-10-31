@@ -1,3 +1,4 @@
+// CI trigger for the verified V17.1 dual-fix baseline; no application behavior changed.
 plugins {
     id 'com.android.application' version '8.5.2' apply false
 }
