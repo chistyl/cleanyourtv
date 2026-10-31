@@ -301,21 +301,27 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <TextView
+                <HorizontalScrollView
                     android:id="@+id/weeklyWeather"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
+                    android:background="@drawable/v17_weather_card"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp"
-                    android:background="@drawable/v17_weather_card"
-                    android:textColor="#F2FFFFFF"
-                    android:textSize="13sp"
-                    android:fontFamily="@string/font_regular"
-                    android:lineSpacingExtra="4dp"
-                    android:visibility="gone" />
+                    android:fillViewport="true"
+                    android:scrollbars="none"
+                    android:overScrollMode="never"
+                    android:visibility="gone">
+                    <LinearLayout
+                        android:id="@+id/weeklyWeatherDays"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical" />
+                </HorizontalScrollView>
 
             </LinearLayout>
 
