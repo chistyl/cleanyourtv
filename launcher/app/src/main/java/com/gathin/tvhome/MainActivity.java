@@ -3758,18 +3758,179 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onOpenFolder(String folderName) {
+        showFolderContents(folderName, false);
+    }
+
+    /** Open folders as a grid of real app shortcuts; long-press an app to rename or move it out. */
+    private void showFolderContents(String folderName, boolean systemFolder) {
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-        Set<String> members = prefs.getStringSet("folder_apps_" + folderName, java.util.Collections.<String>emptySet());
-        List<ResolveInfo> all = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
-        List<ResolveInfo> matches = new ArrayList<>();
-        for (ResolveInfo ri : all) if (ri.activityInfo != null && members.contains(ri.activityInfo.packageName)) matches.add(ri);
-        String[] labels = new String[matches.size()];
-        for (int i=0;i<matches.size();i++) labels[i]=String.valueOf(matches.get(i).loadLabel(getPackageManager()));
-        new AlertDialog.Builder(this).setTitle(folderName).setItems(labels,(d,which)->{
-            ResolveInfo ri=matches.get(which);
-            Intent launch=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER).setComponent(new ComponentName(ri.activityInfo.packageName,ri.activityInfo.name)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try { startActivity(launch); } catch(ActivityNotFoundException ignored) {}
-        }).setNegativeButton("關閉",null).show();
+        Set<String> members;
+        if (systemFolder) {
+            List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
+                    new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+            java.util.HashSet<String> current = new java.util.HashSet<>();
+            Set<String> excluded = prefs.getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
+            for (ResolveInfo ri : installed) {
+                if (ri.activityInfo == null || !ri.activityInfo.exported || ri.activityInfo.packageName.equals(getPackageName())) continue;
+                try {
+                    int flags = getPackageManager().getApplicationInfo(ri.activityInfo.packageName, 0).flags;
+                    if ((flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+                            && !excluded.contains(ri.activityInfo.packageName)) current.add(ri.activityInfo.packageName);
+                } catch (PackageManager.NameNotFoundException ignored) { }
+            }
+            members = current;
+        } else {
+            members = new java.util.HashSet<>(prefs.getStringSet("folder_apps_" + folderName,
+                    java.util.Collections.<String>emptySet()));
+        }
+
+        List<ResolveInfo> all = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        java.util.TreeMap<String, ResolveInfo> matches = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : all) {
+            if (ri.activityInfo != null && ri.activityInfo.exported && members.contains(ri.activityInfo.packageName))
+                matches.put(ri.activityInfo.packageName, ri);
+        }
+
+        Dialog dialog = new Dialog(this);
+        LinearLayout outer = new LinearLayout(this);
+        outer.setOrientation(LinearLayout.VERTICAL);
+        outer.setPadding((int)(18*density), (int)(14*density), (int)(18*density), (int)(14*density));
+        outer.setBackgroundColor(Color.rgb(28, 32, 40));
+        TextView heading = new TextView(this);
+        heading.setText(folderName);
+        heading.setTextColor(Color.WHITE);
+        heading.setTextSize(20);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.setPadding((int)(8*density), (int)(4*density), 0, (int)(12*density));
+        outer.addView(heading, new LinearLayout.LayoutParams(-1, -2));
+
+        ScrollView scroll = new ScrollView(this);
+        android.widget.GridLayout grid = new android.widget.GridLayout(this);
+        grid.setColumnCount(4);
+        grid.setUseDefaultMargins(false);
+        scroll.addView(grid);
+        outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        Runnable populate = () -> {
+            grid.removeAllViews();
+            for (ResolveInfo ri : matches.values()) {
+                String packageName = ri.activityInfo.packageName;
+                LinearLayout tile = new LinearLayout(this);
+                tile.setOrientation(LinearLayout.VERTICAL);
+                tile.setGravity(Gravity.CENTER);
+                tile.setFocusable(true);
+                tile.setClickable(true);
+                tile.setPadding((int)(5*density), (int)(8*density), (int)(5*density), (int)(8*density));
+                ImageView icon = new ImageView(this);
+                icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                try { icon.setImageDrawable(getPackageManager().getApplicationIcon(packageName)); }
+                catch (PackageManager.NameNotFoundException ignored) { }
+                tile.addView(icon, new LinearLayout.LayoutParams((int)(52*density), (int)(52*density)));
+                TextView name = new TextView(this);
+                String customName = prefs.getString("label_" + packageName, null);
+                name.setText(customName != null ? customName : String.valueOf(ri.loadLabel(getPackageManager())));
+                name.setTextColor(Color.WHITE);
+                name.setTextSize(11);
+                name.setGravity(Gravity.CENTER);
+                name.setMaxLines(2);
+                name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                name.setVisibility(prefs.getBoolean("hide_all_names", false) ? View.GONE : View.VISIBLE);
+                LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(-1, (int)(34*density));
+                nameLp.topMargin = (int)(4*density);
+                tile.addView(name, nameLp);
+                tile.setOnClickListener(v -> {
+                    Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+                            .setComponent(new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                    try { startActivity(launch); } catch (ActivityNotFoundException ignored) { }
+                    dialog.dismiss();
+                });
+                tile.setOnLongClickListener(v -> {
+                    String[] actions = {"修改 APP 名稱", systemFolder ? "移出系統資料夾" : "移出資料夾"};
+                    new AlertDialog.Builder(this).setTitle(name.getText()).setItems(actions, (menu, which) -> {
+                        if (which == 0) {
+                            EditText edit = new EditText(this);
+                            edit.setSingleLine(true);
+                            edit.setText(prefs.getString("label_" + packageName, String.valueOf(ri.loadLabel(getPackageManager()))));
+                            new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
+                                    .setNegativeButton("取消", null).setPositiveButton("儲存", (d, w) -> {
+                                        String value = edit.getText().toString().trim();
+                                        if (!value.isEmpty()) prefs.edit().putString("label_" + packageName, value).apply();
+                                        reloadApps(false);
+                                        dialog.dismiss();
+                                        showFolderContents(folderName, systemFolder);
+                                    }).show();
+                        } else {
+                            if (systemFolder) {
+                                java.util.HashSet<String> excluded = new java.util.HashSet<>(prefs.getStringSet(
+                                        "system_folder_excluded", java.util.Collections.<String>emptySet()));
+                                excluded.add(packageName);
+                                prefs.edit().putStringSet("system_folder_excluded", excluded).apply();
+                            } else {
+                                java.util.HashSet<String> updated = new java.util.HashSet<>(prefs.getStringSet(
+                                        "folder_apps_" + folderName, java.util.Collections.<String>emptySet()));
+                                updated.remove(packageName);
+                                prefs.edit().putStringSet("folder_apps_" + folderName, updated).apply();
+                            }
+                            reloadApps(false);
+                            dialog.dismiss();
+                            showFolderContents(folderName, systemFolder);
+                        }
+                    }).show();
+                    return true;
+                });
+                android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
+                lp.width = (int)(92*density);
+                lp.height = (int)(112*density);
+                grid.addView(tile, lp);
+            }
+            if (systemFolder) {
+                LinearLayout add = new LinearLayout(this);
+                add.setOrientation(LinearLayout.VERTICAL);
+                add.setGravity(Gravity.CENTER);
+                add.setFocusable(true);
+                add.setClickable(true);
+                TextView plus = new TextView(this);
+                plus.setText("+");
+                plus.setTextColor(Color.WHITE);
+                plus.setTextSize(42);
+                plus.setGravity(Gravity.CENTER);
+                add.addView(plus, new LinearLayout.LayoutParams((int)(52*density), (int)(52*density)));
+                TextView caption = new TextView(this);
+                caption.setText("新增 APP");
+                caption.setTextColor(Color.WHITE);
+                caption.setTextSize(11);
+                caption.setGravity(Gravity.CENTER);
+                add.addView(caption, new LinearLayout.LayoutParams(-1, (int)(34*density)));
+                add.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    showSystemFolderAssignment();
+                });
+                android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
+                lp.width = (int)(92*density);
+                lp.height = (int)(112*density);
+                grid.addView(add, lp);
+            }
+            if (matches.isEmpty() && !systemFolder) {
+                TextView empty = new TextView(this);
+                empty.setText("資料夾目前沒有 APP");
+                empty.setTextColor(Color.LTGRAY);
+                empty.setPadding((int)(12*density), (int)(18*density), (int)(12*density), (int)(18*density));
+                grid.addView(empty);
+            }
+        };
+        populate.run();
+        Button close = new Button(this);
+        close.setText("關閉");
+        close.setOnClickListener(v -> dialog.dismiss());
+        outer.addView(close, new LinearLayout.LayoutParams(-1, -2));
+        dialog.setContentView(outer);
+        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setLayout(
+                Math.min((int)(440*density), getResources().getDisplayMetrics().widthPixels - (int)(32*density)),
+                Math.min((int)(560*density), getResources().getDisplayMetrics().heightPixels - (int)(48*density)));
     }
 
     /** 管理系統資料夾：勾選的系統 APP 留在「系統」，取消勾選則移回桌面。 */
@@ -3806,37 +3967,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onOpenSystemFolder() {
-        List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
-                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
-        java.util.TreeMap<String, ResolveInfo> systemApps = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        java.util.Set<String> excluded = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
-                .getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
-        for (ResolveInfo ri : installed) {
-            if (ri.activityInfo == null || !ri.activityInfo.exported
-                    || ri.activityInfo.packageName.equals(getPackageName())) continue;
-            try {
-                android.content.pm.ApplicationInfo info = getPackageManager().getApplicationInfo(ri.activityInfo.packageName, 0);
-                if ((info.flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM
-                        | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-                        && !excluded.contains(ri.activityInfo.packageName))
-                    systemApps.put(ri.activityInfo.packageName, ri);
-            } catch (PackageManager.NameNotFoundException ignored) { }
-        }
-        List<ResolveInfo> apps = new ArrayList<>(systemApps.values());
-        if (apps.isEmpty()) {
-            Toast.makeText(this, "目前沒有可顯示的系統 APP", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String[] labels = new String[apps.size()];
-        for (int i = 0; i < apps.size(); i++) labels[i] = String.valueOf(apps.get(i).loadLabel(getPackageManager()));
-        new AlertDialog.Builder(this).setTitle("系統").setItems(labels, (dialog, which) -> {
-            ResolveInfo ri = apps.get(which);
-            Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                    .setComponent(new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-            try { startActivity(launch); }
-            catch (ActivityNotFoundException e) { Toast.makeText(this, "無法開啟此 APP", Toast.LENGTH_SHORT).show(); }
-        }).show();
+        showFolderContents("系統", true);
     }
 
     /**
