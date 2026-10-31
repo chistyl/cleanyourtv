@@ -797,16 +797,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
-        // Hide an entire app row as soon as its top edge enters the header boundary.
-        // INVISIBLE preserves RecyclerView measurements, Dock positions and focus navigation.
+        // Let the RecyclerView viewport clip rows naturally while they cross the header edge.
+        // Hide only rows that have completely passed above the viewport; this avoids the abrupt
+        // disappear/reappear jump when scrolling up and down across the first visible pixel.
         Runnable updateHeaderRowVisibility = () -> {
             if (grid == null) return;
             int boundary = grid.getPaddingTop();
             for (int i = 0; i < grid.getChildCount(); i++) {
                 View child = grid.getChildAt(i);
                 if (child == null) continue;
-                boolean rowTouchesHeader = child.getTop() < boundary;
-                child.setVisibility(rowTouchesHeader ? View.INVISIBLE : View.VISIBLE);
+                boolean rowFullyAboveHeader = child.getBottom() <= boundary;
+                child.setVisibility(rowFullyAboveHeader ? View.INVISIBLE : View.VISIBLE);
             }
         };
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -3864,6 +3865,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void renderWeeklyWeather(JSONArray dates, JSONArray codes, JSONArray highs, JSONArray lows, JSONArray rain) {
         if (weeklyWeatherDays == null || weeklyWeatherView == null) return;
+        // Never display a rounded empty shell when the forecast response has no usable daily data.
+        if (dates == null || codes == null || highs == null || lows == null
+                || dates.length() == 0 || codes.length() == 0 || highs.length() == 0 || lows.length() == 0) {
+            weeklyWeatherView.animate().cancel();
+            weeklyWeatherView.setVisibility(View.GONE);
+            return;
+        }
         weeklyWeatherDays.removeAllViews();
         weeklyWeatherDays.setOrientation(LinearLayout.VERTICAL);
         weeklyWeatherDays.setGravity(Gravity.CENTER_VERTICAL);
