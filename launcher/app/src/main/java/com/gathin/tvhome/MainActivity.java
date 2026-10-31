@@ -550,6 +550,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         clockBlock = findViewById(R.id.leftBlock);
         weeklyWeatherView = findViewById(R.id.weeklyWeather);
         weeklyWeatherDays = findViewById(R.id.weeklyWeatherDays);
+        // Keep the weather card visually below the clock, but outside leftBlock's measurement.
+        // Otherwise enabling the forecast shrinks the weighted grid viewport and changes Dock sizing/scroll geometry.
+        ViewGroup weatherParent = (ViewGroup) weeklyWeatherView.getParent();
+        weatherParent.removeView(weeklyWeatherView);
+        FrameLayout.LayoutParams weatherOverlayLp = new FrameLayout.LayoutParams(
+                clockBlock.getWidth(), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
+        int glassIndex = root.indexOfChild(findViewById(R.id.glass));
+        root.addView(weeklyWeatherView, Math.max(0, glassIndex), weatherOverlayLp);
+        Runnable placeWeatherOverlay = () -> {
+            if (weeklyWeatherView == null || clockBlock == null || root == null) return;
+            int[] rootPos = new int[2], clockPos = new int[2];
+            root.getLocationInWindow(rootPos);
+            clockBlock.getLocationInWindow(clockPos);
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) weeklyWeatherView.getLayoutParams();
+            lp.width = clockBlock.getWidth();
+            lp.leftMargin = clockPos[0] - rootPos[0];
+            lp.topMargin = clockPos[1] - rootPos[1] + clockBlock.getHeight() + (int) (10 * density);
+            weeklyWeatherView.setLayoutParams(lp);
+        };
+        clockBlock.addOnLayoutChangeListener((v, l, t, rr, b, ol, ot, orr, ob) -> placeWeatherOverlay.run());
+        root.addOnLayoutChangeListener((v, l, t, rr, b, ol, ot, orr, ob) -> placeWeatherOverlay.run());
+        root.post(placeWeatherOverlay);
         // The forecast is informational only: never let TV focus, hover, pressed or ripple states
         // brighten the entire weather panel when the remote cursor passes over it.
         weeklyWeatherView.setFocusable(false);
