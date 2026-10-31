@@ -3670,7 +3670,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (folderMode[0]) {
                     String folder = folders.get(position);
                     image.setImageResource(android.R.drawable.ic_menu_agenda);
-                    label.setText(folder); checked = folderHidden[position];
+                    label.setText("系統".equals(folder)
+                            ? prefs.getString("system_folder_label", "系統") : folder);
+                    checked = folderHidden[position];
                 } else {
                     String pkg = packages.get(position);
                     ResolveInfo ri = appMap.get(pkg);
