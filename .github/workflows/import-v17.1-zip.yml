@@ -1,0 +1,59 @@
+name: Import CleanYourTV V17.1 ZIP
+
+on:
+  push:
+    branches:
+      - v17.1-update
+    paths:
+      - 'CleanYourTV-V17.1-source*.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: v17.1-update
+          fetch-depth: 0
+
+      - name: Extract V17.1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="$(find . -maxdepth 1 -type f -name 'CleanYourTV-V17.1-source*.zip' | head -n 1)"
+          if [ -z "$ZIP_FILE" ]; then
+            echo "V17.1 ZIP not found in repository root"
+            exit 1
+          fi
+          mkdir -p /tmp/v171-source
+          unzip -q "$ZIP_FILE" -d /tmp/v171-source
+          if [ -d /tmp/v171-source/cleanyourtv-main/launcher ]; then
+            SRC="/tmp/v171-source/cleanyourtv-main"
+          elif [ -d /tmp/v171-source/launcher ]; then
+            SRC="/tmp/v171-source"
+          else
+            echo "Cannot find launcher project in ZIP"
+            find /tmp/v171-source -maxdepth 3 -type d | head -n 80
+            exit 1
+          fi
+          rsync -a --delete "$SRC/launcher/" launcher/
+          if [ -f "$SRC/V17_1_CHANGELOG.md" ]; then
+            cp "$SRC/V17_1_CHANGELOG.md" ./V17_1_CHANGELOG.md
+          fi
+          rm -f "$ZIP_FILE"
+
+      - name: Commit imported source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A launcher V17_1_CHANGELOG.md CleanYourTV-V17.1-source*.zip
+          if git diff --cached --quiet; then
+            echo "No source changes detected"
+            exit 0
+          fi
+          git commit -m "Import complete CleanYourTV V17.1 source"
+          git push origin HEAD:v17.1-update
