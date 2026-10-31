@@ -3685,6 +3685,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked);
                 row.addView(check); row.setFocusable(true);
+                GradientDrawable itemBg = new GradientDrawable();
+                itemBg.setColor(Color.TRANSPARENT); itemBg.setCornerRadius(10f * density);
+                row.setBackground(itemBg);
+                row.setOnFocusChangeListener((v, focused) -> {
+                    GradientDrawable focusBg = new GradientDrawable();
+                    focusBg.setColor(focused ? 0x33FFFFFF : Color.TRANSPARENT);
+                    focusBg.setCornerRadius(10f * density); v.setBackground(focusBg);
+                });
                 return row;
             }
         };
@@ -4552,7 +4560,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                 reloadApps(false);
                             }).show();
                 });
-                addSettingsMenuRow(folderRows, folderPopup, "移動", this::toggleReorder);
+                addSettingsMenuRow(folderRows, folderPopup, "移動", () -> {
+                    if (!beginReorder()) return;
+                    int at = adapter.positionOf(key);
+                    if (at < 0) return;
+                    focusTile(at);
+                    pickUp(at);
+                    Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+                });
             }
             addSettingsMenuRow(folderRows, folderPopup, hidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
                 folderPrefs.edit().putBoolean("hide_all_names", !hidden).apply();
