@@ -329,7 +329,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             boolean inFolder = false;
             for (String folder : homePrefs.getStringSet("home_folders", Collections.<String>emptySet()))
                 if (homePrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()).contains(pkg)) { inFolder = true; break; }
-            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder || inSystemFolder
+            // An explicit Home shortcut always wins over automatic System-folder placement.
+            // This lets an owner surface a preinstalled/system app directly on the desktop from the library.
+            if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder
+                    || (inSystemFolder && !added.contains(pkg))
                     || homePrefs.getBoolean("home_hidden_" + pkg, false)
                     || !LibraryApps.visible(true, hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
