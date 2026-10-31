@@ -3777,6 +3777,94 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }).show();
     }
 
+    /** APP picker opened from a folder's own "+" tile; rows include native TV artwork. */
+    private void showFolderAppAssignment(String folder) {
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        List<ResolveInfo> found = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        java.util.TreeMap<String, ResolveInfo> candidates = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : found) {
+            if (ri.activityInfo != null && ri.activityInfo.exported
+                    && !ri.activityInfo.packageName.equals(getPackageName()))
+                candidates.put(ri.activityInfo.packageName, ri);
+        }
+        final ArrayList<String> packages = new ArrayList<>(candidates.keySet());
+        final boolean[] checked = new boolean[packages.size()];
+        Set<String> current = prefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet());
+        for (int i = 0; i < packages.size(); i++) checked[i] = current.contains(packages.get(i));
+
+        android.widget.ListView list = new android.widget.ListView(this);
+        list.setDividerHeight((int) density);
+        list.setLayoutParams(new ViewGroup.LayoutParams(-1, (int) (440 * density)));
+        android.widget.BaseAdapter rows = new android.widget.BaseAdapter() {
+            @Override public int getCount() { return packages.size(); }
+            @Override public Object getItem(int position) { return packages.get(position); }
+            @Override public long getItemId(int position) { return position; }
+            @Override public View getView(int position, View convertView, ViewGroup parent) {
+                LinearLayout row = convertView instanceof LinearLayout ? (LinearLayout) convertView
+                        : new LinearLayout(MainActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding((int)(12*density), (int)(6*density), (int)(12*density), (int)(6*density));
+                row.removeAllViews();
+                ResolveInfo ri = candidates.get(packages.get(position));
+                ImageView image = new ImageView(MainActivity.this);
+                image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                image.setImageDrawable(loadTvFolderArtwork(ri));
+                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(42*density)));
+                TextView label = new TextView(MainActivity.this);
+                String custom = prefs.getString("label_" + packages.get(position), null);
+                label.setText(custom != null ? custom : String.valueOf(ri.loadLabel(getPackageManager())));
+                label.setTextColor(Color.WHITE);
+                label.setTextSize(15);
+                LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                textLp.leftMargin = (int)(12*density);
+                row.addView(label, textLp);
+                android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
+                check.setFocusable(false);
+                check.setClickable(false);
+                check.setChecked(checked[position]);
+                row.addView(check);
+                row.setFocusable(true);
+                return row;
+            }
+        };
+        list.setAdapter(rows);
+        list.setOnItemClickListener((parent, view, position, id) -> {
+            checked[position] = !checked[position];
+            rows.notifyDataSetChanged();
+        });
+        new AlertDialog.Builder(this).setTitle("加入「" + folder + "」")
+                .setView(list).setNegativeButton("取消", null)
+                .setPositiveButton("儲存", (dialog, which) -> {
+                    java.util.LinkedHashSet<String> chosen = new java.util.LinkedHashSet<>();
+                    for (int i = 0; i < packages.size(); i++) if (checked[i]) chosen.add(packages.get(i));
+                    SharedPreferences.Editor edit = prefs.edit().putStringSet("folder_apps_" + folder, chosen);
+                    for (String other : prefs.getStringSet("home_folders", Collections.<String>emptySet())) {
+                        if (folder.equals(other)) continue;
+                        java.util.HashSet<String> set = new java.util.HashSet<>(prefs.getStringSet(
+                                "folder_apps_" + other, Collections.<String>emptySet()));
+                        set.removeAll(chosen);
+                        edit.putStringSet("folder_apps_" + other, set);
+                    }
+                    java.util.HashSet<String> systemAdded = new java.util.HashSet<>(prefs.getStringSet(
+                            "system_folder_added", Collections.<String>emptySet()));
+                    systemAdded.removeAll(chosen);
+                    java.util.HashSet<String> systemExcluded = new java.util.HashSet<>(prefs.getStringSet(
+                            "system_folder_excluded", Collections.<String>emptySet()));
+                    for (String pkg : chosen) {
+                        try {
+                            int flags = getPackageManager().getApplicationInfo(pkg, 0).flags;
+                            if ((flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0)
+                                systemExcluded.add(pkg);
+                        } catch (PackageManager.NameNotFoundException ignored) { }
+                    }
+                    edit.putStringSet("system_folder_added", systemAdded)
+                            .putStringSet("system_folder_excluded", systemExcluded).apply();
+                    reloadApps(false);
+                }).show();
+    }
+
     private void showSystemFolderComingSoon() {
         Toast.makeText(this, "系統資料夾功能接續開發中", Toast.LENGTH_SHORT).show();
     }
@@ -3946,7 +4034,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 lp.height = (int)(112*density);
                 grid.addView(tile, lp);
             }
-            if (systemFolder) {
+            // Every folder has the same final "+" tile. The system folder uses its system-app
+            // selector; user folders open a picker scoped to the folder currently being viewed.
+            {
                 LinearLayout add = new LinearLayout(this);
                 add.setOrientation(LinearLayout.VERTICAL);
                 add.setGravity(Gravity.CENTER);
@@ -3958,15 +4048,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 plus.setTextSize(42);
                 plus.setGravity(Gravity.CENTER);
                 add.addView(plus, new LinearLayout.LayoutParams((int)(52*density), (int)(52*density)));
-                TextView caption = new TextView(this);
-                caption.setText("新增 APP");
-                caption.setTextColor(Color.WHITE);
-                caption.setTextSize(11);
-                caption.setGravity(Gravity.CENTER);
-                add.addView(caption, new LinearLayout.LayoutParams(-1, (int)(34*density)));
                 add.setOnClickListener(v -> {
                     dialog.dismiss();
-                    showSystemFolderAssignment();
+                    if (systemFolder) showSystemFolderAssignment();
+                    else showFolderAppAssignment(folderName);
                 });
                 android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
                 lp.width = (int)(92*density);
