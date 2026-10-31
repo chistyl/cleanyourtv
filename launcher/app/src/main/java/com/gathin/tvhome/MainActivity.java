@@ -3702,7 +3702,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 row.setOnClickListener(v -> {
                     if (folderMode[0]) folderHidden[position] = !folderHidden[position];
                     else appHidden[position] = !appHidden[position];
-                    adapter.notifyDataSetChanged();
+                    ((android.widget.BaseAdapter) ((android.widget.ListView) parent).getAdapter()).notifyDataSetChanged();
                 });
                 GradientDrawable itemBg = new GradientDrawable();
                 itemBg.setColor(Color.TRANSPARENT); itemBg.setCornerRadius(10f * density);
@@ -3826,7 +3826,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 row.addView(check);
                 row.setFocusable(true);
                 row.setClickable(true);
-                row.setOnClickListener(v -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
+                row.setOnClickListener(v -> { checked[position] = !checked[position]; ((android.widget.BaseAdapter) ((android.widget.ListView) parent).getAdapter()).notifyDataSetChanged(); });
                 return row;
             }
         };
