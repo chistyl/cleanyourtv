@@ -3761,63 +3761,77 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         weeklyWeatherDays.setOrientation(LinearLayout.VERTICAL);
         weeklyWeatherDays.setGravity(Gravity.CENTER_VERTICAL);
 
-        SharedPreferences weatherPrefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
-        String city = weatherPrefs.getString("city", "桃園市");
         TextView heading = new TextView(this);
-        heading.setText("一週天氣・" + city);
+        heading.setText("一週天氣・桃園市");
         heading.setTextColor(Color.WHITE);
         heading.setTextSize(16);
         heading.setTypeface(null, android.graphics.Typeface.BOLD);
-        heading.setPadding((int)(4*density), (int)(2*density), (int)(4*density), (int)(5*density));
+        heading.setPadding((int)(4*density), (int)(2*density), (int)(4*density), (int)(8*density));
         weeklyWeatherDays.addView(heading, new LinearLayout.LayoutParams(-1, -2));
 
+        LinearLayout forecast = new LinearLayout(this);
+        forecast.setOrientation(LinearLayout.HORIZONTAL);
+        forecast.setGravity(Gravity.CENTER_VERTICAL);
         int count = Math.min(7, dates.length());
         for (int i = 0; i < count; i++) {
             try {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
                 int code = codes.optInt(i, -1);
-                LinearLayout row = new LinearLayout(this);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(Gravity.CENTER_VERTICAL);
-                row.setPadding((int)(4*density), (int)(3*density), (int)(4*density), (int)(3*density));
+
+                LinearLayout dayColumn = new LinearLayout(this);
+                dayColumn.setOrientation(LinearLayout.VERTICAL);
+                dayColumn.setGravity(Gravity.CENTER);
+                dayColumn.setPadding((int)(4*density), (int)(4*density), (int)(4*density), (int)(4*density));
 
                 TextView dateView = new TextView(this);
                 dateView.setText(day);
                 dateView.setTextColor(Color.WHITE);
                 dateView.setTextSize(14);
-                dateView.setGravity(Gravity.CENTER_VERTICAL);
-                row.addView(dateView, new LinearLayout.LayoutParams((int)(58*density), -2));
+                dateView.setGravity(Gravity.CENTER);
+                dayColumn.addView(dateView, new LinearLayout.LayoutParams(-1, -2));
 
+                LinearLayout conditionLine = new LinearLayout(this);
+                conditionLine.setOrientation(LinearLayout.HORIZONTAL);
+                conditionLine.setGravity(Gravity.CENTER);
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(19);
+                iconView.setTextSize(20);
                 iconView.setGravity(Gravity.CENTER);
-                row.addView(iconView, new LinearLayout.LayoutParams((int)(34*density), -2));
-
+                conditionLine.addView(iconView, new LinearLayout.LayoutParams(-2, -2));
                 TextView condition = new TextView(this);
                 condition.setText(weatherLabel(code));
                 condition.setTextColor(0xFFE8EBF0);
-                condition.setTextSize(14);
+                condition.setTextSize(13);
                 condition.setGravity(Gravity.CENTER_VERTICAL);
-                row.addView(condition, new LinearLayout.LayoutParams((int)(94*density), -2));
+                condition.setMaxLines(1);
+                condition.setEllipsize(TextUtils.TruncateAt.END);
+                LinearLayout.LayoutParams conditionLp = new LinearLayout.LayoutParams(-2, -2);
+                conditionLp.leftMargin = (int)(3*density);
+                conditionLine.addView(condition, conditionLp);
+                dayColumn.addView(conditionLine, new LinearLayout.LayoutParams(-1, -2));
 
                 TextView temperature = new TextView(this);
-                temperature.setText(Math.round(highs.optDouble(i)) + "° / " + Math.round(lows.optDouble(i)) + "°");
+                temperature.setText(Math.round(highs.optDouble(i)) + " / " + Math.round(lows.optDouble(i)));
                 temperature.setTextColor(Color.WHITE);
                 temperature.setTextSize(14);
-                temperature.setGravity(Gravity.CENTER_VERTICAL);
-                row.addView(temperature, new LinearLayout.LayoutParams((int)(112*density), -2));
+                temperature.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams tempLp = new LinearLayout.LayoutParams(-1, -2);
+                tempLp.topMargin = (int)(3*density);
+                dayColumn.addView(temperature, tempLp);
 
                 TextView precipitation = new TextView(this);
                 precipitation.setText("降雨 " + (rain != null && !rain.isNull(i) ? rain.optInt(i) + "%" : "--"));
                 precipitation.setTextColor(0xFFD5D9E0);
-                precipitation.setTextSize(14);
-                precipitation.setGravity(Gravity.CENTER_VERTICAL);
-                row.addView(precipitation, new LinearLayout.LayoutParams((int)(94*density), -2));
-                weeklyWeatherDays.addView(row, new LinearLayout.LayoutParams(-1, -2));
+                precipitation.setTextSize(12);
+                precipitation.setGravity(Gravity.CENTER);
+                dayColumn.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
+
+                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                forecast.addView(dayColumn, columnLp);
             } catch (Exception ignored) { }
         }
+        weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
         weeklyWeatherView.setVisibility(View.VISIBLE);
     }
 
