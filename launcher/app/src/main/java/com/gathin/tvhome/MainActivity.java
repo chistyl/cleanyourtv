@@ -786,12 +786,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 boolean enabled = getSharedPreferences("weekly_weather", MODE_PRIVATE)
                         .getBoolean("enabled", false);
                 if (!enabled) {
-                    weeklyWeatherView.setVisibility(View.INVISIBLE);
+                    weeklyWeatherView.setVisibility(View.GONE);
                     return;
                 }
                 if (hidden) {
                     weeklyWeatherView.animate().cancel();
-                    weeklyWeatherView.setVisibility(View.GONE);
+                    // INVISIBLE keeps the header and RecyclerView geometry stable while scrolling.
+                    weeklyWeatherView.setVisibility(View.INVISIBLE);
                     weeklyWeatherView.setAlpha(1f);
                 } else {
                     weeklyWeatherView.setAlpha(0f);
