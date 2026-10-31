@@ -612,6 +612,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
+        // Clip TV artwork to the same rounded 16:9 silhouette used by modern Android TV app tiles.
+        GradientDrawable bannerOutline = new GradientDrawable();
+        bannerOutline.setColor(Color.TRANSPARENT);
+        bannerOutline.setCornerRadius(12f * ctx.getResources().getDisplayMetrics().density);
+        h.banner.setBackground(bannerOutline);
+        h.banner.setClipToOutline(true);
         if (uniformTiles && e.banner == null) {
             if (e.backdrop == null) e.backdrop = backdrop(e.icon, ambientColorAt(position));
             h.card.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, e.backdrop));
