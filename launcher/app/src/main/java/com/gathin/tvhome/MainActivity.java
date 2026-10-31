@@ -212,6 +212,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View clockBlock;
     private HorizontalScrollView weeklyWeatherView;
     private LinearLayout weeklyWeatherDays;
+    private boolean weatherHiddenByScroll;
     private View btnInputs;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
@@ -761,6 +762,45 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     glassScrollShiftX -= dx;
                     glass.setTranslationX(glass.getTranslationX() - dx);
                 }
+            }
+        });
+
+        // Keep the weather card out of the way while the app grid is scrolled upward.
+        // It returns only when the grid returns to its top, so it cannot cover the top controls.
+        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            private void syncWeatherVisibility(RecyclerView rv) {
+                if (weeklyWeatherView == null) return;
+                boolean hidden = rv.computeVerticalScrollOffset() > Math.max(1, (int)(8 * density));
+                if (weatherHiddenByScroll == hidden) return;
+                weatherHiddenByScroll = hidden;
+                boolean enabled = getSharedPreferences("weekly_weather", MODE_PRIVATE)
+                        .getBoolean("enabled", false);
+                if (!enabled) {
+                    weeklyWeatherView.setVisibility(View.GONE);
+                    return;
+                }
+                if (hidden) {
+                    weeklyWeatherView.animate().cancel();
+                    weeklyWeatherView.setVisibility(View.GONE);
+                    weeklyWeatherView.setAlpha(1f);
+                } else {
+                    weeklyWeatherView.setAlpha(0f);
+                    weeklyWeatherView.setVisibility(View.VISIBLE);
+                    weeklyWeatherView.animate().alpha(1f).setDuration(180).start();
+                }
+            }
+            @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                syncWeatherVisibility(rv);
+            }
+            @Override public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) syncWeatherVisibility(rv);
+            }
+        });
+        grid.post(() -> {
+            if (grid != null && weeklyWeatherView != null) {
+                boolean hidden = grid.computeVerticalScrollOffset() > Math.max(1, (int)(8 * density));
+                weatherHiddenByScroll = hidden;
+                if (hidden) weeklyWeatherView.setVisibility(View.GONE);
             }
         });
 
@@ -3655,7 +3695,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weeklyWeatherView == null) return;
         SharedPreferences prefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean("enabled", false);
-        weeklyWeatherView.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        weeklyWeatherView.setVisibility(enabled && !weatherHiddenByScroll ? View.VISIBLE : View.GONE);
         if (!enabled) return;
         showWeeklyWeatherStatus("一週天氣  ·  正在取得預報…");
         loadWeeklyWeather();
