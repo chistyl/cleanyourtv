@@ -4692,21 +4692,32 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (i - folderColumns >= 0) item.setNextFocusUpId(folderFocusTiles.get(i - folderColumns).getId());
             if (i + folderColumns < folderFocusTiles.size()) item.setNextFocusDownId(folderFocusTiles.get(i + folderColumns).getId());
             item.setOnKeyListener((v, keyCode, event) -> {
-                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                int action = event.getAction();
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
+                        || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                    if (action == KeyEvent.ACTION_UP) {
+                        v.performClick();
+                        return true;
+                    }
+                    return true;
+                }
+                if (action != KeyEvent.ACTION_DOWN) return false;
                 int index = folderFocusTiles.indexOf(v);
                 if (index < 0) return false;
                 int target = -1;
                 if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && index % folderColumns > 0) target = index - 1;
-                else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && index % folderColumns < folderColumns - 1 && index + 1 < folderFocusTiles.size()) target = index + 1;
+                else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && index % folderColumns < folderColumns - 1
+                        && index + 1 < folderFocusTiles.size()) target = index + 1;
                 else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && index - folderColumns >= 0) target = index - folderColumns;
                 else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && index + folderColumns < folderFocusTiles.size()) target = index + folderColumns;
                 if (target >= 0) {
                     View next = folderFocusTiles.get(target);
                     next.requestFocus();
-                    return true;
-                }
-                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
-                    v.performClick();
+                    next.post(() -> {
+                        android.graphics.Rect rect = new android.graphics.Rect();
+                        next.getDrawingRect(rect);
+                        scroll.requestChildRectangleOnScreen(next, rect, true);
+                    });
                     return true;
                 }
                 return false;
