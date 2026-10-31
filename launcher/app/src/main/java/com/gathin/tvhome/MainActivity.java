@@ -786,7 +786,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 boolean enabled = getSharedPreferences("weekly_weather", MODE_PRIVATE)
                         .getBoolean("enabled", false);
                 if (!enabled) {
-                    weeklyWeatherView.setVisibility(View.GONE);
+                    weeklyWeatherView.setVisibility(View.INVISIBLE);
                     return;
                 }
                 if (hidden) {
@@ -810,7 +810,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (grid != null && weeklyWeatherView != null) {
                 boolean hidden = grid.computeVerticalScrollOffset() > Math.max(1, (int)(8 * density));
                 weatherHiddenByScroll = hidden;
-                if (hidden) weeklyWeatherView.setVisibility(View.GONE);
+                if (hidden) weeklyWeatherView.setVisibility(View.INVISIBLE);
             }
         });
 
@@ -2503,7 +2503,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
             if (position >= lastRowStart) {
-                if (adapter.isLibraryAt(count)) focusLibrary();
+                // Stop at the final real app tile. Do not send Down into the trailing
+                // full-width App Library row, which appears as an unknown blank focus area.
                 return true;
             }
             target = Math.min(position + COLUMNS, count - 1);
