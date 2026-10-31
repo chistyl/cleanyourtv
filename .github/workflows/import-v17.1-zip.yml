@@ -1,6 +1,7 @@
 name: Import CleanYourTV V17.1 ZIP
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - v17.1-update
