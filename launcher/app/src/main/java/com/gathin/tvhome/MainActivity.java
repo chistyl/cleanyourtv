@@ -4603,15 +4603,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 tile.addView(tvCard, cardLp);
                 // 焦點只保留遙控器導覽，不改變 TV 卡片外型、比例、邊框或大小。
                 tile.setOnFocusChangeListener((v, focused) -> {
-                    // 電視遙控器焦點必須清楚可見：放大卡片、提高層級並使用高對比亮青色外框。
-                    float scale = focused ? 1.055f : 1f;
+                    // High-contrast TV focus: obvious scale, amber outline and tinted card.
+                    float scale = focused ? 1.12f : 1f;
                     tvCard.setScaleX(scale);
                     tvCard.setScaleY(scale);
-                    tvCard.setTranslationZ(focused ? 14f * density : 0f);
-                    tvCard.setElevation(focused ? 14f * density : 0f);
-                    cardSurface.setColor(focused ? 0xFFEAF6FF : savedBackground);
-                    cardSurface.setStroke(Math.max(1, (int)(focused ? 4*density : density)),
-                            focused ? 0xFF36C5F0 : 0x24FFFFFF);
+                    tvCard.setTranslationZ(focused ? 24f * density : 0f);
+                    tvCard.setElevation(focused ? 24f * density : 0f);
+                    cardSurface.setColor(focused ? 0xFF263B55 : savedBackground);
+                    cardSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
+                            focused ? 0xFFFFD54F : 0x24FFFFFF);
+                    name.setTextColor(focused ? 0xFFFFE082 : Color.WHITE);
+                    name.setTypeface(null, focused ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
                 });
                 tile.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
@@ -4673,14 +4675,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 addLabelLp.topMargin = (int)(3*density);
                 add.addView(addLabelSpacer, addLabelLp);
                 add.setOnFocusChangeListener((v, focused) -> {
-                    float scale = focused ? 1.055f : 1f;
+                    float scale = focused ? 1.12f : 1f;
                     addCard.setScaleX(scale);
                     addCard.setScaleY(scale);
-                    addCard.setTranslationZ(focused ? 14f * density : 0f);
-                    addCard.setElevation(focused ? 14f * density : 0f);
+                    addCard.setTranslationZ(focused ? 24f * density : 0f);
+                    addCard.setElevation(focused ? 24f * density : 0f);
                     addSurface.setColor(focused ? 0xFF46566B : 0xFF343B47);
-                    addSurface.setStroke(Math.max(1, (int)(focused ? 4*density : density)),
-                            focused ? 0xFF36C5F0 : 0x24FFFFFF);
+                    addSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
+                            focused ? 0xFFFFD54F : 0x24FFFFFF);
                 });
                 add.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
