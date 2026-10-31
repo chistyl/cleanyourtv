@@ -55,6 +55,7 @@ import java.io.InputStream;
  * (by label), the rest is alphabetical.
  */
 public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    static final String ICON_SIZE_KEY = "app_icon_size_percent";
 
     interface TileListener {
         void onTileFocused(int position, View card);
@@ -316,6 +317,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
             // redraw the tile name as something else (#117).
             SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            int globalIconAdjustment = Math.max(-50, Math.min(200, custom.getInt(ICON_SIZE_KEY, 0)));
             String customLabel = custom.getString("label_" + pkg, null);
             String label = card != null ? card.label : Cards.cleanLabel(
                     customLabel != null ? customLabel : (appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm))), pkg);
@@ -332,7 +334,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 if (icon == null) icon = ri.loadIcon(pm);
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
-                int iconAdjustment = custom.getInt("icon_scale_adjust_" + pkg, 0);
+                int iconAdjustment = custom.getInt("icon_scale_adjust_" + pkg, 0) + globalIconAdjustment;
                 float iconScale = Math.max(0.10f, Math.min(3.75f, 1.25f * (1f + iconAdjustment / 100f)));
                 // A custom icon or an explicit size adjustment switches this tile to icon artwork,
                 // otherwise keep the app's native TV banner when one exists.
