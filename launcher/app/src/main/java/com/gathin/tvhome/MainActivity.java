@@ -4222,7 +4222,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         new AlertDialog.Builder(this).setTitle("調整圖標大小（-50% ～ +200%）")
                 .setView(panel).setNegativeButton("取消", null)
                 .setNeutralButton("恢復預設 125%", (dialog, which) -> {
-                    prefs.edit().remove("icon_scale_adjust_" + pkg).remove("icon_scale_" + pkg).apply();
+                    prefs.edit().remove("icon_scale_adjust_" + pkg).remove("icon_scale_" + pkg)
+                            .remove("icon_scale_override_" + pkg).apply();
                     reloadApps(false);
                 })
                 .setPositiveButton("套用", (dialog, which) -> {
