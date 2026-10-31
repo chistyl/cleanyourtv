@@ -3738,7 +3738,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             JSONArray rain = daily.optJSONArray("precipitation_probability_max");
             SpannableStringBuilder out = new SpannableStringBuilder("一週天氣  ·  " + place + "\n");
             out.setSpan(new StyleSpan(Typeface.BOLD), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            out.setSpan(new RelativeSizeSpan(1.08f), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            out.setSpan(new RelativeSizeSpan(1.12f), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             for (int i = 0; i < Math.min(7, dates.length()); i++) {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
@@ -3746,7 +3746,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 out.append(day).append("   ");
                 int iconStart = out.length();
                 out.append(weatherIcon(code));
-                out.setSpan(new RelativeSizeSpan(1.65f), iconStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.setSpan(new RelativeSizeSpan(1.75f), iconStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 out.append("   ").append(weatherLabel(code)).append("   ")
                         .append(String.valueOf(Math.round(highs.optDouble(i)))).append("° / ")
                         .append(String.valueOf(Math.round(lows.optDouble(i)))).append("°");
@@ -3756,8 +3756,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             weatherHandler.post(() -> {
                 if (weeklyWeatherView != null) {
                     weeklyWeatherView.setTypeface(Typeface.DEFAULT);
-                    weeklyWeatherView.setTextSize(15f);
-                    weeklyWeatherView.setLineSpacing(7f, 1.08f);
+                    weeklyWeatherView.setTextSize(16f);
+                    weeklyWeatherView.setLineSpacing(9f, 1.12f);
+                    weeklyWeatherView.setPadding((int)(18 * getResources().getDisplayMetrics().density),
+                            (int)(12 * getResources().getDisplayMetrics().density),
+                            (int)(18 * getResources().getDisplayMetrics().density),
+                            (int)(12 * getResources().getDisplayMetrics().density));
                     weeklyWeatherView.setText(out);
                 }
             });
@@ -4471,12 +4475,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.setBackgroundColor(Color.TRANSPARENT);
         grid.setForeground(null);
         int availableWidthDp = Math.max(320, (int) (getResources().getDisplayMetrics().widthPixels / density) - 64);
-        int folderColumns = 3;
-        int folderTileDp = Math.max(96, Math.min(260, (availableWidthDp - 48) / folderColumns));
+        int folderColumns = 5;
+        int folderTileDp = Math.max(72, Math.min(156, (availableWidthDp - 48) / folderColumns));
         grid.setColumnCount(folderColumns);
         grid.setUseDefaultMargins(false);
-        // 資料夾格線橫向填滿內容區，四欄等寬分配，確保第一欄與最後一欄
-        // 到左右邊界的留白一致，不再只靠左排列固定寬度卡片。
+        // 五欄等寬填滿內容區，GridLayout 權重分配確保左右邊界留白一致。
         grid.setAlignmentMode(android.widget.GridLayout.ALIGN_BOUNDS);
         grid.setColumnOrderPreserved(false);
         grid.setFocusable(false);
@@ -4628,13 +4631,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         };
         populate.run();
-        // 明確設定遙控器焦點路徑：每列三個，左右相鄰、上下對應同欄，避免焦點跳失。
+        // 明確設定遙控器焦點路徑：每列五個，左右相鄰、上下對應同欄。
         for (int i = 0; i < folderFocusTiles.size(); i++) {
             View item = folderFocusTiles.get(i);
             if (i % folderColumns > 0) item.setNextFocusLeftId(folderFocusTiles.get(i - 1).getId());
             if (i % folderColumns < folderColumns - 1 && i + 1 < folderFocusTiles.size()) item.setNextFocusRightId(folderFocusTiles.get(i + 1).getId());
             if (i - folderColumns >= 0) item.setNextFocusUpId(folderFocusTiles.get(i - folderColumns).getId());
             if (i + folderColumns < folderFocusTiles.size()) item.setNextFocusDownId(folderFocusTiles.get(i + folderColumns).getId());
+            item.setOnKeyListener((v, keyCode, event) -> {
+                if (event.getAction() == KeyEvent.ACTION_UP && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)) {
+                    return v.performClick();
+                }
+                return false;
+            });
         }
         Button close = new Button(this);
         close.setText("關閉");
