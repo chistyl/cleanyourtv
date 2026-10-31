@@ -3796,9 +3796,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 conditionLine.setGravity(Gravity.CENTER);
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(20);
+                iconView.setTextSize(34);
                 iconView.setGravity(Gravity.CENTER);
                 conditionLine.addView(iconView, new LinearLayout.LayoutParams(-2, -2));
+                dayColumn.addView(conditionLine, new LinearLayout.LayoutParams(-1, -2));
                 TextView condition = new TextView(this);
                 condition.setText(weatherLabel(code));
                 condition.setTextColor(0xFFE8EBF0);
@@ -3806,10 +3807,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 condition.setGravity(Gravity.CENTER_VERTICAL);
                 condition.setMaxLines(1);
                 condition.setEllipsize(TextUtils.TruncateAt.END);
-                LinearLayout.LayoutParams conditionLp = new LinearLayout.LayoutParams(-2, -2);
-                conditionLp.leftMargin = (int)(3*density);
-                conditionLine.addView(condition, conditionLp);
-                dayColumn.addView(conditionLine, new LinearLayout.LayoutParams(-1, -2));
+                condition.setGravity(Gravity.CENTER);
+                condition.setTextSize(13);
+                condition.setMaxLines(1);
+                condition.setEllipsize(TextUtils.TruncateAt.END);
+                dayColumn.addView(condition, new LinearLayout.LayoutParams(-1, -2));
 
                 TextView temperature = new TextView(this);
                 temperature.setText(Math.round(highs.optDouble(i)) + " / " + Math.round(lows.optDouble(i)));
