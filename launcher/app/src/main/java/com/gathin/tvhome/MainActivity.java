@@ -775,10 +775,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
-        // Hide the weather panel completely while the app grid is scrolled.
-        // GONE releases its height so the RecyclerView gets the full screen for app navigation.
-        // Restore it only after the user returns to the very top; this avoids stealing space
-        // from the last rows and prevents focus from landing below the visible app list.
+        // Hide the weather panel visually while preserving its measured height.
+        // Changing a header child to GONE resizes the weighted RecyclerView during DPAD navigation;
+        // the grid then recalculates tile height and top padding mid-scroll, causing focus jumps.
+        // INVISIBLE keeps the grid viewport and focus geometry stable.
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             private void hideWeatherForGrid() {
                 if (weeklyWeatherView == null || weatherHiddenByScroll) return;
@@ -787,7 +787,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (!enabled) return;
                 weatherHiddenByScroll = true;
                 weeklyWeatherView.animate().cancel();
-                weeklyWeatherView.setVisibility(View.GONE);
+                weeklyWeatherView.setVisibility(View.INVISIBLE);
                 weeklyWeatherView.setAlpha(1f);
             }
             private void restoreWeatherAtTop(RecyclerView rv) {
@@ -797,9 +797,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         .getBoolean("enabled", false);
                 if (!enabled) return;
                 weatherHiddenByScroll = false;
-                weeklyWeatherView.setAlpha(0f);
+                weeklyWeatherView.setAlpha(1f);
                 weeklyWeatherView.setVisibility(View.VISIBLE);
-                weeklyWeatherView.animate().alpha(1f).setDuration(180).start();
             }
             @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 if (dy > 0) hideWeatherForGrid();
@@ -813,7 +812,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (grid != null && weeklyWeatherView != null
                     && grid.canScrollVertically(-1)) {
                 weatherHiddenByScroll = true;
-                weeklyWeatherView.setVisibility(View.GONE);
+                weeklyWeatherView.setVisibility(View.INVISIBLE);
             }
         });
 
@@ -3709,7 +3708,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weeklyWeatherView == null) return;
         SharedPreferences prefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean("enabled", false);
-        weeklyWeatherView.setVisibility(enabled && !weatherHiddenByScroll ? View.VISIBLE : View.GONE);
+        weeklyWeatherView.setVisibility(!enabled ? View.GONE : (weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE));
         if (!enabled) return;
         showWeeklyWeatherStatus("一週天氣  ·  正在取得預報…");
         loadWeeklyWeather();
