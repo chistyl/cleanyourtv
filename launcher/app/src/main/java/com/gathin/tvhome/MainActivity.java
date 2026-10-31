@@ -65,6 +65,8 @@ import android.view.Window;
 import android.view.animation.AnimationUtils;
 import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
+import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -3945,22 +3947,35 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         java.util.ArrayList<String> packages = new java.util.ArrayList<>(candidates.keySet());
         String[] labels = new String[packages.size()];
         boolean[] checked = new boolean[packages.size()];
-        java.util.Set<String> excluded = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
-                .getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        Set<String> excluded = prefs.getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
+        Set<String> added = prefs.getStringSet("system_folder_added", java.util.Collections.<String>emptySet());
         for (int i=0;i<packages.size();i++) {
             ResolveInfo ri = candidates.get(packages.get(i));
             labels[i] = String.valueOf(ri.loadLabel(getPackageManager()));
             try {
                 int flags = getPackageManager().getApplicationInfo(packages.get(i), 0).flags;
-                checked[i] = (flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0 && !excluded.contains(packages.get(i));
+                boolean isSystem = (flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                checked[i] = added.contains(packages.get(i)) || (isSystem && !excluded.contains(packages.get(i)));
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
         new AlertDialog.Builder(this).setTitle("勾選要放入「系統」資料夾的 APP")
                 .setMultiChoiceItems(labels, checked, (dialog, which, value) -> checked[which] = value)
                 .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
                     java.util.HashSet<String> excludedNow = new java.util.HashSet<>();
-                    for (int i=0;i<packages.size();i++) if (!checked[i]) excludedNow.add(packages.get(i));
-                    getSharedPreferences("tv_app_customizations", MODE_PRIVATE).edit().putStringSet("system_folder_excluded", excludedNow).apply();
+                    java.util.HashSet<String> addedNow = new java.util.HashSet<>();
+                    for (int i=0;i<packages.size();i++) {
+                        String packageName = packages.get(i);
+                        boolean isSystem = false;
+                        try {
+                            int flags = getPackageManager().getApplicationInfo(packageName, 0).flags;
+                            isSystem = (flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                        } catch (PackageManager.NameNotFoundException ignored) { }
+                        if (checked[i] && !isSystem) addedNow.add(packageName);
+                        if (!checked[i] && isSystem) excludedNow.add(packageName);
+                    }
+                    prefs.edit().putStringSet("system_folder_excluded", excludedNow)
+                            .putStringSet("system_folder_added", addedNow).apply();
                     reloadApps(false);
                 }).show();
     }
