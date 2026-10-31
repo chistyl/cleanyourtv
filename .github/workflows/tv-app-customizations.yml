@@ -1,4 +1,5 @@
 name: TV App Customizations
+# Rebuild the customized TV launcher whenever its UI or interaction code changes.
 on:
   workflow_dispatch:
   push:
