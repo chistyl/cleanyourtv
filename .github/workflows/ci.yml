@@ -61,12 +61,14 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease
-      # Upload first so the built APK remains available for size analysis even when the guard fails.
-      - name: Upload release APK for inspection
+      # Keep the R8 mapping beside the APK so stack traces can be decoded if obfuscation reduces the APK.
+      - name: Upload release APK and R8 mapping for inspection
         uses: actions/upload-artifact@v4
         with:
           name: CleanYourTV-app-release
-          path: launcher/app/build/outputs/apk/release/app-release.apk
+          path: |
+            launcher/app/build/outputs/apk/release/app-release.apk
+            launcher/app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 14
       - name: The launcher stays small
