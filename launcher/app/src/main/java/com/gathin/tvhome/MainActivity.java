@@ -3758,64 +3758,64 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void renderWeeklyWeather(JSONArray dates, JSONArray codes, JSONArray highs, JSONArray lows, JSONArray rain) {
         if (weeklyWeatherDays == null || weeklyWeatherView == null) return;
         weeklyWeatherDays.removeAllViews();
+        weeklyWeatherDays.setOrientation(LinearLayout.VERTICAL);
+        weeklyWeatherDays.setGravity(Gravity.CENTER_VERTICAL);
+
+        SharedPreferences weatherPrefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
+        String city = weatherPrefs.getString("city", "桃園市");
+        TextView heading = new TextView(this);
+        heading.setText("一週天氣・" + city);
+        heading.setTextColor(Color.WHITE);
+        heading.setTextSize(16);
+        heading.setTypeface(null, android.graphics.Typeface.BOLD);
+        heading.setPadding((int)(4*density), (int)(2*density), (int)(4*density), (int)(5*density));
+        weeklyWeatherDays.addView(heading, new LinearLayout.LayoutParams(-1, -2));
+
         int count = Math.min(7, dates.length());
         for (int i = 0; i < count; i++) {
             try {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
-                String[] weekdayNames = {"一", "二", "三", "四", "五", "六", "日"};
-                String weekday = "";
-                try { weekday = "週" + weekdayNames[LocalDate.parse(date).getDayOfWeek().getValue() - 1]; }
-                catch (Exception ignored) { }
                 int code = codes.optInt(i, -1);
-                LinearLayout item = new LinearLayout(this);
-                item.setOrientation(LinearLayout.VERTICAL);
-                item.setGravity(Gravity.CENTER);
-                item.setPadding((int)(8*density), (int)(5*density), (int)(8*density), (int)(5*density));
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding((int)(4*density), (int)(3*density), (int)(4*density), (int)(3*density));
 
                 TextView dateView = new TextView(this);
-                dateView.setText(weekday + "\\n" + day);
-                dateView.setTextColor(0xFFBFC4CE);
-                dateView.setTextSize(13);
-                dateView.setGravity(Gravity.CENTER);
-                item.addView(dateView, new LinearLayout.LayoutParams(-1, -2));
+                dateView.setText(day);
+                dateView.setTextColor(Color.WHITE);
+                dateView.setTextSize(14);
+                dateView.setGravity(Gravity.CENTER_VERTICAL);
+                row.addView(dateView, new LinearLayout.LayoutParams((int)(58*density), -2));
 
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(30);
+                iconView.setTextSize(19);
                 iconView.setGravity(Gravity.CENTER);
-                LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(-1, (int)(48*density));
-                iconLp.topMargin = (int)(5*density);
-                item.addView(iconView, iconLp);
+                row.addView(iconView, new LinearLayout.LayoutParams((int)(34*density), -2));
 
                 TextView condition = new TextView(this);
                 condition.setText(weatherLabel(code));
-                condition.setTextColor(Color.WHITE);
-                condition.setTextSize(13);
-                condition.setGravity(Gravity.CENTER);
-                condition.setMaxLines(1);
-                condition.setEllipsize(TextUtils.TruncateAt.END);
-                item.addView(condition, new LinearLayout.LayoutParams(-1, -2));
+                condition.setTextColor(0xFFE8EBF0);
+                condition.setTextSize(14);
+                condition.setGravity(Gravity.CENTER_VERTICAL);
+                row.addView(condition, new LinearLayout.LayoutParams((int)(94*density), -2));
 
                 TextView temperature = new TextView(this);
-                temperature.setText(Math.round(highs.optDouble(i)) + "°  " + Math.round(lows.optDouble(i)) + "°");
-                temperature.setTextColor(0xFFE9EBF0);
+                temperature.setText(Math.round(highs.optDouble(i)) + "° / " + Math.round(lows.optDouble(i)) + "°");
+                temperature.setTextColor(Color.WHITE);
                 temperature.setTextSize(14);
-                temperature.setGravity(Gravity.CENTER);
-                LinearLayout.LayoutParams tempLp = new LinearLayout.LayoutParams(-1, -2);
-                tempLp.topMargin = (int)(5*density);
-                item.addView(temperature, tempLp);
+                temperature.setGravity(Gravity.CENTER_VERTICAL);
+                row.addView(temperature, new LinearLayout.LayoutParams((int)(112*density), -2));
 
                 TextView precipitation = new TextView(this);
-                precipitation.setText(rain != null && !rain.isNull(i) ? "降雨 " + rain.optInt(i) + "%" : "降雨 --");
-                precipitation.setTextColor(0xFF9DA5B3);
-                precipitation.setTextSize(11);
-                precipitation.setGravity(Gravity.CENTER);
-                item.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
-
-                LinearLayout.LayoutParams itemLp = new LinearLayout.LayoutParams(0, -2, 1f);
-                if (count < 7) itemLp.width = Math.max((int)(92*density), getResources().getDisplayMetrics().widthPixels / Math.max(1,count));
-                weeklyWeatherDays.addView(item, itemLp);
+                precipitation.setText("降雨 " + (rain != null && !rain.isNull(i) ? rain.optInt(i) + "%" : "--"));
+                precipitation.setTextColor(0xFFD5D9E0);
+                precipitation.setTextSize(14);
+                precipitation.setGravity(Gravity.CENTER_VERTICAL);
+                row.addView(precipitation, new LinearLayout.LayoutParams((int)(94*density), -2));
+                weeklyWeatherDays.addView(row, new LinearLayout.LayoutParams(-1, -2));
             } catch (Exception ignored) { }
         }
         weeklyWeatherView.setVisibility(View.VISIBLE);
