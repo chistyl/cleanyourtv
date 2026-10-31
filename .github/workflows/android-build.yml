@@ -7,6 +7,7 @@ on:
     branches:
       - v17.1-update
       - v17.1-dual-fix-baseline
+      - v17.1-third-menu-position-fix
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
