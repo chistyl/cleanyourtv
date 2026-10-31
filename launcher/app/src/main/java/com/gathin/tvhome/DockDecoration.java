@@ -51,7 +51,9 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         this.singleRow = singleRow;
         this.bandAll = singleRow && bandAll;
         this.density = density;
-        this.namesRoom = names ? 22 * density : 0;
+        // The first dock tiles never render a caption underneath (their large title is above them).
+        // Extending the black band by a second label row made its lower margin visibly larger than its top.
+        this.namesRoom = 0f;
         this.lightGlass = lightGlass;
         this.evenPadding = evenPadding;
         this.bandVisible = bandVisible;
