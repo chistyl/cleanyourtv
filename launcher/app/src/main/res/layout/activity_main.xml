@@ -307,7 +307,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:layout_marginEnd="40dp"
+                    android:layout_marginEnd="100dp"
                     android:background="@drawable/v17_weather_card"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
@@ -319,7 +319,7 @@
                     android:visibility="gone">
                     <LinearLayout
                         android:id="@+id/weeklyWeatherDays"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:gravity="center_vertical" />
