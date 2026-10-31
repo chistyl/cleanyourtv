@@ -282,6 +282,27 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (phoneLaunchers != null) for (ResolveInfo ri : phoneLaunchers) {
             if (ri.activityInfo != null && seenPackages.add(ri.activityInfo.packageName)) found.add(ri);
         }
+        // Some vendor/China-market TV apps have no exported MAIN+LAUNCHER or LEANBACK category,
+        // but Android can still resolve their package launch intent. Add those launchable packages too.
+        // This catches apps such as vendor video/music clients whose icons appear in the system app list
+        // but are omitted from category-based launcher queries.
+        try {
+            List<android.content.pm.ApplicationInfo> installed = pm.getInstalledApplications(PackageManager.MATCH_ALL);
+            for (android.content.pm.ApplicationInfo app : installed) {
+                if (app == null || app.packageName == null || app.packageName.equals(ctx.getPackageName())
+                        || seenPackages.contains(app.packageName)) continue;
+                try {
+                    Intent launch = pm.getLaunchIntentForPackage(app.packageName);
+                    if (launch == null || launch.getComponent() == null) continue;
+                    android.content.pm.ActivityInfo activity = pm.getActivityInfo(launch.getComponent(), 0);
+                    if (activity == null || !activity.exported) continue;
+                    ResolveInfo fallback = new ResolveInfo();
+                    fallback.activityInfo = activity;
+                    found.add(fallback);
+                    seenPackages.add(app.packageName);
+                } catch (PackageManager.NameNotFoundException | RuntimeException ignored) { }
+            }
+        } catch (RuntimeException ignored) { }
         // Copy before merging: LibraryApps.load() may return an immutable empty set (#419).
         Set<String> added = new HashSet<>(LibraryApps.load(ctx));
         added.addAll(libraryPreload);
