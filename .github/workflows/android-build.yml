@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - v17.1-update
+      - v17.1-dual-fix-baseline
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
