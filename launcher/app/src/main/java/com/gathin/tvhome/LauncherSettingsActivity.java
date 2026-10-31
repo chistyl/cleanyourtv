@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import android.widget.SeekBar;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,6 +39,9 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
+    private TextView appNamesChoice;
+    private TextView iconSizeLabel;
+    private SeekBar iconSizeSeekBar;
     private TextView openOnStartChoice;
     private int columns;
     private int rowsBelowDock;
@@ -152,6 +156,37 @@ public final class LauncherSettingsActivity extends Activity {
             openOnStartChoice.setVisibility(View.VISIBLE);
             openOnStartChoice.setOnClickListener(v -> showOpenOnStartPicker());
         }
+        appNamesChoice = findViewById(R.id.appNamesChoice);
+        appNamesChoice.setOnClickListener(v -> {
+            SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+            boolean hideNames = !appPrefs.getBoolean("hide_all_names", false);
+            appPrefs.edit().putBoolean("hide_all_names", hideNames).apply();
+            changed();
+            refresh();
+            Toast.makeText(this, hideNames ? "已隱藏全部 APP 名稱" : "已顯示全部 APP 名稱", Toast.LENGTH_SHORT).show();
+        });
+
+        iconSizeLabel = findViewById(R.id.iconSizeLabel);
+        iconSizeSeekBar = findViewById(R.id.iconSizeSeekBar);
+        SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        int savedIconAdjustment = Math.max(-50, Math.min(200, appPrefs.getInt(AppAdapter.ICON_SIZE_KEY, 0)));
+        iconSizeSeekBar.setMax(250);
+        iconSizeSeekBar.setProgress(savedIconAdjustment + 50);
+        updateIconSizeLabel(savedIconAdjustment);
+        iconSizeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            private int pending = savedIconAdjustment;
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                pending = progress - 50;
+                updateIconSizeLabel(pending);
+                if (fromUser) appPrefs.edit().putInt(AppAdapter.ICON_SIZE_KEY, pending).apply();
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                changed();
+                Toast.makeText(LauncherSettingsActivity.this, "APP 圖標大小已更新", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         followThemeChoice = findViewById(R.id.followThemeChoice);
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
@@ -277,6 +312,10 @@ public final class LauncherSettingsActivity extends Activity {
         return -1;
     }
 
+    private void updateIconSizeLabel(int value) {
+        iconSizeLabel.setText("APP 圖標大小：" + (value > 0 ? "+" : "") + value + "%");
+    }
+
     /**
      * A choice was saved. Home rebuilds when it next resumes because the change count moved, whether these
      * settings are left with Back or with the remote's Home button (which cancels the activity result).
@@ -320,6 +359,9 @@ public final class LauncherSettingsActivity extends Activity {
                         : getString(R.string.wallpaper_theme_default)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
         followThemeChoice.setSelected(!hasOnTvChoices());
+        boolean namesHidden = getSharedPreferences("tv_app_customizations", MODE_PRIVATE).getBoolean("hide_all_names", false);
+        appNamesChoice.setText(namesHidden ? "APP 名稱：隱藏（點擊顯示）" : "APP 名稱：顯示（點擊隱藏）");
+        appNamesChoice.setSelected(!namesHidden);
     }
 
     private boolean hasOnTvChoices() {

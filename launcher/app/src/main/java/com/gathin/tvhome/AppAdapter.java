@@ -55,6 +55,7 @@ import java.io.InputStream;
  * (by label), the rest is alphabetical.
  */
 public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    static final String ICON_SIZE_KEY = "app_icon_size_percent";
 
     interface TileListener {
         void onTileFocused(int position, View card);
@@ -229,6 +230,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Packages drawn from their icon and name even when they have a banner (config.xml icon_tiles). */
     private final Set<String> iconTiles;
     private final List<Entry> items = new ArrayList<>();
+    /** TV launcher activities, reused to compose 16:9 folder preview artwork. */
+    private final Map<String, ResolveInfo> tvActivities = new HashMap<>();
 
     AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg) {
         this.ctx = ctx;
@@ -271,7 +274,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // library apps so the caller's list stays as it was.
         List<ResolveInfo> found = new ArrayList<>(leanback);
         Set<String> tvPackages = new HashSet<>();
-        for (ResolveInfo ri : found) if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
+        tvActivities.clear();
+        for (ResolveInfo ri : found) if (ri.activityInfo != null) {
+            tvPackages.add(ri.activityInfo.packageName);
+            tvActivities.put(ri.activityInfo.packageName, ri);
+        }
         leanbackPackages = tvPackages;
         // Copy before merging: LibraryApps.load() may return an immutable empty set (#419).
         Set<String> added = new HashSet<>(LibraryApps.load(ctx));
@@ -316,6 +323,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
             // redraw the tile name as something else (#117).
             SharedPreferences custom = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
+            int globalIconAdjustment = Math.max(-50, Math.min(200, custom.getInt(ICON_SIZE_KEY, 0)));
             String customLabel = custom.getString("label_" + pkg, null);
             String label = card != null ? card.label : Cards.cleanLabel(
                     customLabel != null ? customLabel : (appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm))), pkg);
@@ -332,7 +340,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 if (icon == null) icon = ri.loadIcon(pm);
                 int tileBackground = custom.getInt("background_" + pkg, Color.WHITE);
-                int iconAdjustment = custom.getInt("icon_scale_adjust_" + pkg, 0);
+                int iconAdjustment = custom.getInt("icon_scale_adjust_" + pkg, 0) + globalIconAdjustment;
                 float iconScale = Math.max(0.10f, Math.min(3.75f, 1.25f * (1f + iconAdjustment / 100f)));
                 // A custom icon or an explicit size adjustment switches this tile to icon artwork,
                 // otherwise keep the app's native TV banner when one exists.
@@ -381,7 +389,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         SharedPreferences folderPrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
         for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet())) {
-            if (!"系統".equals(folder)) {
+            if (!"系統".equals(folder) && !folderPrefs.getBoolean("home_hidden_folder_" + folder, false)) {
                 Set<String> members = folderPrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet());
                 fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder),
                         folderPreview(members), null, null, 0));
@@ -398,8 +406,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         && !systemExcluded.contains(pkg)) systemMembers.add(pkg);
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
-        fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
-                folderPreview(systemMembers), null, null, 0));
+        if (!folderPrefs.getBoolean("home_hidden_folder_系統", false)) {
+            fresh.add(new Entry(Entry.SYSTEM_FOLDER, folderPrefs.getString("system_folder_label", "系統"), new ComponentName(ctx, "system-folder"),
+                    folderPreview(systemMembers), null, null, 0));
+        }
         docked = 0;
         while (docked < fresh.size() && isDocked(fresh.get(docked))) docked++;
         emptySlots = dockRow && !reordering ? DockSlots.empty(docked, dockSize, fresh.size(), fillDock) : 0;
@@ -412,7 +422,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    /** Compose a folder tile from up to four app icons inside it. */
+    /** Compose a folder tile from up to four 16:9 TV artwork thumbnails. */
     private Drawable folderPreview(Set<String> packages) {
         int size = 640;
         Bitmap bitmap = Bitmap.createBitmap(size, 360, Bitmap.Config.ARGB_8888);
@@ -420,16 +430,32 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(Color.rgb(42, 48, 58));
         canvas.drawRoundRect(70, 28, 570, 332, 42, 42, paint);
-        int cell = 116, gap = 24;
-        int[][] positions = {{192, 66}, {332, 66}, {192, 196}, {332, 196}};
+        if (packages == null || packages.isEmpty()) {
+            paint.setColor(Color.WHITE);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTextSize(190f);
+            paint.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
+            canvas.drawText("+", size / 2f, 258f, paint);
+            return new BitmapDrawable(ctx.getResources(), bitmap);
+        }
+        PackageManager pm = ctx.getPackageManager();
+        int[][] positions = {{158, 76}, {326, 76}, {158, 190}, {326, 190}};
         int index = 0;
         for (String pkg : packages) {
             if (index >= 4) break;
             try {
-                Drawable icon = ctx.getPackageManager().getApplicationIcon(pkg);
+                ResolveInfo ri = tvActivities.get(pkg);
+                Drawable artwork = ri != null ? loadBanner(pm, ri) : null;
+                if (artwork == null) artwork = iconBanner(pm.getApplicationIcon(pkg), Color.WHITE, 1.25f);
                 int x = positions[index][0], y = positions[index][1];
-                icon.setBounds(x, y, x + cell, y + cell);
-                icon.draw(canvas);
+                android.graphics.Path clip = new android.graphics.Path();
+                clip.addRoundRect(new android.graphics.RectF(x, y, x + 156, y + 88),
+                        12f, 12f, android.graphics.Path.Direction.CW);
+                canvas.save();
+                canvas.clipPath(clip);
+                artwork.setBounds(x, y, x + 156, y + 88);
+                artwork.draw(canvas);
+                canvas.restore();
                 index++;
             } catch (Exception ignored) { }
         }
@@ -586,6 +612,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
+        // Clip TV artwork to the same rounded 16:9 silhouette used by modern Android TV app tiles.
+        GradientDrawable bannerOutline = new GradientDrawable();
+        bannerOutline.setColor(Color.TRANSPARENT);
+        bannerOutline.setCornerRadius(12f * ctx.getResources().getDisplayMetrics().density);
+        h.banner.setBackground(bannerOutline);
+        h.banner.setClipToOutline(true);
         if (uniformTiles && e.banner == null) {
             if (e.backdrop == null) e.backdrop = backdrop(e.icon, ambientColorAt(position));
             h.card.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, e.backdrop));
