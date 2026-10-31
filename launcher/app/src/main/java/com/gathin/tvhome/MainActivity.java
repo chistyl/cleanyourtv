@@ -4024,6 +4024,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout row = convertView instanceof LinearLayout ? (LinearLayout) convertView : new LinearLayout(MainActivity.this);
                 row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding((int)(12*density), (int)(6*density), (int)(12*density), (int)(6*density));
+                row.removeAllViews();
                 ImageView image = new ImageView(MainActivity.this); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 image.setImageDrawable(loadTvFolderArtwork(candidates.get(packages.get(position))));
                 row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(42*density)));
