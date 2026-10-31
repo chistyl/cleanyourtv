@@ -3692,7 +3692,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     label.setText(custom != null ? custom : String.valueOf(ri.loadLabel(getPackageManager())));
                     checked = appHidden[position];
                 }
-                row.addView(image, new LinearLayout.LayoutParams((int)(76*density), (int)(44*density)));
+                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(40*density)));
                 LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, -2, 1f);
                 textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
@@ -3810,7 +3810,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 ImageView image = new ImageView(MainActivity.this);
                 image.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 image.setImageDrawable(loadTvFolderArtwork(ri));
-                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(42*density)));
+                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(40*density)));
                 TextView label = new TextView(MainActivity.this);
                 String custom = prefs.getString("label_" + packages.get(position), null);
                 label.setText(custom != null ? custom : String.valueOf(ri.loadLabel(getPackageManager())));
@@ -4162,7 +4162,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 row.removeAllViews();
                 ImageView image = new ImageView(MainActivity.this); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 image.setImageDrawable(loadTvFolderArtwork(candidates.get(packages.get(position))));
-                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(42*density)));
+                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(40*density)));
                 TextView label = new TextView(MainActivity.this);
                 label.setText(String.valueOf(candidates.get(packages.get(position)).loadLabel(getPackageManager())));
                 label.setTextColor(Color.WHITE); label.setTextSize(15);
