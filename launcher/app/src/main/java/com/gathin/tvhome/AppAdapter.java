@@ -561,12 +561,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(e.name);
-        // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
-        // In a single row every tile is the dock's kind: the big title above names it.
+        // The first five dock tiles are identified by the large hero title above them, never by a second
+        // caption underneath. Keep their caption space reserved so the next row cannot move upward.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
         boolean hideAllNames = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE)
                 .getBoolean("hide_all_names", false);
-        h.name.setVisibility(e.name.isEmpty() ? View.GONE : (hideAllNames ? View.INVISIBLE : View.VISIBLE));
+        // INVISIBLE (not GONE) deliberately preserves the row height when names are hidden.
+        h.name.setVisibility(e.name.isEmpty() || hideAllNames || dockKind ? View.INVISIBLE : View.VISIBLE);
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(1f);
