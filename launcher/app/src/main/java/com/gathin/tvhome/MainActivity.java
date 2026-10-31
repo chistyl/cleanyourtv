@@ -3598,7 +3598,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         addSettingsMenuRow(rows, popup, "更換桌布", this::showWallpaperPicker);
         addSettingsMenuRow(rows, popup, "資料夾管理", this::showFolderManagementComingSoon);
-        addSettingsMenuRow(rows, popup, "系統", this::showSystemFolderComingSoon);
+        addSettingsMenuRow(rows, popup, "系統", () -> showFolderContents("系統", true));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
