@@ -3763,6 +3763,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             try {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
+                String[] weekdayNames = {"一", "二", "三", "四", "五", "六", "日"};
+                String weekday = "";
+                try { weekday = "週" + weekdayNames[LocalDate.parse(date).getDayOfWeek().getValue() - 1]; }
+                catch (Exception ignored) { }
                 int code = codes.optInt(i, -1);
                 LinearLayout item = new LinearLayout(this);
                 item.setOrientation(LinearLayout.VERTICAL);
@@ -3770,7 +3774,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 item.setPadding((int)(8*density), (int)(5*density), (int)(8*density), (int)(5*density));
 
                 TextView dateView = new TextView(this);
-                dateView.setText(day);
+                dateView.setText(weekday + "\\n" + day);
                 dateView.setTextColor(0xFFBFC4CE);
                 dateView.setTextSize(13);
                 dateView.setGravity(Gravity.CENTER);
