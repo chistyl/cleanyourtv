@@ -3925,7 +3925,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         folderBackground.setCornerRadius(22f * density);
         outer.setBackground(folderBackground); outer.setClipToOutline(true);
         TextView heading = new TextView(this);
-        heading.setText(folderName);
+        heading.setText(systemFolder
+                ? prefs.getString("system_folder_label", "系統") : folderName);
         heading.setTextColor(Color.WHITE);
         heading.setTextSize(20);
         heading.setGravity(Gravity.CENTER_VERTICAL);
@@ -4434,7 +4435,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             if (key.contains("/system-folder")) {
                 addSettingsMenuRow(folderRows, folderPopup, "重新命名", () -> {
-                    Toast.makeText(this, "系統資料夾名稱固定", Toast.LENGTH_SHORT).show();
+                    EditText edit = new EditText(this);
+                    edit.setSingleLine(true);
+                    edit.setText(folderPrefs.getString("system_folder_label", "系統"));
+                    new AlertDialog.Builder(this).setTitle("重新命名").setView(edit)
+                            .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
+                                String value = edit.getText().toString().trim();
+                                if (value.isEmpty() || "系統".equals(value)
+                                        || folderPrefs.getStringSet("home_folders", Collections.<String>emptySet()).contains(value)) {
+                                    Toast.makeText(this, "資料夾名稱不可使用或已存在", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                folderPrefs.edit().putString("system_folder_label", value).apply();
+                                reloadApps(false);
+                            }).show();
+                });
+                addSettingsMenuRow(folderRows, folderPopup, "刪除資料夾", () -> {
+                    new AlertDialog.Builder(this).setTitle("刪除系統資料夾")
+                            .setMessage("系統 APP 不會解除安裝；之後可在「桌面顯示」重新顯示資料夾。")
+                            .setNegativeButton("取消", null).setPositiveButton("刪除", (dialog, which) -> {
+                                folderPrefs.edit().putBoolean("home_hidden_folder_系統", true).apply();
+                                reloadApps(false);
+                            }).show();
                 });
             }
             if (key.contains("/folder:")) {
