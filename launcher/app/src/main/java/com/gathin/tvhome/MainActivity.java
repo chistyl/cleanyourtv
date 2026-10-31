@@ -4045,8 +4045,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** True when the event belongs to a hold that opened the tile menu and must not reach the tile. */
+    private boolean focusedTileIsFolder() {
+        int position = focusedTilePosition();
+        String key = position < 0 ? null : adapter.keyAt(position);
+        return key != null && (key.contains("/system-folder") || key.contains("/folder:"));
+    }
+
     private boolean holdOk(KeyEvent event) {
-        if (!tileMenuEnabled || !isOkKey(event.getKeyCode())) return false;
+        if (!isOkKey(event.getKeyCode())) return false;
+        if (!tileMenuEnabled && !focusedTileIsFolder()) return false;
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             if (event.getRepeatCount() == 0) {
                 holdOkFired = false;
