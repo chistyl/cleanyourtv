@@ -3891,8 +3891,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return resources.getDrawable(bannerId, getTheme());
             }
         } catch (Exception ignored) { }
-        try { return getPackageManager().getApplicationIcon(ri.activityInfo.packageName); }
-        catch (PackageManager.NameNotFoundException ignored) { return getDrawable(android.R.drawable.sym_def_app_icon); }
+        Drawable appIcon;
+        try { appIcon = getPackageManager().getApplicationIcon(ri.activityInfo.packageName); }
+        catch (PackageManager.NameNotFoundException ignored) { appIcon = getDrawable(android.R.drawable.sym_def_app_icon); }
+        // Keep every folder shortcut in a 16:9 TV tile, even when the app has no native TV banner.
+        Bitmap artwork = Bitmap.createBitmap(640, 360, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(artwork);
+        int side = 220;
+        appIcon.setBounds((640 - side) / 2, (360 - side) / 2, (640 + side) / 2, (360 + side) / 2);
+        appIcon.draw(canvas);
+        return new android.graphics.drawable.BitmapDrawable(getResources(), artwork);
     }
 
     /** Open folders as a grid of TV artwork shortcuts; long-press an app to rename or move it out. */
@@ -3943,7 +3951,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heading.setPadding((int)(8*density), (int)(4*density), 0, (int)(12*density));
         outer.addView(heading, new LinearLayout.LayoutParams(-1, -2));
 
+        final int folderDialogWidth = Math.min((int)(440*density),
+                getResources().getDisplayMetrics().widthPixels - (int)(32*density));
+        final int folderCellWidth = Math.max(1, (folderDialogWidth - (int)(36*density)) / 4);
         ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        GradientDrawable scrollBackground = new GradientDrawable();
+        scrollBackground.setColor(Color.rgb(28, 32, 40));
+        scrollBackground.setCornerRadius(14f * density);
+        scroll.setBackground(scrollBackground);
+        scroll.setClipToOutline(true);
         android.widget.GridLayout grid = new android.widget.GridLayout(this);
         grid.setColumnCount(4);
         grid.setUseDefaultMargins(false);
@@ -3960,6 +3977,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 tile.setFocusable(true);
                 tile.setClickable(true);
                 tile.setPadding((int)(5*density), (int)(8*density), (int)(5*density), (int)(8*density));
+                GradientDrawable tileBackground = new GradientDrawable();
+                tileBackground.setColor(Color.TRANSPARENT);
+                tileBackground.setCornerRadius(12f * density);
+                tile.setBackground(tileBackground);
+                tile.setOnFocusChangeListener((v, focused) -> {
+                    GradientDrawable focusBackground = new GradientDrawable();
+                    focusBackground.setColor(focused ? 0x33FFFFFF : Color.TRANSPARENT);
+                    focusBackground.setCornerRadius(12f * density);
+                    v.setBackground(focusBackground);
+                });
                 ImageView icon = new ImageView(this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 icon.setImageDrawable(loadTvFolderArtwork(ri));
@@ -3972,7 +3999,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 name.setGravity(Gravity.CENTER);
                 name.setMaxLines(2);
                 name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-                name.setVisibility(prefs.getBoolean("hide_all_names", false) ? View.GONE : View.VISIBLE);
+                name.setVisibility(prefs.getBoolean("hide_all_names", false) ? View.INVISIBLE : View.VISIBLE);
                 LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(-1, (int)(34*density));
                 nameLp.topMargin = (int)(4*density);
                 tile.addView(name, nameLp);
@@ -3984,7 +4011,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     dialog.dismiss();
                 });
                 tile.setOnLongClickListener(v -> {
-                    String[] actions = {"修改 APP 名稱", systemFolder ? "移出系統資料夾" : "移出資料夾"};
+                    boolean allNamesHidden = prefs.getBoolean("hide_all_names", false);
+                    String[] actions = {"修改 APP 名稱",
+                            allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱",
+                            systemFolder ? "移出系統資料夾" : "移出資料夾"};
                     new AlertDialog.Builder(this).setTitle(name.getText()).setItems(actions, (menu, which) -> {
                         if (which == 0) {
                             EditText edit = new EditText(this);
@@ -3998,6 +4028,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                         dialog.dismiss();
                                         showFolderContents(folderName, systemFolder);
                                     }).show();
+                        } else if (which == 1) {
+                            prefs.edit().putBoolean("hide_all_names", !allNamesHidden).apply();
+                            reloadApps(false);
+                            dialog.dismiss();
+                            showFolderContents(folderName, systemFolder);
                         } else {
                             if (systemFolder) {
                                 boolean isSystem = false;
@@ -4030,7 +4065,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     return true;
                 });
                 android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-                lp.width = (int)(92*density);
+                lp.width = folderCellWidth;
                 lp.height = (int)(112*density);
                 grid.addView(tile, lp);
             }
@@ -4042,6 +4077,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 add.setGravity(Gravity.CENTER);
                 add.setFocusable(true);
                 add.setClickable(true);
+                GradientDrawable addBackground = new GradientDrawable();
+                addBackground.setColor(Color.TRANSPARENT);
+                addBackground.setCornerRadius(12f * density);
+                add.setBackground(addBackground);
+                add.setOnFocusChangeListener((v, focused) -> {
+                    GradientDrawable focusBackground = new GradientDrawable();
+                    focusBackground.setColor(focused ? 0x33FFFFFF : Color.TRANSPARENT);
+                    focusBackground.setCornerRadius(12f * density);
+                    v.setBackground(focusBackground);
+                });
                 TextView plus = new TextView(this);
                 plus.setText("+");
                 plus.setTextColor(Color.WHITE);
@@ -4054,7 +4099,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     else showFolderAppAssignment(folderName);
                 });
                 android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-                lp.width = (int)(92*density);
+                lp.width = folderCellWidth;
                 lp.height = (int)(112*density);
                 grid.addView(add, lp);
             }
@@ -4075,7 +4120,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         dialog.show();
         if (dialog.getWindow() != null) dialog.getWindow().setLayout(
-                Math.min((int)(440*density), getResources().getDisplayMetrics().widthPixels - (int)(32*density)),
+                folderDialogWidth,
                 Math.min((int)(560*density), getResources().getDisplayMetrics().heightPixels - (int)(48*density)));
     }
 
