@@ -1,2 +1,3 @@
-# Allow R8 to obfuscate class and method names as well as remove unused code.
-# Keep the generated mapping file with each CI build so any crash stack trace can be de-obfuscated.
+# Shrink and optimise, but keep class and method names: readable stack traces matter more
+# than the small APK reduction from obfuscation on this launcher.
+-dontobfuscate
