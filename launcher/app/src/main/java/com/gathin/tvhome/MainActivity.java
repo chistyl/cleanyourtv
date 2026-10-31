@@ -3758,9 +3758,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weeklyWeatherView == null) return;
         SharedPreferences prefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean("enabled", false);
-        weeklyWeatherView.setVisibility(!enabled ? View.GONE : (weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE));
+        // Do not expose an empty weather-card background while loading. The card becomes visible
+        // only after renderWeeklyWeather() has populated a complete forecast.
+        weeklyWeatherView.setVisibility(View.GONE);
         if (!enabled) return;
-        showWeeklyWeatherStatus("一週天氣  ·  正在取得預報…");
+        weatherHiddenByScroll = false;
         loadWeeklyWeather();
     }
 
@@ -3949,7 +3951,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showWeatherError(String message) {
-        weatherHandler.post(() -> { if (weeklyWeatherView != null) showWeeklyWeatherStatus("一週天氣：" + message); });
+        // A failed location/network request must not leave a large, empty rounded panel on the desktop.
+        weatherHandler.post(() -> {
+            if (weeklyWeatherView != null) {
+                weeklyWeatherView.animate().cancel();
+                weeklyWeatherView.setVisibility(View.GONE);
+            }
+        });
     }
 
     /** Weather symbols follow the reference card: distinct, instantly scannable icons per condition. */
