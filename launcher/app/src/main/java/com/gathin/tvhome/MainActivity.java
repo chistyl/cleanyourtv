@@ -3741,6 +3741,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         set.removeAll(chosen);
                         edit.putStringSet("folder_apps_" + other, set);
                     }
+                    java.util.HashSet<String> systemAdded = new java.util.HashSet<>(prefs.getStringSet(
+                            "system_folder_added", java.util.Collections.<String>emptySet()));
+                    systemAdded.removeAll(chosen);
+                    java.util.HashSet<String> systemExcluded = new java.util.HashSet<>(prefs.getStringSet(
+                            "system_folder_excluded", java.util.Collections.<String>emptySet()));
+                    for (String packageName : chosen) {
+                        try {
+                            int flags = getPackageManager().getApplicationInfo(packageName, 0).flags;
+                            if ((flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0)
+                                systemExcluded.add(packageName);
+                        } catch (PackageManager.NameNotFoundException ignored) { }
+                    }
+                    edit.putStringSet("system_folder_added", systemAdded)
+                            .putStringSet("system_folder_excluded", systemExcluded);
                     edit.apply();
                     reloadApps(false);
                 }).show();
@@ -3987,8 +4001,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         if (checked[i] && !isSystem) addedNow.add(packageName);
                         if (!checked[i] && isSystem) excludedNow.add(packageName);
                     }
-                    prefs.edit().putStringSet("system_folder_excluded", excludedNow)
-                            .putStringSet("system_folder_added", addedNow).apply();
+                    SharedPreferences.Editor edit = prefs.edit()
+                            .putStringSet("system_folder_excluded", excludedNow)
+                            .putStringSet("system_folder_added", addedNow);
+                    Set<String> generalFolders = prefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
+                    for (String folder : generalFolders) {
+                        java.util.HashSet<String> set = new java.util.HashSet<>(prefs.getStringSet(
+                                "folder_apps_" + folder, java.util.Collections.<String>emptySet()));
+                        set.removeAll(addedNow);
+                        edit.putStringSet("folder_apps_" + folder, set);
+                    }
+                    edit.apply();
                     reloadApps(false);
                 }).show();
     }
