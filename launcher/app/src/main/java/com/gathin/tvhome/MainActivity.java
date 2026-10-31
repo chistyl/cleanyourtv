@@ -3975,31 +3975,56 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).show();
     }
 
-    /** Adjust the size of the selected custom icon (20%–90% of its tile artwork area). */
-        /** Icon size adjustment from -50% to +200%; zero is the default size. */
+    /** Icon size adjustment: -50% to +200% around a 125% default scale, with a live sample preview. */
     private void showAppIconSizeDialog(String pkg, SharedPreferences prefs) {
         int current = prefs.getInt("icon_scale_adjust_" + pkg, 0);
         SeekBar size = new SeekBar(this);
         size.setMax(250);
         size.setProgress(Math.max(0, Math.min(250, current + 50)));
+
         TextView value = new TextView(this);
         value.setGravity(Gravity.CENTER);
-        value.setText("圖標大小：" + (size.getProgress() - 50) + "%");
+        value.setTextSize(16f);
+        ImageView preview = new ImageView(this);
+        preview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        try {
+            preview.setImageDrawable(getPackageManager().getApplicationIcon(pkg));
+        } catch (PackageManager.NameNotFoundException ignored) { }
+        int previewBase = (int) (112 * density);
+        LinearLayout previewFrame = new LinearLayout(this);
+        previewFrame.setGravity(Gravity.CENTER);
+        previewFrame.setPadding(0, (int) (10 * density), 0, (int) (10 * density));
+        previewFrame.addView(preview, new LinearLayout.LayoutParams(previewBase, previewBase));
+
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(28, 16, 28, 8);
         panel.addView(value);
+        panel.addView(previewFrame);
         panel.addView(size);
+
+        Runnable updatePreview = () -> {
+            int adjustment = size.getProgress() - 50;
+            float scale = Math.max(0.10f, Math.min(3.75f, 1.25f * (1f + adjustment / 100f)));
+            int side = Math.max((int) (28 * density), Math.round(previewBase * scale / 1.25f));
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) preview.getLayoutParams();
+            lp.width = side;
+            lp.height = side;
+            preview.setLayoutParams(lp);
+            int shownPercent = Math.round(125f * (1f + adjustment / 100f));
+            value.setText("圖標比例：" + shownPercent + "%（調整 " + (adjustment > 0 ? "+" : "") + adjustment + "%）");
+        };
         size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                value.setText("圖標大小：" + (progress - 50) + "%");
+                updatePreview.run();
             }
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
         });
+        updatePreview.run();
         new AlertDialog.Builder(this).setTitle("調整圖標大小")
                 .setView(panel).setNegativeButton("取消", null)
-                .setNeutralButton("恢復預設", (dialog, which) -> {
+                .setNeutralButton("恢復預設 125%", (dialog, which) -> {
                     prefs.edit().remove("icon_scale_adjust_" + pkg).remove("icon_scale_" + pkg).apply();
                     reloadApps(false);
                 })
