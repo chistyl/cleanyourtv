@@ -4454,14 +4454,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.setBackgroundColor(Color.TRANSPARENT);
         grid.setForeground(null);
         int availableWidthDp = Math.max(320, (int) (getResources().getDisplayMetrics().widthPixels / density) - 64);
-        int folderColumns = 4;
-        int folderTileDp = Math.max(96, Math.min(220, (availableWidthDp - 48) / folderColumns));
+        int folderColumns = 3;
+        int folderTileDp = Math.max(96, Math.min(260, (availableWidthDp - 48) / folderColumns));
         grid.setColumnCount(folderColumns);
         grid.setUseDefaultMargins(false);
         // 資料夾格線橫向填滿內容區，四欄等寬分配，確保第一欄與最後一欄
         // 到左右邊界的留白一致，不再只靠左排列固定寬度卡片。
         grid.setAlignmentMode(android.widget.GridLayout.ALIGN_BOUNDS);
         grid.setColumnOrderPreserved(false);
+        grid.setFocusable(false);
+        grid.setFocusableInTouchMode(false);
+        java.util.ArrayList<View> folderFocusTiles = new java.util.ArrayList<>();
         android.graphics.drawable.GradientDrawable scrollClip = new android.graphics.drawable.GradientDrawable();
         scrollClip.setColor(Color.TRANSPARENT);
         scrollClip.setCornerRadius(16 * density);
@@ -4480,6 +4483,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout tile = new LinearLayout(this);
                 tile.setOrientation(LinearLayout.VERTICAL);
                 tile.setGravity(Gravity.CENTER_HORIZONTAL);
+                tile.setId(View.generateViewId());
                 tile.setFocusable(true); tile.setClickable(true);
                 tile.setDefaultFocusHighlightEnabled(false);
                 tile.setPadding((int)(3*density), (int)(5*density), (int)(3*density), (int)(4*density));
@@ -4552,6 +4556,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 lp.height = Math.round((folderTileDp * 9f / 16f + 42f)*density);
                 lp.setMargins((int)(6*density), (int)(6*density), (int)(6*density), (int)(6*density));
                 grid.addView(tile, lp);
+                folderFocusTiles.add(tile);
             }
             {
                 LinearLayout add = new LinearLayout(this);
@@ -4601,9 +4606,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 lp.height = Math.round((folderTileDp * 9f / 16f + 42f)*density);
                 lp.setMargins((int)(6*density), (int)(6*density), (int)(6*density), (int)(6*density));
                 grid.addView(add, lp);
+                add.setId(View.generateViewId());
+                folderFocusTiles.add(add);
             }
         };
         populate.run();
+        // 明確設定遙控器焦點路徑：每列三個，左右相鄰、上下對應同欄，避免焦點跳失。
+        for (int i = 0; i < folderFocusTiles.size(); i++) {
+            View item = folderFocusTiles.get(i);
+            if (i % folderColumns > 0) item.setNextFocusLeftId(folderFocusTiles.get(i - 1).getId());
+            if (i % folderColumns < folderColumns - 1 && i + 1 < folderFocusTiles.size()) item.setNextFocusRightId(folderFocusTiles.get(i + 1).getId());
+            if (i - folderColumns >= 0) item.setNextFocusUpId(folderFocusTiles.get(i - folderColumns).getId());
+            if (i + folderColumns < folderFocusTiles.size()) item.setNextFocusDownId(folderFocusTiles.get(i + folderColumns).getId());
+        }
         Button close = new Button(this);
         close.setText("關閉");
         close.setOnClickListener(v -> dialog.dismiss());
@@ -4619,7 +4634,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 Math.min((int)(620*density), getResources().getDisplayMetrics().heightPixels - (int)(48*density)));
         }
         grid.post(() -> {
-            View first = grid.getChildAt(0);
+            View first = folderFocusTiles.isEmpty() ? null : folderFocusTiles.get(0);
             if (first != null) first.requestFocus();
         });
     }
