@@ -4172,7 +4172,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked[position]);
                 row.addView(check);
                 row.setFocusable(true); row.setClickable(true);
-                row.setOnClickListener(v -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
+                row.setOnClickListener(v -> { checked[position] = !checked[position]; ((android.widget.BaseAdapter) ((android.widget.ListView) parent).getAdapter()).notifyDataSetChanged(); });
                 return row;
             }
         };
