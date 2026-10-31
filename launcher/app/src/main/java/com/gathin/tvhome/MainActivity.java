@@ -1113,6 +1113,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             catch (SecurityException ignored) { }
             getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit()
                     .putString("custom_wallpaper_uri", uri.toString()).apply();
+            getSharedPreferences("tv_app_customizations", MODE_PRIVATE).edit()
+                    .putBoolean("hide_dock_color_effect", true).apply();
             recreate();
         }
         if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK
@@ -3591,7 +3593,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (220 * density));
         addSettingsMenuRow(rows, popup, "系統設定", () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         addSettingsMenuRow(rows, popup, "桌面顯示", this::showHomeAppVisibilityDialog);
-        addSettingsMenuRow(rows, popup, "更換桌布", this::showWallpaperPicker);
+        addSettingsMenuRow(rows, popup, "桌布設定", this::showWallpaperPicker);
         addSettingsMenuRow(rows, popup, "新增資料夾", this::showCreateFolderDialog);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
@@ -3639,8 +3641,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showWallpaperPicker() {
         SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         boolean hideColor = appPrefs.getBoolean("hide_dock_color_effect", false);
-        String[] choices = {"選擇圖片", "還原預設桌布", hideColor ? "顯示前五個 APP 左側色彩效果" : "隱藏前五個 APP 左側色彩效果"};
-        new AlertDialog.Builder(this).setTitle("更換桌布").setItems(choices, (dialog, which) -> {
+        String[] choices = {"選擇圖片", "還原預設", hideColor ? "顯示前五個 APP 左側色彩效果" : "隱藏前五個 APP 左側色彩效果"};
+        new AlertDialog.Builder(this).setTitle("桌布設定").setItems(choices, (dialog, which) -> {
             if (which == 0) {
                 Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE); pick.setType("image/*");
@@ -3648,7 +3650,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 try { startActivityForResult(pick, WALLPAPER_PICK_REQUEST); }
                 catch (ActivityNotFoundException e) { Toast.makeText(this, "找不到圖片選擇器", Toast.LENGTH_LONG).show(); }
             } else if (which == 1) {
-                getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply(); recreate();
+                getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply();
+                appPrefs.edit().putBoolean("hide_dock_color_effect", false).apply();
+                recreate();
             } else {
                 appPrefs.edit().putBoolean("hide_dock_color_effect", !hideColor).apply(); recreate();
             }
@@ -4429,8 +4433,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             PopupWindow folderPopup = glassPopup(folderPanel, (int) (220 * density));
             if (key.contains("/folder:")) {
                 String oldName = key.substring(key.indexOf("/folder:") + "/folder:".length());
-                addSettingsMenuRow(folderRows, folderPopup, "管理資料夾 APP", this::showFolderAppAssignment);
-                addSettingsMenuRow(folderRows, folderPopup, "修改資料夾名稱", () -> {
+                addSettingsMenuRow(folderRows, folderPopup, "重新命名", () -> {
                     EditText edit = new EditText(this);
                     edit.setSingleLine(true);
                     edit.setText(oldName);
@@ -4453,7 +4456,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 });
             }
             if (key.contains("/system-folder")) {
-                addSettingsMenuRow(folderRows, folderPopup, "管理系統資料夾 APP", this::showSystemFolderAssignment);
+                addSettingsMenuRow(folderRows, folderPopup, "重新命名", () -> {
+                    Toast.makeText(this, "系統資料夾名稱固定", Toast.LENGTH_SHORT).show();
+                });
             }
             if (key.contains("/folder:")) {
                 addSettingsMenuRow(folderRows, folderPopup, "刪除資料夾", () -> {
@@ -4469,6 +4474,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                 reloadApps(false);
                             }).show();
                 });
+                addSettingsMenuRow(folderRows, folderPopup, "移動", this::toggleReorder);
             }
             addSettingsMenuRow(folderRows, folderPopup, hidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
                 folderPrefs.edit().putBoolean("hide_all_names", !hidden).apply();
