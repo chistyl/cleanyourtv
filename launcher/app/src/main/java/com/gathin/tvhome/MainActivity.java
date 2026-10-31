@@ -550,6 +550,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         clockBlock = findViewById(R.id.leftBlock);
         weeklyWeatherView = findViewById(R.id.weeklyWeather);
         weeklyWeatherDays = findViewById(R.id.weeklyWeatherDays);
+        // The forecast is informational only: never let TV focus, hover, pressed or ripple states
+        // brighten the entire weather panel when the remote cursor passes over it.
+        weeklyWeatherView.setFocusable(false);
+        weeklyWeatherView.setFocusableInTouchMode(false);
+        weeklyWeatherView.setClickable(false);
+        weeklyWeatherView.setLongClickable(false);
+        weeklyWeatherView.setForeground(null);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            weeklyWeatherView.setStateListAnimator(null);
+        }
         // The weather card follows leftBlock's available width; never assign screen-relative width,
         // which can push the top-right Wi-Fi / Settings controls off-screen on some TV resolutions.
         refreshWeeklyWeatherVisibility();
