@@ -4612,8 +4612,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     cardSurface.setColor(focused ? 0xFF263B55 : savedBackground);
                     cardSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
                             focused ? 0xFFFFD54F : 0x24FFFFFF);
-                    name.setTextColor(focused ? 0xFFFFE082 : Color.WHITE);
-                    name.setTypeface(null, focused ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
                 });
                 tile.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
