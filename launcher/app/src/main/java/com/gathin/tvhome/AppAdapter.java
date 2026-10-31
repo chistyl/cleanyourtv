@@ -336,7 +336,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 float iconScale = Math.max(0.10f, Math.min(3.75f, 1.25f * (1f + iconAdjustment / 100f)));
                 // A custom icon or an explicit size adjustment switches this tile to icon artwork,
                 // otherwise keep the app's native TV banner when one exists.
-                boolean forceIconTile = custom.getBoolean("icon_scale_override_" + pkg, false) || customIcon != null;
+                boolean forceIconTile = custom.getBoolean("icon_scale_override_" + pkg,
+                        custom.contains("icon_scale_adjust_" + pkg)) || customIcon != null;
                 if (!forceIconTile) {
                     banner = bundledBanner(appBanners.get(pkg));
                     if (banner == null) banner = loadBanner(pm, ri);
