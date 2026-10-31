@@ -448,8 +448,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 Drawable artwork = ri != null ? loadBanner(pm, ri) : null;
                 if (artwork == null) artwork = iconBanner(pm.getApplicationIcon(pkg), Color.WHITE, 1.25f);
                 int x = positions[index][0], y = positions[index][1];
+                android.graphics.Path clip = new android.graphics.Path();
+                clip.addRoundRect(new android.graphics.RectF(x, y, x + 156, y + 88),
+                        12f, 12f, android.graphics.Path.Direction.CW);
+                canvas.save();
+                canvas.clipPath(clip);
                 artwork.setBounds(x, y, x + 156, y + 88);
                 artwork.draw(canvas);
+                canvas.restore();
                 index++;
             } catch (Exception ignored) { }
         }
