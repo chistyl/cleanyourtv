@@ -3697,7 +3697,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked);
-                row.addView(check); row.setFocusable(false); row.setClickable(false);
+                row.addView(check);
+                row.setFocusable(true); row.setClickable(true);
+                row.setOnClickListener(v -> {
+                    if (folderMode[0]) folderHidden[position] = !folderHidden[position];
+                    else appHidden[position] = !appHidden[position];
+                    adapter.notifyDataSetChanged();
+                });
                 GradientDrawable itemBg = new GradientDrawable();
                 itemBg.setColor(Color.TRANSPARENT); itemBg.setCornerRadius(10f * density);
                 row.setBackground(itemBg);
@@ -3709,14 +3715,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return row;
             }
         };
-        list.setItemsCanFocus(false);
+        list.setItemsCanFocus(true);
         list.setFocusable(true);
         list.setAdapter(adapter);
-        list.setOnItemClickListener((parent, view, position, id) -> {
-            if (folderMode[0]) folderHidden[position] = !folderHidden[position];
-            else appHidden[position] = !appHidden[position];
-            adapter.notifyDataSetChanged();
-        });
         Runnable refreshTabs = () -> {
             appTab.setAlpha(folderMode[0] ? 0.58f : 1f);
             folderTab.setAlpha(folderMode[0] ? 1f : 0.58f);
@@ -3823,18 +3824,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 check.setClickable(false);
                 check.setChecked(checked[position]);
                 row.addView(check);
-                row.setFocusable(false);
-                row.setClickable(false);
+                row.setFocusable(true);
+                row.setClickable(true);
+                row.setOnClickListener(v -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
                 return row;
             }
         };
-        list.setItemsCanFocus(false);
+        list.setItemsCanFocus(true);
         list.setFocusable(true);
         list.setAdapter(rows);
-        list.setOnItemClickListener((parent, view, position, id) -> {
-            checked[position] = !checked[position];
-            rows.notifyDataSetChanged();
-        });
         new AlertDialog.Builder(this).setTitle("加入「" + folder + "」")
                 .setView(list).setNegativeButton("取消", null)
                 .setPositiveButton("儲存", (dialog, which) -> {
@@ -3992,7 +3990,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 ImageView icon = new ImageView(this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 icon.setImageDrawable(loadTvFolderArtwork(ri));
-                tile.addView(icon, new LinearLayout.LayoutParams((int)(66*density), (int)(40*density)));
+                GradientDrawable artworkClip = new GradientDrawable();
+                artworkClip.setColor(Color.TRANSPARENT);
+                artworkClip.setCornerRadius(8f * density);
+                icon.setBackground(artworkClip);
+                icon.setClipToOutline(true);
+                tile.addView(icon, new LinearLayout.LayoutParams((int)(72*density), (int)(40.5f*density)));
                 TextView name = new TextView(this);
                 String customName = prefs.getString("label_" + packageName, null);
                 name.setText(customName != null ? customName : String.valueOf(ri.loadLabel(getPackageManager())));
@@ -4167,13 +4170,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked[position]);
-                row.addView(check); row.setFocusable(false); row.setClickable(false); return row;
+                row.addView(check);
+                row.setFocusable(true); row.setClickable(true);
+                row.setOnClickListener(v -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
+                return row;
             }
         };
-        list.setItemsCanFocus(false);
+        list.setItemsCanFocus(true);
         list.setFocusable(true);
         list.setAdapter(rows);
-        list.setOnItemClickListener((parent, view, position, id) -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
         new AlertDialog.Builder(this).setTitle("系統資料夾：勾選要收納的 APP").setView(list)
                 .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
                     java.util.HashSet<String> excludedNow = new java.util.HashSet<>(), addedNow = new java.util.HashSet<>();
