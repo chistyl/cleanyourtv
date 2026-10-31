@@ -75,6 +75,7 @@ import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
 import android.widget.Button;
 import android.widget.ScrollView;
+import android.widget.HorizontalScrollView;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -209,7 +210,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean advancedEffects;
     private TextView greeting;
     private View clockBlock;
-    private TextView weeklyWeatherView;
+    private HorizontalScrollView weeklyWeatherView;
+    private LinearLayout weeklyWeatherDays;
     private View btnInputs;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
@@ -546,6 +548,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         greeting = findViewById(R.id.greeting);
         clockBlock = findViewById(R.id.leftBlock);
         weeklyWeatherView = findViewById(R.id.weeklyWeather);
+        weeklyWeatherDays = findViewById(R.id.weeklyWeatherDays);
         refreshWeeklyWeatherVisibility();
         greetingColor = greeting.getCurrentTextColor();
         if (!cfg.showGreeting) greeting.setVisibility(View.GONE);
@@ -3652,7 +3655,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean enabled = prefs.getBoolean("enabled", false);
         weeklyWeatherView.setVisibility(enabled ? View.VISIBLE : View.GONE);
         if (!enabled) return;
-        weeklyWeatherView.setText("一週天氣  ·  正在取得預報…");
+        showWeeklyWeatherStatus("一週天氣  ·  正在取得預報…");
         loadWeeklyWeather();
     }
 
@@ -3667,7 +3670,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             weatherHandler.post(() -> {
-                weeklyWeatherView.setText("一週天氣：需要定位權限，請至設定允許，或改用固定城市");
+                showWeeklyWeatherStatus("一週天氣：需要定位權限，請至設定允許，或改用固定城市");
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 918);
             });
             return;
@@ -3684,7 +3687,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             } catch (Exception ignored) { }
             if (location == null) {
-                weatherHandler.post(() -> weeklyWeatherView.setText("無法取得電視位置，請改用「固定指定城市」"));
+                weatherHandler.post(() -> showWeeklyWeatherStatus("無法取得電視位置，請改用「固定指定城市」"));
             } else {
                 fetchForecast(location.getLatitude(), location.getLongitude(), "目前位置");
             }
@@ -3736,36 +3739,82 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             JSONArray dates = daily.getJSONArray("time"), codes = daily.getJSONArray("weather_code");
             JSONArray highs = daily.getJSONArray("temperature_2m_max"), lows = daily.getJSONArray("temperature_2m_min");
             JSONArray rain = daily.optJSONArray("precipitation_probability_max");
-            SpannableStringBuilder out = new SpannableStringBuilder("一週天氣  ·  " + place + "\n");
-            out.setSpan(new StyleSpan(Typeface.BOLD), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            out.setSpan(new RelativeSizeSpan(1.12f), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            for (int i = 0; i < Math.min(7, dates.length()); i++) {
+            weatherHandler.post(() -> renderWeeklyWeather(dates, codes, highs, lows, rain));
+
+        } catch (Exception e) { showWeatherError("天氣資料讀取失敗：" + e.getMessage()); }
+    }
+
+    private void showWeeklyWeatherStatus(String message) {
+        if (weeklyWeatherDays == null) return;
+        weeklyWeatherDays.removeAllViews();
+        TextView status = new TextView(this);
+        status.setText(message);
+        status.setTextColor(Color.WHITE);
+        status.setTextSize(15);
+        status.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
+        weeklyWeatherDays.addView(status, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private void renderWeeklyWeather(JSONArray dates, JSONArray codes, JSONArray highs, JSONArray lows, JSONArray rain) {
+        if (weeklyWeatherDays == null || weeklyWeatherView == null) return;
+        weeklyWeatherDays.removeAllViews();
+        int count = Math.min(7, dates.length());
+        for (int i = 0; i < count; i++) {
+            try {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
                 int code = codes.optInt(i, -1);
-                out.append(day).append("   ");
-                int iconStart = out.length();
-                out.append(weatherIcon(code));
-                out.setSpan(new RelativeSizeSpan(1.75f), iconStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                out.append("   ").append(weatherLabel(code)).append("   ")
-                        .append(String.valueOf(Math.round(highs.optDouble(i)))).append("° / ")
-                        .append(String.valueOf(Math.round(lows.optDouble(i)))).append("°");
-                if (rain != null && !rain.isNull(i)) out.append("   降雨 ").append(String.valueOf(rain.optInt(i))).append('%');
-                if (i < Math.min(7, dates.length()) - 1) out.append("\n");
-            }
-            weatherHandler.post(() -> {
-                if (weeklyWeatherView != null) {
-                    weeklyWeatherView.setTypeface(Typeface.DEFAULT);
-                    weeklyWeatherView.setTextSize(16f);
-                    weeklyWeatherView.setLineSpacing(9f, 1.12f);
-                    weeklyWeatherView.setPadding((int)(18 * getResources().getDisplayMetrics().density),
-                            (int)(12 * getResources().getDisplayMetrics().density),
-                            (int)(18 * getResources().getDisplayMetrics().density),
-                            (int)(12 * getResources().getDisplayMetrics().density));
-                    weeklyWeatherView.setText(out);
-                }
-            });
-        } catch (Exception e) { showWeatherError("天氣資料讀取失敗：" + e.getMessage()); }
+                LinearLayout item = new LinearLayout(this);
+                item.setOrientation(LinearLayout.VERTICAL);
+                item.setGravity(Gravity.CENTER);
+                item.setPadding((int)(8*density), (int)(5*density), (int)(8*density), (int)(5*density));
+
+                TextView dateView = new TextView(this);
+                dateView.setText(day);
+                dateView.setTextColor(0xFFBFC4CE);
+                dateView.setTextSize(13);
+                dateView.setGravity(Gravity.CENTER);
+                item.addView(dateView, new LinearLayout.LayoutParams(-1, -2));
+
+                TextView iconView = new TextView(this);
+                iconView.setText(weatherIcon(code));
+                iconView.setTextSize(30);
+                iconView.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(-1, (int)(48*density));
+                iconLp.topMargin = (int)(5*density);
+                item.addView(iconView, iconLp);
+
+                TextView condition = new TextView(this);
+                condition.setText(weatherLabel(code));
+                condition.setTextColor(Color.WHITE);
+                condition.setTextSize(13);
+                condition.setGravity(Gravity.CENTER);
+                condition.setMaxLines(1);
+                condition.setEllipsize(TextUtils.TruncateAt.END);
+                item.addView(condition, new LinearLayout.LayoutParams(-1, -2));
+
+                TextView temperature = new TextView(this);
+                temperature.setText(Math.round(highs.optDouble(i)) + "°  " + Math.round(lows.optDouble(i)) + "°");
+                temperature.setTextColor(0xFFE9EBF0);
+                temperature.setTextSize(14);
+                temperature.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams tempLp = new LinearLayout.LayoutParams(-1, -2);
+                tempLp.topMargin = (int)(5*density);
+                item.addView(temperature, tempLp);
+
+                TextView precipitation = new TextView(this);
+                precipitation.setText(rain != null && !rain.isNull(i) ? "降雨 " + rain.optInt(i) + "%" : "降雨 --");
+                precipitation.setTextColor(0xFF9DA5B3);
+                precipitation.setTextSize(11);
+                precipitation.setGravity(Gravity.CENTER);
+                item.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
+
+                LinearLayout.LayoutParams itemLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                if (count < 7) itemLp.width = Math.max((int)(92*density), getResources().getDisplayMetrics().widthPixels / Math.max(1,count));
+                weeklyWeatherDays.addView(item, itemLp);
+            } catch (Exception ignored) { }
+        }
+        weeklyWeatherView.setVisibility(View.VISIBLE);
     }
 
     private JSONObject getJson(String address) throws Exception {
@@ -3779,7 +3828,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showWeatherError(String message) {
-        weatherHandler.post(() -> { if (weeklyWeatherView != null) weeklyWeatherView.setText("一週天氣：" + message); });
+        weatherHandler.post(() -> { if (weeklyWeatherView != null) showWeeklyWeatherStatus("一週天氣：" + message); });
     }
 
     /** Weather symbols follow the reference card: distinct, instantly scannable icons per condition. */
@@ -4639,8 +4688,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (i - folderColumns >= 0) item.setNextFocusUpId(folderFocusTiles.get(i - folderColumns).getId());
             if (i + folderColumns < folderFocusTiles.size()) item.setNextFocusDownId(folderFocusTiles.get(i + folderColumns).getId());
             item.setOnKeyListener((v, keyCode, event) -> {
-                if (event.getAction() == KeyEvent.ACTION_UP && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)) {
-                    return v.performClick();
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                int index = folderFocusTiles.indexOf(v);
+                if (index < 0) return false;
+                int target = -1;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && index % folderColumns > 0) target = index - 1;
+                else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && index % folderColumns < folderColumns - 1 && index + 1 < folderFocusTiles.size()) target = index + 1;
+                else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && index - folderColumns >= 0) target = index - folderColumns;
+                else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && index + folderColumns < folderFocusTiles.size()) target = index + folderColumns;
+                if (target >= 0) {
+                    View next = folderFocusTiles.get(target);
+                    next.requestFocus();
+                    return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                    v.performClick();
+                    return true;
                 }
                 return false;
             });
