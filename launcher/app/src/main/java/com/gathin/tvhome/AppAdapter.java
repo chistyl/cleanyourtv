@@ -297,11 +297,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             SharedPreferences homePrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
             boolean inSystemFolder = false;
             Set<String> systemExclusions = homePrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet());
+            Set<String> systemAdded = homePrefs.getStringSet("system_folder_added", Collections.<String>emptySet());
             try {
                 android.content.pm.ApplicationInfo appInfo = ctx.getPackageManager().getApplicationInfo(pkg, 0);
                 boolean isSystem = (appInfo.flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM
                         | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
-                inSystemFolder = isSystem && !systemExclusions.contains(pkg);
+                inSystemFolder = systemAdded.contains(pkg) || (isSystem && !systemExclusions.contains(pkg));
             } catch (PackageManager.NameNotFoundException ignored) { }
             boolean inFolder = false;
             for (String folder : homePrefs.getStringSet("home_folders", Collections.<String>emptySet()))
@@ -381,15 +382,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         folderPreview(members), null, null, 0));
             }
         }
-        Set<String> systemMembers = new HashSet<>();
+        Set<String> systemMembers = new HashSet<>(folderPrefs.getStringSet("system_folder_added", Collections.<String>emptySet()));
+        Set<String> systemExcluded = folderPrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet());
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             try {
                 int flags = pm.getApplicationInfo(pkg, 0).flags;
                 if ((flags & (android.content.pm.ApplicationInfo.FLAG_SYSTEM | android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-                        && !folderPrefs.getStringSet("system_folder_excluded", Collections.<String>emptySet()).contains(pkg))
-                    systemMembers.add(pkg);
+                        && !systemExcluded.contains(pkg)) systemMembers.add(pkg);
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
         fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
