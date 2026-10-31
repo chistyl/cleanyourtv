@@ -307,7 +307,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:layout_marginEnd="100dp"
+                    android:layout_marginEnd="0dp"
                     android:background="@drawable/v17_weather_card"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
