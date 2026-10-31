@@ -605,7 +605,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
-            if (tileMenu) {
+            if (tileMenu || e.kind == Entry.SYSTEM_FOLDER || e.kind == Entry.USER_FOLDER) {
                 int pos = h.getBindingAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION) listener.onTileLongPress(pos, v);
                 return true;
