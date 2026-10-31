@@ -3602,40 +3602,118 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
     }
 
-    /** 桌面顯示：勾選代表隱藏，可同時管理 APP、一般資料夾與系統資料夾。 */
+    /** 桌面顯示分為 APP／資料夾頁籤，清單顯示 TV 橫幅圖示；勾選代表隱藏。 */
     private void showHomeAppVisibilityDialog() {
-        List<ResolveInfo> apps = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
-        if (apps == null || apps.isEmpty()) apps = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
-        final Map<String, String> labels = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (ResolveInfo ri : apps) if (ri.activityInfo != null && ri.activityInfo.exported
-                && !ri.activityInfo.packageName.equals(getPackageName()))
-            labels.put(ri.activityInfo.packageName, String.valueOf(ri.loadLabel(getPackageManager())));
-        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-        final List<String> keys = new ArrayList<>(), names = new ArrayList<>();
-        final List<Boolean> initial = new ArrayList<>();
-        for (String pkg : labels.keySet()) {
-            keys.add("app:" + pkg); names.add("APP　" + labels.get(pkg)); initial.add(prefs.getBoolean("home_hidden_" + pkg, false));
+        final SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        List<ResolveInfo> found = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        if (found == null || found.isEmpty()) found = getPackageManager().queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
+        final java.util.TreeMap<String, ResolveInfo> appMap =
+                new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (ResolveInfo ri : found) {
+            if (ri.activityInfo != null && ri.activityInfo.exported
+                    && !ri.activityInfo.packageName.equals(getPackageName()))
+                appMap.put(ri.activityInfo.packageName, ri);
         }
-        List<String> folders = new ArrayList<>(prefs.getStringSet("home_folders", Collections.<String>emptySet()));
+        final ArrayList<String> packages = new ArrayList<>(appMap.keySet());
+        final ArrayList<String> folders = new ArrayList<>(prefs.getStringSet(
+                "home_folders", Collections.<String>emptySet()));
         Collections.sort(folders, String.CASE_INSENSITIVE_ORDER);
-        for (String folder : folders) {
-            keys.add("folder:" + folder); names.add("資料夾　" + folder);
-            initial.add(prefs.getBoolean("home_hidden_folder_" + folder, false));
+        if (!folders.contains("系統")) folders.add("系統");
+        final boolean[] appHidden = new boolean[packages.size()];
+        final boolean[] folderHidden = new boolean[folders.size()];
+        for (int i = 0; i < packages.size(); i++)
+            appHidden[i] = prefs.getBoolean("home_hidden_" + packages.get(i), false);
+        for (int i = 0; i < folders.size(); i++)
+            folderHidden[i] = prefs.getBoolean("home_hidden_folder_" + folders.get(i), false);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding((int)(16*density), (int)(12*density), (int)(16*density), (int)(8*density));
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        TextView appTab = new TextView(this), folderTab = new TextView(this);
+        appTab.setText("APP"); folderTab.setText("資料夾");
+        for (TextView tab : new TextView[]{appTab, folderTab}) {
+            tab.setTextColor(Color.WHITE); tab.setTextSize(17); tab.setGravity(Gravity.CENTER);
+            tab.setFocusable(true); tab.setPadding(0, (int)(12*density), 0, (int)(12*density));
+            GradientDrawable tabBg = new GradientDrawable();
+            tabBg.setColor(0x223FFFFFF); tabBg.setCornerRadius(12*density);
+            tab.setBackground(tabBg);
+            LinearLayout.LayoutParams tabLp = new LinearLayout.LayoutParams(0, -2, 1f);
+            tabLp.setMargins((int)(4*density), 0, (int)(4*density), 0);
+            tabs.addView(tab, tabLp);
         }
-        keys.add("folder:系統"); names.add("資料夾　系統"); initial.add(prefs.getBoolean("home_hidden_folder_系統", false));
-        final boolean[] checked = new boolean[initial.size()];
-        for (int i = 0; i < checked.length; i++) checked[i] = initial.get(i);
-        new AlertDialog.Builder(this).setTitle("桌面顯示（打勾＝隱藏）")
-                .setMultiChoiceItems(names.toArray(new String[0]), checked, (dialog, which, value) -> checked[which] = value)
-                .setPositiveButton("儲存", (dialog, which) -> {
-                    SharedPreferences.Editor edit = prefs.edit();
-                    for (int i = 0; i < keys.size(); i++) {
-                        String key = keys.get(i);
-                        if (key.startsWith("app:")) edit.putBoolean("home_hidden_" + key.substring(4), checked[i]);
-                        else edit.putBoolean("home_hidden_folder_" + key.substring(7), checked[i]);
-                    }
-                    edit.apply(); reloadApps(false);
-                }).setNegativeButton("取消", null).show();
+        content.addView(tabs, new LinearLayout.LayoutParams(-1, -2));
+        TextView hint = new TextView(this);
+        hint.setText("打勾＝隱藏"); hint.setTextColor(0xFFB8C2CC); hint.setTextSize(13);
+        hint.setPadding((int)(6*density), (int)(8*density), 0, (int)(4*density));
+        content.addView(hint);
+        android.widget.ListView list = new android.widget.ListView(this);
+        list.setDivider(new ColorDrawable(0x223FFFFFF)); list.setDividerHeight(1);
+        content.addView(list, new LinearLayout.LayoutParams(-1, (int)(390*density)));
+        final boolean[] folderMode = {false};
+        android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+            @Override public int getCount() { return folderMode[0] ? folders.size() : packages.size(); }
+            @Override public Object getItem(int position) { return folderMode[0] ? folders.get(position) : packages.get(position); }
+            @Override public long getItemId(int position) { return position; }
+            @Override public View getView(int position, View recycled, ViewGroup parent) {
+                LinearLayout row = recycled instanceof LinearLayout ? (LinearLayout) recycled : new LinearLayout(MainActivity.this);
+                row.removeAllViews(); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding((int)(8*density), (int)(6*density), (int)(8*density), (int)(6*density));
+                ImageView image = new ImageView(MainActivity.this);
+                image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                TextView label = new TextView(MainActivity.this);
+                label.setTextColor(Color.WHITE); label.setTextSize(15);
+                boolean checked;
+                if (folderMode[0]) {
+                    String folder = folders.get(position);
+                    image.setImageResource(android.R.drawable.ic_menu_agenda);
+                    label.setText(folder); checked = folderHidden[position];
+                } else {
+                    String pkg = packages.get(position);
+                    ResolveInfo ri = appMap.get(pkg);
+                    image.setImageDrawable(loadTvFolderArtwork(ri));
+                    String custom = prefs.getString("label_" + pkg, null);
+                    label.setText(custom != null ? custom : String.valueOf(ri.loadLabel(getPackageManager())));
+                    checked = appHidden[position];
+                }
+                row.addView(image, new LinearLayout.LayoutParams((int)(76*density), (int)(44*density)));
+                LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
+                android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
+                check.setFocusable(false); check.setClickable(false); check.setChecked(checked);
+                row.addView(check); row.setFocusable(true);
+                return row;
+            }
+        };
+        list.setAdapter(adapter);
+        list.setOnItemClickListener((parent, view, position, id) -> {
+            if (folderMode[0]) folderHidden[position] = !folderHidden[position];
+            else appHidden[position] = !appHidden[position];
+            adapter.notifyDataSetChanged();
+        });
+        Runnable refreshTabs = () -> {
+            appTab.setAlpha(folderMode[0] ? 0.58f : 1f);
+            folderTab.setAlpha(folderMode[0] ? 1f : 0.58f);
+            adapter.notifyDataSetChanged(); list.setSelection(0);
+        };
+        appTab.setOnClickListener(v -> { folderMode[0] = false; refreshTabs.run(); });
+        folderTab.setOnClickListener(v -> { folderMode[0] = true; refreshTabs.run(); });
+        refreshTabs.run();
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("桌面顯示")
+                .setView(content).setPositiveButton("儲存", null)
+                .setNegativeButton("取消", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            SharedPreferences.Editor edit = prefs.edit();
+            for (int i = 0; i < packages.size(); i++)
+                edit.putBoolean("home_hidden_" + packages.get(i), appHidden[i]);
+            for (int i = 0; i < folders.size(); i++)
+                edit.putBoolean("home_hidden_folder_" + folders.get(i), folderHidden[i]);
+            edit.apply(); dialog.dismiss(); reloadApps(false);
+        }));
+        dialog.show();
     }
 
     private void showWallpaperPicker() {
@@ -4598,6 +4676,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.setFocusable(true);
         row.setFocusableInTouchMode(true);
         row.setClickable(true);
+        GradientDrawable rowBg = new GradientDrawable();
+        rowBg.setColor(Color.TRANSPARENT); rowBg.setCornerRadius(12f * density);
+        row.setBackground(rowBg);
+        row.setOnFocusChangeListener((v, focused) -> {
+            GradientDrawable focusBg = new GradientDrawable();
+            focusBg.setColor(focused ? 0x33FFFFFF : Color.TRANSPARENT);
+            focusBg.setCornerRadius(12f * density); v.setBackground(focusBg);
+        });
         row.setOnClickListener(v -> {
             popup.dismiss();
             action.run();
