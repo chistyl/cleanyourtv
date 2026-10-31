@@ -406,14 +406,15 @@
             </LinearLayout>
         </RelativeLayout>
 
-        <!-- The wrapper clips at the grid's edge; the grid itself must not clip so scaled tiles can overflow their cells. -->
+        <!-- Clip scrolling app rows at the top of the grid viewport so they never draw over the clock/date header.
+             The RecyclerView may still allow tile scaling inside this viewport; this parent is the hard clipping edge. -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:layout_marginTop="10dp"
-            android:clipChildren="false"
-            android:clipToPadding="false">
+            android:clipChildren="true"
+            android:clipToPadding="true">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/grid"
