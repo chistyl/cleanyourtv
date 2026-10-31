@@ -58,6 +58,10 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.InputType;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
+import android.graphics.Typeface;
+import android.text.SpannableStringBuilder;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -3732,18 +3736,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             JSONArray dates = daily.getJSONArray("time"), codes = daily.getJSONArray("weather_code");
             JSONArray highs = daily.getJSONArray("temperature_2m_max"), lows = daily.getJSONArray("temperature_2m_min");
             JSONArray rain = daily.optJSONArray("precipitation_probability_max");
-            StringBuilder out = new StringBuilder("一週天氣  ·  ").append(place).append("\n");
+            SpannableStringBuilder out = new SpannableStringBuilder("一週天氣  ·  " + place + "\n");
+            out.setSpan(new StyleSpan(Typeface.BOLD), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            out.setSpan(new RelativeSizeSpan(1.08f), 0, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             for (int i = 0; i < Math.min(7, dates.length()); i++) {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
                 int code = codes.optInt(i, -1);
-                out.append(day).append("  ").append(weatherIcon(code)).append("  ").append(weatherLabel(code)).append("  ")
-                        .append(Math.round(highs.optDouble(i))).append("° / ").append(Math.round(lows.optDouble(i))).append("°");
-                if (rain != null && !rain.isNull(i)) out.append("  降雨 ").append(rain.optInt(i)).append('%');
+                out.append(day).append("   ");
+                int iconStart = out.length();
+                out.append(weatherIcon(code));
+                out.setSpan(new RelativeSizeSpan(1.65f), iconStart, out.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.append("   ").append(weatherLabel(code)).append("   ")
+                        .append(String.valueOf(Math.round(highs.optDouble(i)))).append("° / ")
+                        .append(String.valueOf(Math.round(lows.optDouble(i)))).append("°");
+                if (rain != null && !rain.isNull(i)) out.append("   降雨 ").append(String.valueOf(rain.optInt(i))).append('%');
                 if (i < Math.min(7, dates.length()) - 1) out.append("\n");
             }
-            String result = out.toString();
-            weatherHandler.post(() -> { if (weeklyWeatherView != null) weeklyWeatherView.setText(result); });
+            weatherHandler.post(() -> {
+                if (weeklyWeatherView != null) {
+                    weeklyWeatherView.setTypeface(Typeface.DEFAULT);
+                    weeklyWeatherView.setTextSize(15f);
+                    weeklyWeatherView.setLineSpacing(7f, 1.08f);
+                    weeklyWeatherView.setText(out);
+                }
+            });
         } catch (Exception e) { showWeatherError("天氣資料讀取失敗：" + e.getMessage()); }
     }
 
