@@ -775,43 +775,45 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
-        // Keep the weather card out of the way while the app grid is scrolled upward.
-        // It returns only when the grid returns to its top, so it cannot cover the top controls.
+        // Hide the weather panel completely while the app grid is scrolled.
+        // GONE releases its height so the RecyclerView gets the full screen for app navigation.
+        // Restore it only after the user returns to the very top; this avoids stealing space
+        // from the last rows and prevents focus from landing below the visible app list.
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            private void syncWeatherVisibility(RecyclerView rv) {
-                if (weeklyWeatherView == null) return;
-                boolean hidden = rv.computeVerticalScrollOffset() > Math.max(1, (int)(8 * density));
-                if (weatherHiddenByScroll == hidden) return;
-                weatherHiddenByScroll = hidden;
+            private void hideWeatherForGrid() {
+                if (weeklyWeatherView == null || weatherHiddenByScroll) return;
                 boolean enabled = getSharedPreferences("weekly_weather", MODE_PRIVATE)
                         .getBoolean("enabled", false);
-                if (!enabled) {
-                    weeklyWeatherView.setVisibility(View.GONE);
-                    return;
-                }
-                if (hidden) {
-                    weeklyWeatherView.animate().cancel();
-                    // INVISIBLE keeps the header and RecyclerView geometry stable while scrolling.
-                    weeklyWeatherView.setVisibility(View.INVISIBLE);
-                    weeklyWeatherView.setAlpha(1f);
-                } else {
-                    weeklyWeatherView.setAlpha(0f);
-                    weeklyWeatherView.setVisibility(View.VISIBLE);
-                    weeklyWeatherView.animate().alpha(1f).setDuration(180).start();
-                }
+                if (!enabled) return;
+                weatherHiddenByScroll = true;
+                weeklyWeatherView.animate().cancel();
+                weeklyWeatherView.setVisibility(View.GONE);
+                weeklyWeatherView.setAlpha(1f);
+            }
+            private void restoreWeatherAtTop(RecyclerView rv) {
+                if (weeklyWeatherView == null || !weatherHiddenByScroll
+                        || rv.canScrollVertically(-1)) return;
+                boolean enabled = getSharedPreferences("weekly_weather", MODE_PRIVATE)
+                        .getBoolean("enabled", false);
+                if (!enabled) return;
+                weatherHiddenByScroll = false;
+                weeklyWeatherView.setAlpha(0f);
+                weeklyWeatherView.setVisibility(View.VISIBLE);
+                weeklyWeatherView.animate().alpha(1f).setDuration(180).start();
             }
             @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                syncWeatherVisibility(rv);
+                if (dy > 0) hideWeatherForGrid();
+                else if (dy < 0) restoreWeatherAtTop(rv);
             }
             @Override public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) syncWeatherVisibility(rv);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) restoreWeatherAtTop(rv);
             }
         });
         grid.post(() -> {
-            if (grid != null && weeklyWeatherView != null) {
-                boolean hidden = grid.computeVerticalScrollOffset() > Math.max(1, (int)(8 * density));
-                weatherHiddenByScroll = hidden;
-                if (hidden) weeklyWeatherView.setVisibility(View.INVISIBLE);
+            if (grid != null && weeklyWeatherView != null
+                    && grid.canScrollVertically(-1)) {
+                weatherHiddenByScroll = true;
+                weeklyWeatherView.setVisibility(View.GONE);
             }
         });
 
