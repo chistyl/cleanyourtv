@@ -93,10 +93,16 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             RecyclerView.ViewHolder vh = parent.getChildViewHolder(child);
             View card = vh instanceof AppAdapter.Holder ? ((AppAdapter.Holder) vh).card : child.findViewById(R.id.card);
             if (card == null) continue;
-            float l = child.getLeft() + card.getLeft();
-            float t = child.getTop() + card.getTop() + child.getTranslationY();
-            float r = l + card.getWidth();
-            float b = t + card.getHeight();
+            // The card is nested inside the holder's item hierarchy. Do not add only the
+            // holder and card offsets: intermediate wrappers/padding can move the card and leave
+            // the dock band detached from the visible tiles. Convert the card's full bounds into
+            // RecyclerView coordinates so the band always follows the actual card position.
+            Rect cardBounds = new Rect(0, 0, card.getWidth(), card.getHeight());
+            parent.offsetDescendantRectToMyCoords(card, cardBounds);
+            float l = cardBounds.left;
+            float t = cardBounds.top;
+            float r = cardBounds.right;
+            float b = cardBounds.bottom;
             cardWidth = card.getWidth();
             if (!any) {
                 rect.set(l, t, r, b);
