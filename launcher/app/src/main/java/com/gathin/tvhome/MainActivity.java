@@ -967,11 +967,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ((TextView) btnSettings).setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_settings, 0, 0, 0);
             if (!iconOnlyButtons) makeIconOnly((TextView) btnSettings);
             btnSettings.setOnClickListener(v -> showTopMenu());
-            // The lone gear sits at the header's middle, not on its bottom line like the row of pills.
+            // Match V16.8: anchor the top menu to the bottom of the complete left header block,
+            // not the clock row or the top edge. Keep the original 6dp breathing room.
             LinearLayout topButtons = findViewById(R.id.topButtons);
             RelativeLayout.LayoutParams tlp = (RelativeLayout.LayoutParams) topButtons.getLayoutParams();
-            tlp.addRule(RelativeLayout.ALIGN_TOP, R.id.leftBlock);
-            tlp.bottomMargin = 0;
+            tlp.addRule(RelativeLayout.ALIGN_TOP, 0);
+            tlp.addRule(RelativeLayout.ALIGN_BOTTOM, R.id.leftBlock);
+            tlp.bottomMargin = Math.round(6 * density);
             topButtons.setLayoutParams(tlp);
             topButtons.setGravity(Gravity.CENTER_VERTICAL);
         }
