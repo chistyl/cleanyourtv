@@ -3797,7 +3797,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(38);
+                iconView.setTextSize(42);
                 iconView.setGravity(Gravity.CENTER);
                 LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(-1, -2);
                 iconLp.topMargin = (int)(2*density);
@@ -3828,7 +3828,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 precipitation.setGravity(Gravity.CENTER);
                 dayColumn.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
 
-                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams((int)(154*density), -2);
+                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams((int)(124*density), -2);
                 forecast.addView(dayColumn, columnLp);
             } catch (Exception ignored) { }
         }
@@ -4678,7 +4678,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     addCard.setScaleY(scale);
                     addCard.setTranslationZ(focused ? 24f * density : 0f);
                     addCard.setElevation(focused ? 24f * density : 0f);
-                    addSurface.setColor(focused ? 0xFF46566B : 0xFF343B47);
+                    addSurface.setColor(focused ? 0xFF536B86 : 0xFF343B47);
                     addSurface.setStroke(Math.max(1, (int)(focused ? 6*density : density)),
                             focused ? 0xFFFFD54F : 0x24FFFFFF);
                 });
