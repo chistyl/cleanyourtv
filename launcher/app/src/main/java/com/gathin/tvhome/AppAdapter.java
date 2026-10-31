@@ -230,6 +230,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** Packages drawn from their icon and name even when they have a banner (config.xml icon_tiles). */
     private final Set<String> iconTiles;
     private final List<Entry> items = new ArrayList<>();
+    /** TV launcher activities, reused to compose 16:9 folder preview artwork. */
+    private final Map<String, ResolveInfo> tvActivities = new HashMap<>();
 
     AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg) {
         this.ctx = ctx;
@@ -272,7 +274,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // library apps so the caller's list stays as it was.
         List<ResolveInfo> found = new ArrayList<>(leanback);
         Set<String> tvPackages = new HashSet<>();
-        for (ResolveInfo ri : found) if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
+        tvActivities.clear();
+        for (ResolveInfo ri : found) if (ri.activityInfo != null) {
+            tvPackages.add(ri.activityInfo.packageName);
+            tvActivities.put(ri.activityInfo.packageName, ri);
+        }
         leanbackPackages = tvPackages;
         // Copy before merging: LibraryApps.load() may return an immutable empty set (#419).
         Set<String> added = new HashSet<>(LibraryApps.load(ctx));
@@ -416,7 +422,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    /** Compose a folder tile from up to four app icons inside it. */
+    /** Compose a folder tile from up to four 16:9 TV artwork thumbnails. */
     private Drawable folderPreview(Set<String> packages) {
         int size = 640;
         Bitmap bitmap = Bitmap.createBitmap(size, 360, Bitmap.Config.ARGB_8888);
@@ -432,16 +438,18 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             canvas.drawText("+", size / 2f, 258f, paint);
             return new BitmapDrawable(ctx.getResources(), bitmap);
         }
-        int cell = 116;
-        int[][] positions = {{192, 66}, {332, 66}, {192, 196}, {332, 196}};
+        PackageManager pm = ctx.getPackageManager();
+        int[][] positions = {{158, 76}, {326, 76}, {158, 190}, {326, 190}};
         int index = 0;
         for (String pkg : packages) {
             if (index >= 4) break;
             try {
-                Drawable icon = ctx.getPackageManager().getApplicationIcon(pkg);
+                ResolveInfo ri = tvActivities.get(pkg);
+                Drawable artwork = ri != null ? loadBanner(pm, ri) : null;
+                if (artwork == null) artwork = iconBanner(pm.getApplicationIcon(pkg), Color.WHITE, 1.25f);
                 int x = positions[index][0], y = positions[index][1];
-                icon.setBounds(x, y, x + cell, y + cell);
-                icon.draw(canvas);
+                artwork.setBounds(x, y, x + 156, y + 88);
+                artwork.draw(canvas);
                 index++;
             } catch (Exception ignored) { }
         }

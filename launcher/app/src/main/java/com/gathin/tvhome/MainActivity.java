@@ -4416,7 +4416,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (reordering || openPopup != null) return;
         String key = adapter.keyAt(position);
         String pkg = adapter.packageAt(position);
-        if (key != null && (key.contains("/system-folder") || key.contains("/folder:"))) {
+        if (key != null && key.contains("/system-folder")) {
+            // 系統資料夾為固定項目，長按不提供任何管理動作。
+            return;
+        }
+        if (key != null && key.contains("/folder:")) {
             SharedPreferences folderPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
             boolean hidden = folderPrefs.getBoolean("hide_all_names", false);
             View folderPanel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
