@@ -3866,10 +3866,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                     }).show();
                         } else {
                             if (systemFolder) {
-                                java.util.HashSet<String> excluded = new java.util.HashSet<>(prefs.getStringSet(
-                                        "system_folder_excluded", java.util.Collections.<String>emptySet()));
-                                excluded.add(packageName);
-                                prefs.edit().putStringSet("system_folder_excluded", excluded).apply();
+                                boolean isSystem = false;
+                                try {
+                                    int flags = getPackageManager().getApplicationInfo(packageName, 0).flags;
+                                    isSystem = (flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                                } catch (PackageManager.NameNotFoundException ignored) { }
+                                if (isSystem) {
+                                    java.util.HashSet<String> excluded = new java.util.HashSet<>(prefs.getStringSet(
+                                            "system_folder_excluded", java.util.Collections.<String>emptySet()));
+                                    excluded.add(packageName);
+                                    prefs.edit().putStringSet("system_folder_excluded", excluded).apply();
+                                } else {
+                                    java.util.HashSet<String> added = new java.util.HashSet<>(prefs.getStringSet(
+                                            "system_folder_added", java.util.Collections.<String>emptySet()));
+                                    added.remove(packageName);
+                                    prefs.edit().putStringSet("system_folder_added", added).apply();
+                                }
                             } else {
                                 java.util.HashSet<String> updated = new java.util.HashSet<>(prefs.getStringSet(
                                         "folder_apps_" + folderName, java.util.Collections.<String>emptySet()));
