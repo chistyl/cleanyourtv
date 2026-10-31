@@ -549,6 +549,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         clockBlock = findViewById(R.id.leftBlock);
         weeklyWeatherView = findViewById(R.id.weeklyWeather);
         weeklyWeatherDays = findViewById(R.id.weeklyWeatherDays);
+        // Keep the forecast card narrower than the header so Wi-Fi / Settings remain visually separate.
+        ViewGroup.LayoutParams weatherCardParams = weeklyWeatherView.getLayoutParams();
+        weatherCardParams.width = Math.round(getResources().getDisplayMetrics().widthPixels * 0.72f);
+        weeklyWeatherView.setLayoutParams(weatherCardParams);
         refreshWeeklyWeatherVisibility();
         greetingColor = greeting.getCurrentTextColor();
         if (!cfg.showGreeting) greeting.setVisibility(View.GONE);
@@ -3758,7 +3762,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void renderWeeklyWeather(JSONArray dates, JSONArray codes, JSONArray highs, JSONArray lows, JSONArray rain) {
         if (weeklyWeatherDays == null || weeklyWeatherView == null) return;
         weeklyWeatherDays.removeAllViews();
-        weeklyWeatherDays.setOrientation(LinearLayout.HORIZONTAL);
+        weeklyWeatherDays.setOrientation(LinearLayout.VERTICAL);
         weeklyWeatherDays.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView heading = new TextView(this);
