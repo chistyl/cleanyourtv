@@ -549,10 +549,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         clockBlock = findViewById(R.id.leftBlock);
         weeklyWeatherView = findViewById(R.id.weeklyWeather);
         weeklyWeatherDays = findViewById(R.id.weeklyWeatherDays);
-        // Keep the forecast card narrower than the header so Wi-Fi / Settings remain visually separate.
-        ViewGroup.LayoutParams weatherCardParams = weeklyWeatherView.getLayoutParams();
-        weatherCardParams.width = Math.round(getResources().getDisplayMetrics().widthPixels * 0.72f);
-        weeklyWeatherView.setLayoutParams(weatherCardParams);
+        // The weather card follows leftBlock's available width; never assign screen-relative width,
+        // which can push the top-right Wi-Fi / Settings controls off-screen on some TV resolutions.
         refreshWeeklyWeatherVisibility();
         greetingColor = greeting.getCurrentTextColor();
         if (!cfg.showGreeting) greeting.setVisibility(View.GONE);
@@ -4603,16 +4601,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         Math.round(folderTileDp * 9f / 16f * density));
                 tile.addView(tvCard, cardLp);
                 // 焦點只保留遙控器導覽，不改變 TV 卡片外型、比例、邊框或大小。
-                android.graphics.drawable.GradientDrawable tileFocusFrame = new android.graphics.drawable.GradientDrawable();
-                tileFocusFrame.setColor(Color.TRANSPARENT);
-                tileFocusFrame.setCornerRadius(22f * density);
-                tileFocusFrame.setStroke(0, Color.TRANSPARENT);
-                tile.setBackground(tileFocusFrame);
                 tile.setOnFocusChangeListener((v, focused) -> {
-                    // 焦點只顯示在 APP 卡片外框，不改變圖示、卡片比例、圓角或底色。
-                    tileFocusFrame.setStroke(Math.max(1, (int)(focused ? 4*density : 0)),
-                            focused ? 0xFFFFD54F : Color.TRANSPARENT);
-                    tile.setElevation(focused ? 10f * density : 0f);
+                    // Focus frame belongs to the icon card only; app name text stays outside the frame.
+                    cardSurface.setStroke(Math.max(1, (int)(focused ? 4*density : density)),
+                            focused ? 0xFFFFD54F : 0x24FFFFFF);
+                    tvCard.setElevation(focused ? 10f * density : 0f);
                 });
                 tile.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
@@ -4673,16 +4666,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 LinearLayout.LayoutParams addLabelLp = new LinearLayout.LayoutParams(-1, (int)(30*density));
                 addLabelLp.topMargin = (int)(3*density);
                 add.addView(addLabelSpacer, addLabelLp);
-                android.graphics.drawable.GradientDrawable addFocusFrame = new android.graphics.drawable.GradientDrawable();
-                addFocusFrame.setColor(Color.TRANSPARENT);
-                addFocusFrame.setCornerRadius(22f * density);
-                addFocusFrame.setStroke(0, Color.TRANSPARENT);
-                add.setBackground(addFocusFrame);
                 add.setOnFocusChangeListener((v, focused) -> {
-                    // ＋卡片同樣只顯示外框，保持原本圖示與卡片造型。
-                    addFocusFrame.setStroke(Math.max(1, (int)(focused ? 4*density : 0)),
-                            focused ? 0xFFFFD54F : Color.TRANSPARENT);
-                    add.setElevation(focused ? 10f * density : 0f);
+                    // The add tile uses the same icon-card-only focus outline.
+                    addSurface.setStroke(Math.max(1, (int)(focused ? 4*density : density)),
+                            focused ? 0xFFFFD54F : 0x24FFFFFF);
+                    addCard.setElevation(focused ? 10f * density : 0f);
                 });
                 add.setOnKeyListener((v, keyCode, event) -> {
                     if (event.getAction() == KeyEvent.ACTION_UP
