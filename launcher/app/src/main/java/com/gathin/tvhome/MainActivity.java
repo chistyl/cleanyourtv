@@ -3697,7 +3697,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked);
-                row.addView(check); row.setFocusable(true);
+                row.addView(check); row.setFocusable(false); row.setClickable(false);
                 GradientDrawable itemBg = new GradientDrawable();
                 itemBg.setColor(Color.TRANSPARENT); itemBg.setCornerRadius(10f * density);
                 row.setBackground(itemBg);
@@ -3709,6 +3709,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return row;
             }
         };
+        list.setItemsCanFocus(false);
+        list.setFocusable(true);
         list.setAdapter(adapter);
         list.setOnItemClickListener((parent, view, position, id) -> {
             if (folderMode[0]) folderHidden[position] = !folderHidden[position];
@@ -3761,14 +3763,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showCreateFolderDialog() {
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         EditText name = new EditText(this); name.setSingleLine(true); name.setHint("輸入資料夾名稱");
-        new AlertDialog.Builder(this).setTitle("新增資料夾").setView(name)
-                .setNegativeButton("取消", null).setPositiveButton("建立", (dialog, which) -> {
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("新增資料夾").setView(name)
+                .setNegativeButton("取消", null).setPositiveButton("建立", (d, which) -> {
                     String value = name.getText().toString().trim();
                     if (value.isEmpty() || "系統".equals(value)) { Toast.makeText(this, "請輸入其他資料夾名稱", Toast.LENGTH_SHORT).show(); return; }
                     java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
                     if (!updated.add(value)) { Toast.makeText(this, "資料夾名稱已存在", Toast.LENGTH_SHORT).show(); return; }
                     prefs.edit().putStringSet("home_folders", updated).apply(); reloadApps(false);
-                }).show();
+                }).create();
+        dialog.show();
+        applyRoundedDialogBackground(dialog);
     }
 
     /** APP picker opened from a folder's own "+" tile; rows include native TV artwork. */
@@ -3819,10 +3823,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 check.setClickable(false);
                 check.setChecked(checked[position]);
                 row.addView(check);
-                row.setFocusable(true);
+                row.setFocusable(false);
+                row.setClickable(false);
                 return row;
             }
         };
+        list.setItemsCanFocus(false);
+        list.setFocusable(true);
         list.setAdapter(rows);
         list.setOnItemClickListener((parent, view, position, id) -> {
             checked[position] = !checked[position];
@@ -4160,9 +4167,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
                 android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
                 check.setFocusable(false); check.setClickable(false); check.setChecked(checked[position]);
-                row.addView(check); row.setFocusable(true); return row;
+                row.addView(check); row.setFocusable(false); row.setClickable(false); return row;
             }
         };
+        list.setItemsCanFocus(false);
+        list.setFocusable(true);
         list.setAdapter(rows);
         list.setOnItemClickListener((parent, view, position, id) -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
         new AlertDialog.Builder(this).setTitle("系統資料夾：勾選要收納的 APP").setView(list)
@@ -4614,7 +4623,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);
         row.findViewById(R.id.status).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
+        TextView rowTitle = row.findViewById(R.id.title);
+        rowTitle.setText(title);
+        rowTitle.setTextColor(Color.WHITE);
         row.setFocusable(true);
         row.setFocusableInTouchMode(true);
         row.setClickable(true);
