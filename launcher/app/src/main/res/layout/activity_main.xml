@@ -200,6 +200,7 @@
                     android:textAllCaps="true" />
 
                 <LinearLayout
+                    android:id="@+id/clockRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -306,6 +307,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
+                    android:layout_marginEnd="40dp"
                     android:background="@drawable/v17_weather_card"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
@@ -350,6 +352,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_alignBottom="@id/leftBlock"
+                android:layout_alignBottom="@id/clockRow"
                 android:layout_marginBottom="6dp"
                 android:clipChildren="false"
                 android:clipToPadding="false"
