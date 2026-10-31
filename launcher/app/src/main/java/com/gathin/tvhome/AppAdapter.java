@@ -424,7 +424,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(Color.rgb(42, 48, 58));
         canvas.drawRoundRect(70, 28, 570, 332, 42, 42, paint);
-        int cell = 116, gap = 24;
+        if (packages == null || packages.isEmpty()) {
+            paint.setColor(Color.WHITE);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTextSize(190f);
+            paint.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
+            canvas.drawText("+", size / 2f, 258f, paint);
+            return new BitmapDrawable(ctx.getResources(), bitmap);
+        }
+        int cell = 116;
         int[][] positions = {{192, 66}, {332, 66}, {192, 196}, {332, 196}};
         int index = 0;
         for (String pkg : packages) {

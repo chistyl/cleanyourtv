@@ -3494,6 +3494,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         folded.add(view);
     }
 
+    /** Apply the same rounded dark surface to expanded settings dialogs and their selectable lists. */
+    private void applyRoundedDialogBackground(AlertDialog dialog) {
+        if (dialog == null || dialog.getWindow() == null) return;
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.rgb(30, 34, 42));
+        background.setCornerRadius(20f * density);
+        background.setStroke(Math.max(1, (int) density), 0x33FFFFFF);
+        dialog.getWindow().setBackgroundDrawable(background);
+        dialog.getWindow().getDecorView().setClipToOutline(true);
+    }
+
     private PopupWindow glassPopup(View panel, int width) {
         final PopupWindow popup = new PopupWindow(panel, width, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));   // needed for Back to dismiss
@@ -3724,27 +3735,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             edit.apply(); dialog.dismiss(); reloadApps(false);
         }));
         dialog.show();
+        applyRoundedDialogBackground(dialog);
     }
 
     private void showWallpaperPicker() {
         SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-        boolean hideColor = appPrefs.getBoolean("hide_dock_color_effect", false);
-        String[] choices = {"選擇圖片", "還原預設", hideColor ? "顯示前五個 APP 左側色彩效果" : "隱藏前五個 APP 左側色彩效果"};
-        new AlertDialog.Builder(this).setTitle("桌布設定").setItems(choices, (dialog, which) -> {
+        String[] choices = {"選擇圖片", "還原預設"};
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("桌布設定").setItems(choices, (d, which) -> {
             if (which == 0) {
                 Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE); pick.setType("image/*");
                 pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try { startActivityForResult(pick, WALLPAPER_PICK_REQUEST); }
                 catch (ActivityNotFoundException e) { Toast.makeText(this, "找不到圖片選擇器", Toast.LENGTH_LONG).show(); }
-            } else if (which == 1) {
+            } else {
                 getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply();
                 appPrefs.edit().putBoolean("hide_dock_color_effect", false).apply();
                 recreate();
-            } else {
-                appPrefs.edit().putBoolean("hide_dock_color_effect", !hideColor).apply(); recreate();
             }
-        }).show();
+        }).create();
+        dialog.show();
+        applyRoundedDialogBackground(dialog);
     }
 
     private void showCreateFolderDialog() {
@@ -4062,7 +4073,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 add.setFocusable(true);
                 add.setClickable(true);
                 GradientDrawable addBackground = new GradientDrawable();
-                addBackground.setColor(Color.TRANSPARENT);
+                addBackground.setColor(0xFF343A45);
                 addBackground.setCornerRadius(12f * density);
                 add.setBackground(addBackground);
                 add.setOnFocusChangeListener((v, focused) -> {
@@ -4420,11 +4431,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     new AlertDialog.Builder(this).setTitle("修改資料夾名稱").setView(edit)
                             .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
                                 String newName = edit.getText().toString().trim();
-                                if (newName.isEmpty() || "系統".equals(newName)) {
-                                    Toast.makeText(this, "資料夾名稱不可使用", Toast.LENGTH_SHORT).show();
+                                java.util.Set<String> folders = folderPrefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
+                                if (newName.isEmpty() || "系統".equals(newName)
+                                        || (!newName.equals(oldName) && folders.contains(newName))) {
+                                    Toast.makeText(this, "資料夾名稱不可使用或已存在", Toast.LENGTH_SHORT).show();
                                     return;
                                 }
-                                java.util.Set<String> folders = folderPrefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
                                 java.util.HashSet<String> updated = new java.util.HashSet<>(folders);
                                 updated.remove(oldName); updated.add(newName);
                                 java.util.Set<String> members = folderPrefs.getStringSet("folder_apps_" + oldName, java.util.Collections.<String>emptySet());
@@ -4484,10 +4496,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
                 });
             }
-            addSettingsMenuRow(folderRows, folderPopup, hidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
-                folderPrefs.edit().putBoolean("hide_all_names", !hidden).apply();
-                reloadApps(false);
-            });
             folderPanel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
             folderPopup.setWidth(Math.max((int) (220 * density), folderPanel.getMeasuredWidth()));
             dropIn(folderPopup, folderPanel, card, Gravity.START);
