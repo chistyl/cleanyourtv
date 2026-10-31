@@ -3639,7 +3639,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             tab.setTextColor(Color.WHITE); tab.setTextSize(17); tab.setGravity(Gravity.CENTER);
             tab.setFocusable(true); tab.setPadding(0, (int)(12*density), 0, (int)(12*density));
             GradientDrawable tabBg = new GradientDrawable();
-            tabBg.setColor(0x223FFFFFF); tabBg.setCornerRadius(12*density);
+            tabBg.setColor(0x22FFFFFF); tabBg.setCornerRadius(12*density);
             tab.setBackground(tabBg);
             LinearLayout.LayoutParams tabLp = new LinearLayout.LayoutParams(0, -2, 1f);
             tabLp.setMargins((int)(4*density), 0, (int)(4*density), 0);
@@ -3651,7 +3651,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hint.setPadding((int)(6*density), (int)(8*density), 0, (int)(4*density));
         content.addView(hint);
         android.widget.ListView list = new android.widget.ListView(this);
-        list.setDivider(new ColorDrawable(0x223FFFFFF)); list.setDividerHeight(1);
+        list.setDivider(new ColorDrawable(0x22FFFFFF)); list.setDividerHeight(1);
         content.addView(list, new LinearLayout.LayoutParams(-1, (int)(390*density)));
         final boolean[] folderMode = {false};
         android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
