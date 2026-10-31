@@ -1,5 +1,5 @@
 name: Android APK Build
-# Rebuild trigger for imported V17.1 source
+# Rebuild trigger for latest V17.1 folder and weather layout
 
 on:
   workflow_dispatch:
