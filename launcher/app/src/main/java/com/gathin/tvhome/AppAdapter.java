@@ -401,7 +401,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
         if (!folderPrefs.getBoolean("home_hidden_folder_系統", false)) {
-            fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
+            fresh.add(new Entry(Entry.SYSTEM_FOLDER, folderPrefs.getString("system_folder_label", "系統"), new ComponentName(ctx, "system-folder"),
                     folderPreview(systemMembers), null, null, 0));
         }
         docked = 0;
