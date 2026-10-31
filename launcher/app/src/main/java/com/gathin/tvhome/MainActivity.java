@@ -4226,7 +4226,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     reloadApps(false);
                 })
                 .setPositiveButton("套用", (dialog, which) -> {
-                    prefs.edit().putInt("icon_scale_adjust_" + pkg, size.getProgress() - 50).apply();
+                    prefs.edit().putInt("icon_scale_adjust_" + pkg, size.getProgress() - 50)
+                            .putBoolean("icon_scale_override_" + pkg, true).apply();
                     reloadApps(false);
                 }).show();
     }
@@ -4336,10 +4337,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, "更換背景色／自訂色彩", () -> showAppBackgroundColorDialog(pkg, appPrefs));
         if (appPrefs.contains("label_" + pkg) || appPrefs.contains("hide_" + pkg)
                 || appPrefs.contains("icon_" + pkg) || appPrefs.contains("icon_scale_" + pkg)
-                || appPrefs.contains("icon_scale_adjust_" + pkg) || appPrefs.contains("background_" + pkg)) {
+                || appPrefs.contains("icon_scale_adjust_" + pkg) || appPrefs.contains("icon_scale_override_" + pkg)
+                || appPrefs.contains("background_" + pkg)) {
             addSettingsMenuRow(rows, popup, "還原 APP 原始設定", () -> {
                 appPrefs.edit().remove("label_" + pkg).remove("hide_" + pkg).remove("icon_" + pkg)
-                        .remove("icon_scale_" + pkg).remove("icon_scale_adjust_" + pkg)
+                        .remove("icon_scale_" + pkg).remove("icon_scale_adjust_" + pkg).remove("icon_scale_override_" + pkg)
                         .remove("background_" + pkg).apply();
                 reloadApps(false);
             });
