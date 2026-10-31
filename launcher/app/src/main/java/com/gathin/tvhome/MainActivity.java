@@ -500,7 +500,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
         // a fade renders it into a full-screen offscreen buffer first.
         ambient.forceHasOverlappingRendering(false);
-        ambientGlow = cfg.ambientGlow;
+        ambientGlow = cfg.ambientGlow && !getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
+                .getBoolean("hide_dock_color_effect", false);
         appGlow = cfg.appGlow;
         if (!ambientGlow) ambient.setVisibility(View.GONE);
         heroName = findViewById(R.id.heroName);
@@ -3589,16 +3590,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (220 * density));
         addSettingsMenuRow(rows, popup, "系統設定", () -> open(systemIntent(Settings.ACTION_SETTINGS)));
-        addSettingsMenuRow(rows, popup, "APP 設定", this::showHomeAppVisibilityDialog);
-        addSettingsMenuRow(rows, popup, getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
-                .getBoolean("hide_all_names", false) ? "顯示 APP 名稱（全域）" : "隱藏 APP 名稱（全域）", () -> {
-            SharedPreferences p = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-            p.edit().putBoolean("hide_all_names", !p.getBoolean("hide_all_names", false)).apply();
-            reloadApps(false);
-        });
+        addSettingsMenuRow(rows, popup, "桌面顯示", this::showHomeAppVisibilityDialog);
         addSettingsMenuRow(rows, popup, "更換桌布", this::showWallpaperPicker);
-        addSettingsMenuRow(rows, popup, "資料夾管理", this::showFolderManagementComingSoon);
-        addSettingsMenuRow(rows, popup, "系統", () -> showFolderContents("系統", true));
+        addSettingsMenuRow(rows, popup, "新增資料夾", this::showCreateFolderDialog);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
@@ -3606,50 +3600,72 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
     }
 
-    /** APP 設定：勾選顯示於桌面，取消勾選即隱藏。 */
+    /** 桌面顯示：勾選代表隱藏，可同時管理 APP、一般資料夾與系統資料夾。 */
     private void showHomeAppVisibilityDialog() {
-        List<ResolveInfo> apps = getPackageManager().queryIntentActivities(
-                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
-        if (apps == null || apps.isEmpty()) apps = getPackageManager().queryIntentActivities(
-                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
+        List<ResolveInfo> apps = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        if (apps == null || apps.isEmpty()) apps = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
         final Map<String, String> labels = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (ResolveInfo ri : apps) {
-            if (ri.activityInfo == null || !ri.activityInfo.exported
-                    || ri.activityInfo.packageName.equals(getPackageName())) continue;
+        for (ResolveInfo ri : apps) if (ri.activityInfo != null && ri.activityInfo.exported
+                && !ri.activityInfo.packageName.equals(getPackageName()))
             labels.put(ri.activityInfo.packageName, String.valueOf(ri.loadLabel(getPackageManager())));
-        }
-        final List<String> packages = new ArrayList<>(labels.keySet());
-        final String[] names = new String[packages.size()];
-        final boolean[] checked = new boolean[packages.size()];
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-        for (int i = 0; i < packages.size(); i++) {
-            names[i] = labels.get(packages.get(i));
-            checked[i] = !prefs.getBoolean("home_hidden_" + packages.get(i), false);
+        final List<String> keys = new ArrayList<>(), names = new ArrayList<>();
+        final List<Boolean> initial = new ArrayList<>();
+        for (String pkg : labels.keySet()) {
+            keys.add("app:" + pkg); names.add("APP　" + labels.get(pkg)); initial.add(prefs.getBoolean("home_hidden_" + pkg, false));
         }
-        new AlertDialog.Builder(this).setTitle("APP 設定（勾選表示於桌面）")
-                .setMultiChoiceItems(names, checked, (dialog, which, show) ->
-                        prefs.edit().putBoolean("home_hidden_" + packages.get(which), !show).apply())
-                .setPositiveButton("完成", (dialog, which) -> reloadApps(false))
-                .setNegativeButton("取消", (dialog, which) -> reloadApps(false)).show();
+        List<String> folders = new ArrayList<>(prefs.getStringSet("home_folders", Collections.<String>emptySet()));
+        Collections.sort(folders, String.CASE_INSENSITIVE_ORDER);
+        for (String folder : folders) {
+            keys.add("folder:" + folder); names.add("資料夾　" + folder);
+            initial.add(prefs.getBoolean("home_hidden_folder_" + folder, false));
+        }
+        keys.add("folder:系統"); names.add("資料夾　系統"); initial.add(prefs.getBoolean("home_hidden_folder_系統", false));
+        final boolean[] checked = new boolean[initial.size()];
+        for (int i = 0; i < checked.length; i++) checked[i] = initial.get(i);
+        new AlertDialog.Builder(this).setTitle("桌面顯示（打勾＝隱藏）")
+                .setMultiChoiceItems(names.toArray(new String[0]), checked, (dialog, which, value) -> checked[which] = value)
+                .setPositiveButton("儲存", (dialog, which) -> {
+                    SharedPreferences.Editor edit = prefs.edit();
+                    for (int i = 0; i < keys.size(); i++) {
+                        String key = keys.get(i);
+                        if (key.startsWith("app:")) edit.putBoolean("home_hidden_" + key.substring(4), checked[i]);
+                        else edit.putBoolean("home_hidden_folder_" + key.substring(7), checked[i]);
+                    }
+                    edit.apply(); reloadApps(false);
+                }).setNegativeButton("取消", null).show();
     }
 
     private void showWallpaperPicker() {
-        String[] choices = {"選擇圖片", "還原預設桌布"};
+        SharedPreferences appPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        boolean hideColor = appPrefs.getBoolean("hide_dock_color_effect", false);
+        String[] choices = {"選擇圖片", "還原預設桌布", hideColor ? "顯示前五個 APP 左側色彩效果" : "隱藏前五個 APP 左側色彩效果"};
         new AlertDialog.Builder(this).setTitle("更換桌布").setItems(choices, (dialog, which) -> {
             if (which == 0) {
                 Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("image/*");
+                pick.addCategory(Intent.CATEGORY_OPENABLE); pick.setType("image/*");
                 pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try { startActivityForResult(pick, WALLPAPER_PICK_REQUEST); }
-                catch (ActivityNotFoundException e) {
-                    Toast.makeText(this, "找不到圖片選擇器", Toast.LENGTH_LONG).show();
-                }
+                catch (ActivityNotFoundException e) { Toast.makeText(this, "找不到圖片選擇器", Toast.LENGTH_LONG).show(); }
+            } else if (which == 1) {
+                getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply(); recreate();
             } else {
-                getSharedPreferences("wallpaper_rotation", MODE_PRIVATE).edit().remove("custom_wallpaper_uri").apply();
-                recreate();
+                appPrefs.edit().putBoolean("hide_dock_color_effect", !hideColor).apply(); recreate();
             }
         }).show();
+    }
+
+    private void showCreateFolderDialog() {
+        SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        EditText name = new EditText(this); name.setSingleLine(true); name.setHint("輸入資料夾名稱");
+        new AlertDialog.Builder(this).setTitle("新增資料夾").setView(name)
+                .setNegativeButton("取消", null).setPositiveButton("建立", (dialog, which) -> {
+                    String value = name.getText().toString().trim();
+                    if (value.isEmpty() || "系統".equals(value)) { Toast.makeText(this, "請輸入其他資料夾名稱", Toast.LENGTH_SHORT).show(); return; }
+                    java.util.LinkedHashSet<String> updated = new java.util.LinkedHashSet<>(prefs.getStringSet("home_folders", new java.util.LinkedHashSet<>()));
+                    if (!updated.add(value)) { Toast.makeText(this, "資料夾名稱已存在", Toast.LENGTH_SHORT).show(); return; }
+                    prefs.edit().putStringSet("home_folders", updated).apply(); reloadApps(false);
+                }).show();
     }
 
     private void showFolderManagementComingSoon() {
@@ -3777,7 +3793,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         showFolderContents(folderName, false);
     }
 
-    /** Open folders as a grid of real app shortcuts; long-press an app to rename or move it out. */
+    /** Prefer a native Android TV banner; fall back to the app icon. */
+    private Drawable loadTvFolderArtwork(ResolveInfo ri) {
+        try {
+            int bannerId = ri.activityInfo.banner;
+            if (bannerId == 0) bannerId = ri.activityInfo.applicationInfo.banner;
+            if (bannerId != 0) {
+                android.content.res.Resources resources = getPackageManager().getResourcesForApplication(ri.activityInfo.applicationInfo);
+                return resources.getDrawable(bannerId, getTheme());
+            }
+        } catch (Exception ignored) { }
+        try { return getPackageManager().getApplicationIcon(ri.activityInfo.packageName); }
+        catch (PackageManager.NameNotFoundException ignored) { return getDrawable(android.R.drawable.sym_def_app_icon); }
+    }
+
+    /** Open folders as a grid of TV artwork shortcuts; long-press an app to rename or move it out. */
     private void showFolderContents(String folderName, boolean systemFolder) {
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         Set<String> members;
@@ -3813,7 +3843,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
         outer.setPadding((int)(18*density), (int)(14*density), (int)(18*density), (int)(14*density));
-        outer.setBackgroundColor(Color.rgb(28, 32, 40));
+        GradientDrawable folderBackground = new GradientDrawable();
+        folderBackground.setColor(Color.rgb(28, 32, 40));
+        folderBackground.setCornerRadius(22f * density);
+        outer.setBackground(folderBackground); outer.setClipToOutline(true);
         TextView heading = new TextView(this);
         heading.setText(folderName);
         heading.setTextColor(Color.WHITE);
@@ -3841,9 +3874,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 tile.setPadding((int)(5*density), (int)(8*density), (int)(5*density), (int)(8*density));
                 ImageView icon = new ImageView(this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                try { icon.setImageDrawable(getPackageManager().getApplicationIcon(packageName)); }
-                catch (PackageManager.NameNotFoundException ignored) { }
-                tile.addView(icon, new LinearLayout.LayoutParams((int)(52*density), (int)(52*density)));
+                icon.setImageDrawable(loadTvFolderArtwork(ri));
+                tile.addView(icon, new LinearLayout.LayoutParams((int)(66*density), (int)(40*density)));
                 TextView name = new TextView(this);
                 String customName = prefs.getString("label_" + packageName, null);
                 name.setText(customName != null ? customName : String.valueOf(ri.loadLabel(getPackageManager())));
@@ -3962,57 +3994,70 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 Math.min((int)(560*density), getResources().getDisplayMetrics().heightPixels - (int)(48*density)));
     }
 
-    /** 管理系統資料夾：勾選的系統 APP 留在「系統」，取消勾選則移回桌面。 */
+    /** 管理系統資料夾：清單顯示 TV Banner／APP 圖示，勾選的 APP 留在「系統」。 */
     private void showSystemFolderAssignment() {
-        List<ResolveInfo> installed = getPackageManager().queryIntentActivities(
-                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
+        List<ResolveInfo> installed = getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), 0);
         java.util.TreeMap<String, ResolveInfo> candidates = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (ResolveInfo ri : installed) {
-            if (ri.activityInfo == null || !ri.activityInfo.exported || ri.activityInfo.packageName.equals(getPackageName())) continue;
-            candidates.put(ri.activityInfo.packageName, ri);
-        }
-        java.util.ArrayList<String> packages = new java.util.ArrayList<>(candidates.keySet());
-        String[] labels = new String[packages.size()];
-        boolean[] checked = new boolean[packages.size()];
+        for (ResolveInfo ri : installed) if (ri.activityInfo != null && ri.activityInfo.exported
+                && !ri.activityInfo.packageName.equals(getPackageName())) candidates.put(ri.activityInfo.packageName, ri);
+        final ArrayList<String> packages = new ArrayList<>(candidates.keySet());
+        final boolean[] checked = new boolean[packages.size()];
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-        Set<String> excluded = prefs.getStringSet("system_folder_excluded", java.util.Collections.<String>emptySet());
-        Set<String> added = prefs.getStringSet("system_folder_added", java.util.Collections.<String>emptySet());
-        for (int i=0;i<packages.size();i++) {
-            ResolveInfo ri = candidates.get(packages.get(i));
-            labels[i] = String.valueOf(ri.loadLabel(getPackageManager()));
+        Set<String> excluded = prefs.getStringSet("system_folder_excluded", Collections.<String>emptySet());
+        Set<String> added = prefs.getStringSet("system_folder_added", Collections.<String>emptySet());
+        for (int i = 0; i < packages.size(); i++) {
+            String pkg = packages.get(i);
             try {
-                int flags = getPackageManager().getApplicationInfo(packages.get(i), 0).flags;
+                int flags = getPackageManager().getApplicationInfo(pkg, 0).flags;
                 boolean isSystem = (flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
-                checked[i] = added.contains(packages.get(i)) || (isSystem && !excluded.contains(packages.get(i)));
+                checked[i] = added.contains(pkg) || (isSystem && !excluded.contains(pkg));
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
-        new AlertDialog.Builder(this).setTitle("勾選要放入「系統」資料夾的 APP")
-                .setMultiChoiceItems(labels, checked, (dialog, which, value) -> checked[which] = value)
+        android.widget.ListView list = new android.widget.ListView(this);
+        list.setDividerHeight((int) density);
+        list.setLayoutParams(new ViewGroup.LayoutParams(-1, (int) (420 * density)));
+        android.widget.BaseAdapter rows = new android.widget.BaseAdapter() {
+            @Override public int getCount() { return packages.size(); }
+            @Override public Object getItem(int position) { return packages.get(position); }
+            @Override public long getItemId(int position) { return position; }
+            @Override public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                LinearLayout row = convertView instanceof LinearLayout ? (LinearLayout) convertView : new LinearLayout(MainActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding((int)(12*density), (int)(6*density), (int)(12*density), (int)(6*density));
+                ImageView image = new ImageView(MainActivity.this); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                image.setImageDrawable(loadTvFolderArtwork(candidates.get(packages.get(position))));
+                row.addView(image, new LinearLayout.LayoutParams((int)(72*density), (int)(42*density)));
+                TextView label = new TextView(MainActivity.this);
+                label.setText(String.valueOf(candidates.get(packages.get(position)).loadLabel(getPackageManager())));
+                label.setTextColor(Color.WHITE); label.setTextSize(15);
+                LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                textLp.leftMargin = (int)(12*density); row.addView(label, textLp);
+                android.widget.CheckBox check = new android.widget.CheckBox(MainActivity.this);
+                check.setFocusable(false); check.setClickable(false); check.setChecked(checked[position]);
+                row.addView(check); row.setFocusable(true); return row;
+            }
+        };
+        list.setAdapter(rows);
+        list.setOnItemClickListener((parent, view, position, id) -> { checked[position] = !checked[position]; rows.notifyDataSetChanged(); });
+        new AlertDialog.Builder(this).setTitle("系統資料夾：勾選要收納的 APP").setView(list)
                 .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
-                    java.util.HashSet<String> excludedNow = new java.util.HashSet<>();
-                    java.util.HashSet<String> addedNow = new java.util.HashSet<>();
-                    for (int i=0;i<packages.size();i++) {
-                        String packageName = packages.get(i);
-                        boolean isSystem = false;
+                    java.util.HashSet<String> excludedNow = new java.util.HashSet<>(), addedNow = new java.util.HashSet<>();
+                    for (int i = 0; i < packages.size(); i++) {
+                        String pkg = packages.get(i); boolean isSystem = false;
                         try {
-                            int flags = getPackageManager().getApplicationInfo(packageName, 0).flags;
+                            int flags = getPackageManager().getApplicationInfo(pkg, 0).flags;
                             isSystem = (flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
                         } catch (PackageManager.NameNotFoundException ignored) { }
-                        if (checked[i] && !isSystem) addedNow.add(packageName);
-                        if (!checked[i] && isSystem) excludedNow.add(packageName);
+                        if (checked[i] && !isSystem) addedNow.add(pkg);
+                        if (!checked[i] && isSystem) excludedNow.add(pkg);
                     }
-                    SharedPreferences.Editor edit = prefs.edit()
-                            .putStringSet("system_folder_excluded", excludedNow)
+                    SharedPreferences.Editor edit = prefs.edit().putStringSet("system_folder_excluded", excludedNow)
                             .putStringSet("system_folder_added", addedNow);
-                    Set<String> generalFolders = prefs.getStringSet("home_folders", java.util.Collections.<String>emptySet());
-                    for (String folder : generalFolders) {
-                        java.util.HashSet<String> set = new java.util.HashSet<>(prefs.getStringSet(
-                                "folder_apps_" + folder, java.util.Collections.<String>emptySet()));
-                        set.removeAll(addedNow);
-                        edit.putStringSet("folder_apps_" + folder, set);
+                    for (String folder : prefs.getStringSet("home_folders", Collections.<String>emptySet())) {
+                        java.util.HashSet<String> set = new java.util.HashSet<>(prefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()));
+                        set.removeAll(addedNow); edit.putStringSet("folder_apps_" + folder, set);
                     }
-                    edit.apply();
-                    reloadApps(false);
+                    edit.apply(); reloadApps(false);
                 }).show();
     }
 
@@ -4253,6 +4298,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             PopupWindow folderPopup = glassPopup(folderPanel, (int) (220 * density));
             if (key.contains("/folder:")) {
                 String oldName = key.substring(key.indexOf("/folder:") + "/folder:".length());
+                addSettingsMenuRow(folderRows, folderPopup, "管理資料夾 APP", this::showFolderAppAssignment);
                 addSettingsMenuRow(folderRows, folderPopup, "修改資料夾名稱", () -> {
                     EditText edit = new EditText(this);
                     edit.setSingleLine(true);

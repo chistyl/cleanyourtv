@@ -80,8 +80,9 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
                                @NonNull RecyclerView.State state) {
         int pos = parent.getChildAdapterPosition(view);
         if (pos >= 0 && (singleRow || pos < dockSize)) {
-            outRect.top = (int) (6 * density);
-            outRect.bottom = (int) (12 * density);
+            // Keep the black dock frame equally spaced above and below the first five app tiles.
+            outRect.top = (int) (9 * density);
+            outRect.bottom = (int) (9 * density);
         }
     }
 

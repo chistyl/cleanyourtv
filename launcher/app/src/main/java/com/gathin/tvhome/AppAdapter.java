@@ -383,7 +383,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         SharedPreferences folderPrefs = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE);
         for (String folder : folderPrefs.getStringSet("home_folders", Collections.<String>emptySet())) {
-            if (!"系統".equals(folder)) {
+            if (!"系統".equals(folder) && !folderPrefs.getBoolean("home_hidden_folder_" + folder, false)) {
                 Set<String> members = folderPrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet());
                 fresh.add(new Entry(Entry.USER_FOLDER, folder, new ComponentName(ctx, "folder:" + folder),
                         folderPreview(members), null, null, 0));
@@ -400,8 +400,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         && !systemExcluded.contains(pkg)) systemMembers.add(pkg);
             } catch (PackageManager.NameNotFoundException ignored) { }
         }
-        fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
-                folderPreview(systemMembers), null, null, 0));
+        if (!folderPrefs.getBoolean("home_hidden_folder_系統", false)) {
+            fresh.add(new Entry(Entry.SYSTEM_FOLDER, "系統", new ComponentName(ctx, "system-folder"),
+                    folderPreview(systemMembers), null, null, 0));
+        }
         docked = 0;
         while (docked < fresh.size() && isDocked(fresh.get(docked))) docked++;
         emptySlots = dockRow && !reordering ? DockSlots.empty(docked, dockSize, fresh.size(), fillDock) : 0;
