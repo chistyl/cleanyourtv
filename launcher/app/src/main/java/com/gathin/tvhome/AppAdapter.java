@@ -273,18 +273,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Set<String> tvPackages = new HashSet<>();
         for (ResolveInfo ri : found) if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
         leanbackPackages = tvPackages;
+        // Include ordinary Android launcher activities as well as TV/Leanback activities.
+        // Many installed apps (including vendor and sideloaded apps) do not declare LEANBACK_LAUNCHER.
+        // Keep the TV package set separate so AppAdapter still launches TV apps with the Leanback category.
+        Set<String> seenPackages = new HashSet<>(tvPackages);
+        List<ResolveInfo> phoneLaunchers = pm.queryIntentActivities(
+                new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0);
+        if (phoneLaunchers != null) for (ResolveInfo ri : phoneLaunchers) {
+            if (ri.activityInfo != null && seenPackages.add(ri.activityInfo.packageName)) found.add(ri);
+        }
         // Copy before merging: LibraryApps.load() may return an immutable empty set (#419).
         Set<String> added = new HashSet<>(LibraryApps.load(ctx));
         added.addAll(libraryPreload);
         Set<String> removed = LibraryApps.loadRemoved(ctx);
-        if (!added.isEmpty()) {
-            Set<String> seen = new HashSet<>(tvPackages);
-            for (ResolveInfo ri : pm.queryIntentActivities(
-                    new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)) {
-                if (ri.activityInfo != null && added.contains(ri.activityInfo.packageName)
-                        && seen.add(ri.activityInfo.packageName)) found.add(ri);
-            }
-        }
         Map<String, Cards.Card> cardByPkg = new HashMap<>();
         for (Cards.Card c : cards) cardByPkg.put(c.pkg, c);
         List<Entry> fresh = new ArrayList<>();
@@ -309,7 +310,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (homePrefs.getStringSet("folder_apps_" + folder, Collections.<String>emptySet()).contains(pkg)) { inFolder = true; break; }
             if (pkg.equals(ctx.getPackageName()) || !ri.activityInfo.exported || inFolder || inSystemFolder
                     || homePrefs.getBoolean("home_hidden_" + pkg, false)
-                    || !LibraryApps.visible(tvPackages.contains(pkg), hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
+                    || !LibraryApps.visible(true, hidden.contains(pkg), added.contains(pkg), removed.contains(pkg))) continue;
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Cards.Card card = cardByPkg.get(pkg);
             if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
