@@ -3758,7 +3758,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void renderWeeklyWeather(JSONArray dates, JSONArray codes, JSONArray highs, JSONArray lows, JSONArray rain) {
         if (weeklyWeatherDays == null || weeklyWeatherView == null) return;
         weeklyWeatherDays.removeAllViews();
-        weeklyWeatherDays.setOrientation(LinearLayout.VERTICAL);
+        weeklyWeatherDays.setOrientation(LinearLayout.HORIZONTAL);
         weeklyWeatherDays.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView heading = new TextView(this);
@@ -3766,7 +3766,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heading.setTextColor(Color.WHITE);
         heading.setTextSize(16);
         heading.setTypeface(null, android.graphics.Typeface.BOLD);
-        heading.setPadding((int)(4*density), (int)(2*density), (int)(4*density), (int)(8*density));
+        heading.setPadding((int)(4*density), (int)(2*density), (int)(4*density), (int)(7*density));
+        // Heading spans the visible card width; the forecast row scrolls horizontally below it.
         weeklyWeatherDays.addView(heading, new LinearLayout.LayoutParams(-1, -2));
 
         LinearLayout forecast = new LinearLayout(this);
@@ -3778,11 +3779,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 String date = dates.getString(i);
                 String day = date.length() >= 10 ? date.substring(5).replace('-', '/') : date;
                 int code = codes.optInt(i, -1);
-
                 LinearLayout dayColumn = new LinearLayout(this);
                 dayColumn.setOrientation(LinearLayout.VERTICAL);
                 dayColumn.setGravity(Gravity.CENTER);
-                dayColumn.setPadding((int)(4*density), (int)(4*density), (int)(4*density), (int)(4*density));
+                dayColumn.setPadding((int)(7*density), (int)(5*density), (int)(7*density), (int)(5*density));
 
                 TextView dateView = new TextView(this);
                 dateView.setText(day);
@@ -3791,24 +3791,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 dateView.setGravity(Gravity.CENTER);
                 dayColumn.addView(dateView, new LinearLayout.LayoutParams(-1, -2));
 
-                LinearLayout conditionLine = new LinearLayout(this);
-                conditionLine.setOrientation(LinearLayout.HORIZONTAL);
-                conditionLine.setGravity(Gravity.CENTER);
                 TextView iconView = new TextView(this);
                 iconView.setText(weatherIcon(code));
-                iconView.setTextSize(34);
+                iconView.setTextSize(38);
                 iconView.setGravity(Gravity.CENTER);
-                conditionLine.addView(iconView, new LinearLayout.LayoutParams(-2, -2));
-                dayColumn.addView(conditionLine, new LinearLayout.LayoutParams(-1, -2));
+                LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(-1, -2);
+                iconLp.topMargin = (int)(2*density);
+                dayColumn.addView(iconView, iconLp);
+
                 TextView condition = new TextView(this);
                 condition.setText(weatherLabel(code));
                 condition.setTextColor(0xFFE8EBF0);
                 condition.setTextSize(13);
-                condition.setGravity(Gravity.CENTER_VERTICAL);
-                condition.setMaxLines(1);
-                condition.setEllipsize(TextUtils.TruncateAt.END);
                 condition.setGravity(Gravity.CENTER);
-                condition.setTextSize(13);
                 condition.setMaxLines(1);
                 condition.setEllipsize(TextUtils.TruncateAt.END);
                 dayColumn.addView(condition, new LinearLayout.LayoutParams(-1, -2));
@@ -3829,11 +3824,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 precipitation.setGravity(Gravity.CENTER);
                 dayColumn.addView(precipitation, new LinearLayout.LayoutParams(-1, -2));
 
-                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                LinearLayout.LayoutParams columnLp = new LinearLayout.LayoutParams((int)(154*density), -2);
                 forecast.addView(dayColumn, columnLp);
             } catch (Exception ignored) { }
         }
-        weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
+        weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-2, -2));
         weeklyWeatherView.setVisibility(View.VISIBLE);
     }
 
