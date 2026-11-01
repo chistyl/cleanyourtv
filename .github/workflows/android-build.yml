@@ -5,10 +5,12 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - v17.1-update
+     - v17.1-update
+      - cy tv-gold-02
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
+      - 'launcher/app/src/main/res/values/config.xml'
 
 permissions:
   contents: read
