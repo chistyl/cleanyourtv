@@ -3028,12 +3028,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     vpn = true;
                     continue;
                 }
-                if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) continue;
+                // Determine physical connectivity from the transport, not INTERNET capability.
+                // VPN DNS interception / TV firmware can temporarily remove INTERNET while
+                // Ethernet remains connected. Treating that transient capability change as
+                // a physical disconnect incorrectly turns the desktop network icon red/offline.
+                boolean hasEthernet = caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+                boolean hasWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+                if (!hasEthernet && !hasWifi) continue;
                 online = true;
-                // Android reached the internet through it; a captive portal stays unvalidated until login.
+                // Keep validation separate from link presence: this only affects warning tint.
                 if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) validated = true;
-                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) ethernet = true;
-                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) wifi = true;
+                if (hasEthernet) ethernet = true;
+                if (hasWifi) wifi = true;
             }
             if (!online) {
                 text = getString(R.string.offline);
