@@ -41,13 +41,9 @@ public class AdsBlockerActivity extends Activity {
     private TextView listStatus;
 
     // Bundled starter rules. Allow rules take precedence over block rules.
-    private static final String DEFAULT_BLOCK =
-            "doubleclick.net\ngooglesyndication.com\ngoogleadservices.com\nadservice.google.com\n" +
-            "app-measurement.com\nadcolony.com\nunityads.unity3d.com\n" +
-            "applovin.com\nmoatads.com\nadsrvr.org\n" +
-            "";
+    private static final String DEFAULT_BLOCK = "";
     private static final String DEFAULT_ALLOW = "";
-    private static final String DEFAULT_RULES_VERSION = "4";
+    private static final String DEFAULT_RULES_VERSION = "5";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -61,37 +57,9 @@ public class AdsBlockerActivity extends Activity {
 
     private void installBundledRules() {
         if (DEFAULT_RULES_VERSION.equals(prefs.getString("bundled_rules_version", ""))) return;
-        LinkedHashSet<String> block = new LinkedHashSet<>(rules(BLOCK));
-        // Remove requested entries from previously persisted rules as well as bundled defaults.
-        // Wildcard entries are normalized to their base domain by normalize().
-        String[] removeFromBlock = {
-                "googleads.g.doubleclick.net", "securepubads.g.doubleclick.net",
-                "pubads.g.doubleclick.net", "pagead2.googlesyndication.com",
-                "av1.xdrig.com", "me.xdrig.com", "www.xdrig.com", "xdrig.com",
-                "footprints-pa.googleapis.com", "www.googleapis.com",
-                "www.googleadservices.com", "youtubei.googleapis.com",
-                "rr2---sn-un57sne7.googlevideo.com", "eligibility-panelresearch.googlevideo.com",
-                "www.googlevideo.com", "googlevideo.com", "p-app.dhub.hinet.net",
-                "ads.aralego.com", "adsv.svc.litv.tv", "acs2.svc.litv.tv",
-                "googleapis.com", "svc.litv.tv"
-        };
-        for (String domain : removeFromBlock) block.remove(domain);
-        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
-        String[] removeFromAllow = {
-                "vid.dbokutv.com", "firebaselogging-pa.googleapis.com",
-                "pic.dbokutv.com", "events.ads.vungle.com"
-        };
-        for (String domain : removeFromAllow) allow.remove(domain);
-        for (String item : DEFAULT_BLOCK.split("\\s+")) {
-            String domain = normalize(item);
-            if (!domain.isEmpty()) block.add(domain);
-        }
-        for (String item : DEFAULT_ALLOW.split("\\s+")) {
-            String domain = normalize(item);
-            if (!domain.isEmpty()) allow.add(domain);
-        }
-        saveRules(BLOCK, block);
-        saveRules(ALLOW, allow);
+        // Clear all saved and downloaded block rules; preserve allow rules.
+        saveRules(BLOCK, new LinkedHashSet<>());
+        AdsFilterListManager.clearBlocked(this);
         prefs.edit().putString("bundled_rules_version", DEFAULT_RULES_VERSION).apply();
     }
 
