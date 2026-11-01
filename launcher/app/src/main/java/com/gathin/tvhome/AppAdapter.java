@@ -617,7 +617,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
-        h.name.setText(e.name);
+        h.name.setText(TraditionalText.display(h.name.getContext(), e.name));
         // The first five dock tiles are identified by the large hero title above them, never by a second
         // caption underneath. Keep their caption space reserved so the next row cannot move upward.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
@@ -661,7 +661,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.banner.setVisibility(View.GONE);
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
-            h.label.setText(e.label);
+            h.label.setText(TraditionalText.display(h.label.getContext(), e.label));
             h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
         }
         h.card.setOnClickListener(v -> launch(e));
