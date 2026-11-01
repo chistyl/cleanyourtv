@@ -399,16 +399,50 @@ public class AdsBlockerActivity extends Activity {
             TextView head = label((time > 0 ? format.format(new Date(time)) : "--") + "    " + result, 16);
             head.setTypeface(null, Typeface.BOLD); head.setTextColor(color);
             card.addView(head, new LinearLayout.LayoutParams(-1, dp(30)));
-            TextView domain = label(item.optString("domain", "未知網域"), 18);
+            String domainValue = normalize(item.optString("domain", ""));
+            LinearLayout domainRow = new LinearLayout(this);
+            domainRow.setGravity(Gravity.CENTER_VERTICAL);
+            TextView domain = label(domainValue.isEmpty() ? "未知網域" : domainValue, 17);
             domain.setTypeface(null, Typeface.BOLD);
-            card.addView(domain, new LinearLayout.LayoutParams(-1, dp(32)));
+            domainRow.addView(domain, new LinearLayout.LayoutParams(0, dp(42), 1f));
+            if (!domainValue.isEmpty() && "已阻擋".equals(result)) {
+                boolean tempAllowed = temporaryAllowedDomains().contains(domainValue);
+                Button allowButton = button(tempAllowed ? "取消暫時允許" : "暫時允許",
+                        () -> toggleTemporaryAllow(domainValue, summary, rows, filter));
+                allowButton.setTextSize(14);
+                allowButton.setPadding(dp(10), dp(4), dp(10), dp(4));
+                allowButton.setBackground(focusBg(tempAllowed ? Color.rgb(38, 105, 78) : Color.rgb(48, 83, 112),
+                        tempAllowed ? Color.rgb(55, 145, 105) : Color.rgb(70, 120, 165)));
+                domainRow.addView(allowButton, new LinearLayout.LayoutParams(-2, dp(40)));
+            }
+            card.addView(domainRow, new LinearLayout.LayoutParams(-1, dp(42)));
             TextView response = label("DNS 回應：" + item.optString("response", "無資料"), 14);
             response.setTextColor(Color.LTGRAY);
             card.addView(response, new LinearLayout.LayoutParams(-1, dp(28)));
-            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(96));
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(112));
             rp.topMargin = dp(7);
             rows.addView(card, rp);
         }
+    }
+
+    private Set<String> temporaryAllowedDomains() {
+        String raw = prefs.getString("temporary_allow_domains", "");
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        if (raw != null) for (String item : raw.split("\\s+")) {
+            String domain = normalize(item);
+            if (!domain.isEmpty()) out.add(domain);
+        }
+        return out;
+    }
+
+    private void toggleTemporaryAllow(String domain, TextView summary, LinearLayout rows, int filter) {
+        LinkedHashSet<String> set = new LinkedHashSet<>(temporaryAllowedDomains());
+        boolean enabled = set.contains(domain);
+        if (enabled) set.remove(domain); else set.add(domain);
+        saveRules("temporary_allow_domains", set);
+        Toast.makeText(this, enabled ? "已取消暫時允許：" + domain : "已暫時允許：" + domain,
+                Toast.LENGTH_SHORT).show();
+        updateDnsLogRows(summary, rows, filter);
     }
 
     private void toggleFilter() {
