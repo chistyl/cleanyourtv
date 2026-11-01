@@ -4430,14 +4430,46 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     .remove("custom_wallpaper_uri").putBoolean("hide_left_color_effect", false).apply();
             dialog.dismiss(); recreate();
         });
-        TextView cancel = new TextView(this); cancel.setText("取消"); cancel.setTextColor(0xFFE0E5EC);
-        cancel.setGravity(Gravity.CENTER); cancel.setPadding(0, (int)(14*density), 0, (int)(4*density));
-        panel.addView(cancel, new LinearLayout.LayoutParams(-1, -2)); cancel.setOnClickListener(v -> dialog.dismiss());
+        TextView cancel = new TextView(this); cancel.setText("取消"); cancel.setTextColor(0xFF80CBC4);
+        cancel.setTextSize(16); cancel.setGravity(Gravity.CENTER);
+        cancel.setFocusable(true); cancel.setFocusableInTouchMode(true); cancel.setClickable(true);
+        cancel.setDefaultFocusHighlightEnabled(false); cancel.setId(View.generateViewId());
+        GradientDrawable cancelNormal = new GradientDrawable();
+        cancelNormal.setColor(0xFF343B47); cancelNormal.setCornerRadius(14*density);
+        cancelNormal.setStroke(Math.max(1,(int)density), 0x3348DAD0);
+        GradientDrawable cancelFocused = new GradientDrawable();
+        cancelFocused.setColor(0xFF00AFA5); cancelFocused.setCornerRadius(14*density);
+        cancelFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        cancel.setBackground(cancelNormal);
+        cancel.setOnFocusChangeListener((v, focused) -> {
+            v.setBackground(focused ? cancelFocused : cancelNormal);
+            cancel.setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
+            v.setElevation(focused ? 8*density : 0f);
+            v.setScaleX(focused ? 1.02f : 1f); v.setScaleY(focused ? 1.02f : 1f);
+        });
+        LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(-1, (int)(48*density));
+        cancelLp.topMargin = (int)(10*density); panel.addView(cancel, cancelLp);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        View firstWallpaperAction = panel.getChildAt(1);
+        View secondWallpaperAction = panel.getChildAt(2);
+        View lastWallpaperAction = panel.getChildAt(panel.getChildCount()-2);
+        if (firstWallpaperAction != null && secondWallpaperAction != null) {
+            firstWallpaperAction.setNextFocusUpId(cancel.getId());
+            firstWallpaperAction.setNextFocusDownId(secondWallpaperAction.getId());
+            secondWallpaperAction.setNextFocusUpId(firstWallpaperAction.getId());
+            secondWallpaperAction.setNextFocusDownId(lastWallpaperAction.getId());
+        }
+        if (lastWallpaperAction != null) {
+            lastWallpaperAction.setNextFocusUpId(secondWallpaperAction.getId());
+            lastWallpaperAction.setNextFocusDownId(cancel.getId());
+            cancel.setNextFocusUpId(lastWallpaperAction.getId());
+        }
         dialog.setContentView(panel); dialog.show();
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             dialog.getWindow().setLayout(Math.min((int)(460*density), getResources().getDisplayMetrics().widthPixels-(int)(48*density)), -2);
         }
+        panel.getChildAt(1).post(() -> panel.getChildAt(1).requestFocus());
     }
 
     /** 手機掃描 QR Code 後，在同一個 Wi-Fi 網路上傳圖片並直接設為桌布。 */
