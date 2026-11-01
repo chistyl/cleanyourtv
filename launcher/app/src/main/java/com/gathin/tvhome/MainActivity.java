@@ -4079,7 +4079,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                 (android.os.PowerManager) getSystemService(POWER_SERVICE);
                         if (power == null) throw new SecurityException("Power service unavailable");
                         power.reboot(null);
-                    } catch (SecurityException | RuntimeException error) {
+                    } catch (RuntimeException error) {
                         new AlertDialog.Builder(this)
                                 .setTitle("無法由啟動器重新開機")
                                 .setMessage("目前電視系統未授予重新開機權限，請使用電視的系統電源選單重新啟動。")
