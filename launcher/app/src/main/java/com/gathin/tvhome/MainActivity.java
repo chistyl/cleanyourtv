@@ -4803,6 +4803,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             check.setOnCheckedChangeListener((button, value) -> checked[index] = value);
             row.addView(check);
             row.setMinimumHeight((int)(82*density));
+            row.setOnFocusChangeListener((v, focused) -> {
+                if (focused) scroll.post(() -> scroll.requestChildRectangleOnScreen(v,
+                        new android.graphics.Rect(0, 0, v.getWidth(), v.getHeight()), false));
+            });
             row.setOnClickListener(v -> check.setChecked(!check.isChecked()));
             GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x18333333);
             rowBg.setCornerRadius(10*density); row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
@@ -4848,13 +4852,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelButton.setMinHeight((int)(48*density)); saveButton.setMinHeight((int)(48*density));
             cancelButton.setId(View.generateViewId()); saveButton.setId(View.generateViewId());
             GradientDrawable buttonNormal = new GradientDrawable();
-            buttonNormal.setColor(0xFF343B47); buttonNormal.setCornerRadius(12*density);
+            buttonNormal.setColor(0xFF343B47); buttonNormal.setCornerRadius(14*density);
             GradientDrawable buttonFocused = new GradientDrawable();
-            buttonFocused.setColor(0xFF46566B); buttonFocused.setCornerRadius(12*density);
-            buttonFocused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
+            buttonFocused.setColor(0xFF00AFA5); buttonFocused.setCornerRadius(14*density);
+            buttonFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
             cancelButton.setBackground(buttonNormal); saveButton.setBackground(buttonNormal);
-            View.OnFocusChangeListener buttonFocus = (v, focused) ->
-                    v.setBackground(focused ? buttonFocused : buttonNormal);
+            cancelButton.setTextColor(0xFF80CBC4); saveButton.setTextColor(0xFF80CBC4);
+            View.OnFocusChangeListener buttonFocus = (v, focused) -> {
+                v.setBackground(focused ? buttonFocused : buttonNormal);
+                ((Button)v).setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
+                v.setScaleX(focused ? 1.025f : 1f);
+                v.setScaleY(focused ? 1.025f : 1f);
+            };
             cancelButton.setOnFocusChangeListener(buttonFocus); saveButton.setOnFocusChangeListener(buttonFocus);
             cancelButton.setNextFocusRightId(saveButton.getId());
             saveButton.setNextFocusLeftId(cancelButton.getId());
