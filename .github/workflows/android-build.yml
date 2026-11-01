@@ -9,6 +9,7 @@ on:
       - cytv-gold04-scroll-stability
       - cytv-gold05-hide-dock-row
       - cytv-gold05-weather-initial-visible
+      - cytv-system-folder-dialog-focus-fix
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
