@@ -4670,12 +4670,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         name.setSingleLine(true);
         name.setFocusable(true);
         name.setFocusableInTouchMode(true);
+        name.setSelectAllOnFocus(false);
+        name.setTextSize(20f); name.setTextColor(Color.WHITE); name.setHintTextColor(0xFF9AA4B2);
+        name.setPadding((int)(14*density), (int)(10*density), (int)(14*density), (int)(10*density));
+        name.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         name.setHint("輸入資料夾名稱");
         LinearLayout nameWrap = new LinearLayout(this);
         nameWrap.setOrientation(LinearLayout.VERTICAL);
         nameWrap.setPadding((int) (24 * density), (int) (12 * density),
                 (int) (24 * density), (int) (8 * density));
-        nameWrap.addView(name, new LinearLayout.LayoutParams(-1, -2));
+        nameWrap.setClipChildren(false); nameWrap.setClipToPadding(false);
+        GradientDrawable fieldNormal = new GradientDrawable();
+        fieldNormal.setColor(0xFF242A34); fieldNormal.setCornerRadius(12*density);
+        fieldNormal.setStroke(Math.max(1,(int)density), 0x554F5B6B);
+        GradientDrawable fieldFocused = new GradientDrawable();
+        fieldFocused.setColor(0xFF293640); fieldFocused.setCornerRadius(12*density);
+        fieldFocused.setStroke(Math.max(2,(int)(2*density)), 0xFF80CBC4);
+        name.setBackground(fieldNormal);
+        name.setOnFocusChangeListener((v, focused) -> {
+            v.setBackground(focused ? fieldFocused : fieldNormal);
+            v.setElevation(focused ? 4*density : 0f);
+        });
+        nameWrap.addView(name, new LinearLayout.LayoutParams(-1, (int)(58*density)));
         AlertDialog createDialog = new AlertDialog.Builder(this).setTitle("新增資料夾").setView(nameWrap)
                 .setNegativeButton("取消", null).setPositiveButton("建立", (x, y) -> {
                     String value = name.getText().toString().trim();
@@ -4752,12 +4768,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelButton.setNextFocusUpId(name.getId());
             createButton.setNextFocusUpId(name.getId());
         }
-        name.setOnFocusChangeListener((v, hasFocus) -> {
-            name.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    hasFocus ? 0xFF00D5C8 : 0xFF80CBC4));
-            name.setElevation(hasFocus ? 3f*density : 0f);
-        });
-        name.post(name::requestFocus);
+        name.setId(View.generateViewId());
+        name.setNextFocusDownId(cancelButton != null ? cancelButton.getId() : View.NO_ID);
+        if (cancelButton != null) cancelButton.setNextFocusUpId(name.getId());
+        if (createButton != null) createButton.setNextFocusUpId(name.getId());
+        name.post(() -> { name.requestFocus(); name.setSelection(name.getText().length()); });
     }
 
     private interface AppSelectionListener { void onSave(boolean[] checked); }
