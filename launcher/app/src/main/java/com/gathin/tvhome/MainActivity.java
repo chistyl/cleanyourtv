@@ -4045,8 +4045,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         toggle.setMinHeight((int)(58*density));
         toggle.setMinWidth((int)(150*density));
         toggle.setSwitchMinWidth((int)(76*density));
-        toggle.setShowText(true);
-        toggle.setTextOn("開啟"); toggle.setTextOff("關閉");
+        // 開關只保留滑鈕與軌道，不顯示「開啟／關閉」文字，避免文字重疊。 
+        toggle.setShowText(false);
+        toggle.setTextOn(""); toggle.setTextOff("");
         toggle.setBackground(remoteWeatherFocusBackground(false));
         toggle.setOnFocusChangeListener((v, focused) -> {
             v.setBackground(remoteWeatherFocusBackground(focused));
