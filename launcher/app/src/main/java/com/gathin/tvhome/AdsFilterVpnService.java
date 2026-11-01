@@ -367,8 +367,6 @@ public class AdsFilterVpnService extends VpnService {
     @Override public void onDestroy() { stopFilter(); super.onDestroy(); }
     private void stopFilter() {
         running.set(false);
-        underlyingNetwork = null;
-        physicalNetworks.clear();
         if (tunnel != null) { try { tunnel.close(); } catch (Exception ignored) {} tunnel = null; }
         if (worker != null) { worker.interrupt(); worker = null; }
         stopForeground(true);
