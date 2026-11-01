@@ -4048,6 +4048,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             toggle.setTextColor(focused ? 0xFF202124 : Color.WHITE);
             v.setScaleX(1f); v.setScaleY(1f);
         });
+        // Neutral switch colors; the white rounded focus pill carries the selection state.
+        toggle.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFB8BEC8));
+        toggle.setTrackTintList(android.content.res.ColorStateList.valueOf(0xFF626A75));
         toggle.setChecked(prefs.getBoolean("enabled", false));
         toggle.setClickable(true);
         toggle.setOnKeyListener((v, keyCode, event) -> {
@@ -4075,8 +4078,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             option.setPadding((int)(10*density), (int)(5*density), (int)(10*density), (int)(5*density));
             option.setBackground(remoteWeatherFocusBackground(false));
             option.setOnFocusChangeListener((v, focused) -> {
+                android.widget.RadioButton radio = (android.widget.RadioButton) v;
                 v.setBackground(remoteWeatherFocusBackground(focused));
-                ((android.widget.RadioButton) v).setTextColor(focused ? 0xFF202124 : Color.WHITE);
+                radio.setTextColor(focused ? 0xFF202124 : Color.WHITE);
+                // Keep the radio indicator visible on the white selected pill.
+                int indicator = focused ? 0xFF343B47 : 0xFF80CBC4;
+                radio.setButtonTintList(android.content.res.ColorStateList.valueOf(indicator));
                 v.setScaleX(1f); v.setScaleY(1f);
             });
         }
