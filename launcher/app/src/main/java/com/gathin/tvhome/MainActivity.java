@@ -4187,8 +4187,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     check.setButtonTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                             new int[]{Color.WHITE, 0xFF9AA4B2}));
                     check.setChecked(Boolean.TRUE.equals(selected.get("app:" + pkg)));
+                    check.setFocusable(false);
                     check.setOnCheckedChangeListener((button, value) -> selected.put("app:" + pkg, value));
-                    row.addView(check, new LinearLayout.LayoutParams((int)(48*density), (int)(56*density)));
+                    row.addView(check, new LinearLayout.LayoutParams((int)(56*density), (int)(64*density)));
+                    row.setFocusable(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x00222832); rowBg.setCornerRadius(10*density);
+                    row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
+                    row.setOnFocusChangeListener((v, focused) -> {
+                        rowBg.setColor(focused ? 0xFF394454 : 0x00222832);
+                        rowBg.setStroke(focused ? Math.max(2,(int)(2*density)) : 0, focused ? Color.WHITE : Color.TRANSPARENT);
+                    });
+                    row.setOnClickListener(v -> check.setChecked(!check.isChecked()));
+                    row.setOnKeyListener((v,key,event) -> {
+                        if(event.getAction()==KeyEvent.ACTION_UP && (key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER)) {
+                            check.setChecked(!check.isChecked()); return true;
+                        }
+                        return false;
+                    });
                     list.addView(row, new LinearLayout.LayoutParams(-1, -2));
                     View divider = new View(this); divider.setBackgroundColor(0x22FFFFFF);
                     list.addView(divider, new LinearLayout.LayoutParams(-1, Math.max(1, (int)density)));
@@ -4213,8 +4228,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     check.setButtonTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                             new int[]{Color.WHITE, 0xFF9AA4B2}));
                     check.setChecked(Boolean.TRUE.equals(selected.get("folder:" + folder)));
+                    check.setFocusable(false);
                     check.setOnCheckedChangeListener((button, value) -> selected.put("folder:" + folder, value));
-                    row.addView(check, new LinearLayout.LayoutParams((int)(48*density), (int)(56*density)));
+                    row.addView(check, new LinearLayout.LayoutParams((int)(56*density), (int)(64*density)));
+                    row.setFocusable(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x00222832); rowBg.setCornerRadius(10*density);
+                    row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
+                    row.setOnFocusChangeListener((v, focused) -> {
+                        rowBg.setColor(focused ? 0xFF394454 : 0x00222832);
+                        rowBg.setStroke(focused ? Math.max(2,(int)(2*density)) : 0, focused ? Color.WHITE : Color.TRANSPARENT);
+                    });
+                    row.setOnClickListener(v -> check.setChecked(!check.isChecked()));
+                    row.setOnKeyListener((v,key,event) -> {
+                        if(event.getAction()==KeyEvent.ACTION_UP && (key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER)) {
+                            check.setChecked(!check.isChecked()); return true;
+                        }
+                        return false;
+                    });
                     list.addView(row, new LinearLayout.LayoutParams(-1, -2));
                     View divider = new View(this); divider.setBackgroundColor(0x22FFFFFF);
                     list.addView(divider, new LinearLayout.LayoutParams(-1, Math.max(1, (int)density)));
@@ -4506,16 +4536,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             android.widget.CheckBox check = new android.widget.CheckBox(this);
             check.setText(ri == null ? pkg : String.valueOf(ri.loadLabel(getPackageManager())));
             check.setTextColor(Color.WHITE); check.setTextSize(14); check.setChecked(checked[i]);
-            check.setFocusable(true); check.setButtonTintList(new ColorStateList(
+            check.setFocusable(false); check.setButtonTintList(new ColorStateList(
                     new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                     new int[]{Color.WHITE, 0xFF9AA4B2}));
-            LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(0, -2, 1f);
+            LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(0, (int)(64*density), 1f);
             checkLp.leftMargin = (int)(10*density); check.setLayoutParams(checkLp);
             check.setOnCheckedChangeListener((button, value) -> checked[index] = value);
             row.addView(check);
+            row.setMinimumHeight((int)(82*density));
             row.setOnClickListener(v -> check.setChecked(!check.isChecked()));
             GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x18333333);
-            rowBg.setCornerRadius(10*density); row.setBackground(rowBg);
+            rowBg.setCornerRadius(10*density); row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
+            row.setOnFocusChangeListener((v, focused) -> {
+                rowBg.setColor(focused ? 0xFF394454 : 0x18333333);
+                rowBg.setStroke(focused ? Math.max(2,(int)(2*density)) : 0, focused ? Color.WHITE : Color.TRANSPARENT);
+            });
+            row.setOnKeyListener((v,key,event) -> {
+                if(event.getAction()==KeyEvent.ACTION_UP && (key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER)) {
+                    check.setChecked(!check.isChecked()); return true;
+                }
+                return false;
+            });
             LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
             rowLp.bottomMargin = (int)(5*density); list.addView(row, rowLp);
         }
