@@ -46,6 +46,42 @@ public class AdsFilterVpnService extends VpnService {
     private volatile Set<String> subscribedBlock = Collections.emptySet();
     private volatile Set<String> subscribedAllow = Collections.emptySet();
 
+    // Built-in rules are intentionally kept out of the editable rules UI.
+    // Allow rules are evaluated before block rules.
+    private static final String[] HIDDEN_ALLOW_RULES = {
+            "vid.dbokutv.com",
+            "firebaselogging-pa.googleapis.com",
+            "pic.dbokutv.com",
+            "events.ads.vungle.com"
+    };
+    private static final String[] HIDDEN_BLOCK_RULES = {
+            "googleads.g.doubleclick.net",
+            "securepubads.g.doubleclick.net",
+            "pubads.g.doubleclick.net",
+            "pagead2.googlesyndication.com",
+            "av1.xdrig.com",
+            "me.xdrig.com",
+            "www.xdrig.com",
+            "*.xdrig.com",
+            "p-app.dhub.hinet.net",
+            "ads.aralego.com",
+            "adsv.svc.litv.tv",
+            "acs2.svc.litv.tv",
+            "*.googleapis.com",
+            "*.svc.litv.tv",
+            "rr2---sn-un57sne7.googlevideo.com",
+            "eligibility-panelresearch.googlevideo.com"
+    };
+
+    // Retained as hidden uBlock user-rule text. These cosmetic/scriptlet rules
+    // require a browser-compatible uBlock engine and are not executable by DNS filtering.
+    private static final String[] HIDDEN_UBLOCK_USER_RULES = {
+            "youtube.com##+js(set, yt.config_.openPopupConfig.supportedPopups.adBlockMessageViewModel, false)",
+            "youtube.com##+js(set, Object.prototype.adBlocksFound, 0)",
+            "youtube.com##+js(set, ytplayer.config.args.raw_player_response.adPlacements, [])",
+            "youtube.com##+js(set, Object.prototype.hasAllowedInstreamAd, true)"
+    };
+
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
@@ -281,18 +317,35 @@ public class AdsFilterVpnService extends VpnService {
         return out;
     }
 
-    private boolean isAllowed(String domain) { return matches(domain, "allow_domains") || matchesSet(domain, subscribedAllow); }
+    private boolean isAllowed(String domain) {
+        if (matchesRules(domain, HIDDEN_ALLOW_RULES)) return true;
+        return matches(domain, "allow_domains") || matchesSet(domain, subscribedAllow);
+    }
     private boolean isBlocked(String domain) {
+        if (matchesRules(domain, HIDDEN_BLOCK_RULES)) return true;
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
         String raw = p.getString("block_domains", "");
         if (raw != null) for (String item : raw.split("\\s+")) {
             String rule = item.trim().toLowerCase(Locale.ROOT);
-            if (!rule.isEmpty() && (domain.equals(rule) || domain.endsWith("." + rule))) return true;
+            if (!rule.isEmpty() && matchesRule(domain, rule)) return true;
         }
         return matchesSet(domain, subscribedBlock);
     }
+    private boolean matchesRules(String domain, String[] rules) {
+        for (String rule : rules) if (matchesRule(domain, rule)) return true;
+        return false;
+    }
+    private boolean matchesRule(String domain, String rawRule) {
+        String rule = rawRule.trim().toLowerCase(Locale.ROOT);
+        if (rule.isEmpty()) return false;
+        if (rule.startsWith("*.")) {
+            String suffix = rule.substring(2);
+            return domain.endsWith("." + suffix);
+        }
+        return domain.equals(rule) || domain.endsWith("." + rule);
+    }
     private boolean matchesSet(String domain, Set<String> rules) {
-        for (String rule : rules) if (domain.equals(rule) || domain.endsWith("." + rule)) return true;
+        for (String rule : rules) if (matchesRule(domain, rule)) return true;
         return false;
     }
     private boolean matches(String domain, String key) {
@@ -300,7 +353,7 @@ public class AdsFilterVpnService extends VpnService {
         if (raw == null) return false;
         for (String item : raw.split("\\s+")) {
             String rule = item.trim().toLowerCase(Locale.ROOT);
-            if (!rule.isEmpty() && (domain.equals(rule) || domain.endsWith("." + rule))) return true;
+            if (!rule.isEmpty() && matchesRule(domain, rule)) return true;
         }
         return false;
     }
