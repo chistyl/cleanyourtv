@@ -279,7 +279,7 @@
     <!-- The dock as its own row: a lighter band, no names under the tiles, parked low on the screen with the top
          shelf above it. false makes the dock apps simply the first tiles of one plain grid (still in dock_apps
          order, no empty slots), with names under every tile and the glow behind every focused tile. -->
-    <bool name="dock_row">true</bool>
+    <bool name="dock_row">false</bool>
     <!-- Inputs, Wi-Fi and Settings folded into one round gear at the top right, like Google TV: OK drops a menu
          with the three, hold OK keeps the launcher menu. Off by default; a theme can set "top_menu": true. -->
     <bool name="top_menu">false</bool>
