@@ -27,6 +27,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class AdsBlockerActivity extends Activity {
     private static final int VPN_REQUEST = 7412;
@@ -161,6 +166,10 @@ public class AdsBlockerActivity extends Activity {
         toggle = button("", this::toggleFilter);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(58)); tp.topMargin = dp(12);
         content.addView(toggle, tp);
+        Button dnsHistory = button("查看 DNS 紀錄", this::showDnsLogs);
+        LinearLayout.LayoutParams logButtonParams = new LinearLayout.LayoutParams(-1, dp(56));
+        logButtonParams.topMargin = dp(8);
+        content.addView(dnsHistory, logButtonParams);
         TextView note = label("注意：YouTube 影片廣告、加密 DNS／DoH，以及與影片共用網域的廣告，可能無法由 DNS 規則攔截。", 15);
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
@@ -289,6 +298,119 @@ public class AdsBlockerActivity extends Activity {
                     LinkedHashSet<String> set = new LinkedHashSet<>(rules(key)); set.add(domain); saveRules(key, set); refresh();
                 }).show();
     }
+    private void showDnsLogs() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(14), dp(18), dp(12));
+        panel.setBackgroundColor(Color.rgb(22, 24, 31));
+
+        TextView summary = label("", 17);
+        summary.setTypeface(null, Typeface.BOLD);
+        panel.addView(summary, new LinearLayout.LayoutParams(-1, dp(42)));
+
+        LinearLayout filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
+        panel.addView(filters, new LinearLayout.LayoutParams(-1, dp(54)));
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout rows = new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(rows);
+        panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        final int[] selected = {0}; // 0 all, 1 blocked, 2 allowed
+        Button[] filterButtons = new Button[3];
+        String[] filterNames = {"全部紀錄", "只看阻擋", "只看允許"};
+        for (int i = 0; i < filterNames.length; i++) {
+            final int index = i;
+            Button b = button(filterNames[i], () -> { selected[0] = index; updateDnsLogRows(summary, rows, selected[0]); });
+            filterButtons[i] = b;
+            LinearLayout.LayoutParams fp = new LinearLayout.LayoutParams(0, dp(48), 1f);
+            fp.rightMargin = dp(5);
+            filters.addView(b, fp);
+        }
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button clear = button("清除紀錄", () -> new AlertDialog.Builder(this)
+                .setTitle("清除 DNS 紀錄")
+                .setMessage("確定要清除所有 DNS 紀錄嗎？")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("清除", (d, w) -> {
+                    prefs.edit().remove("dns_logs").apply();
+                    updateDnsLogRows(summary, rows, selected[0]);
+                }).show());
+        Button close = button("關閉", null);
+        close.setOnClickListener(v -> {});
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        ap.rightMargin = dp(6); actions.addView(clear, ap);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        cp.leftMargin = dp(6); actions.addView(close, cp);
+        panel.addView(actions, new LinearLayout.LayoutParams(-1, dp(54)));
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("DNS 紀錄").setView(panel).create();
+        close.setOnClickListener(v -> dialog.dismiss());
+        updateDnsLogRows(summary, rows, selected[0]);
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels * 0.88), dp(560));
+            dialog.getWindow().setBackgroundDrawable(bg(Color.rgb(22, 24, 31), 0));
+        }
+        filterButtons[0].requestFocus();
+    }
+
+    private void updateDnsLogRows(TextView summary, LinearLayout rows, int filter) {
+        rows.removeAllViews();
+        JSONArray logs;
+        try { logs = new JSONArray(prefs.getString("dns_logs", "[]")); }
+        catch (Exception e) { logs = new JSONArray(); }
+        int blocked = 0, allowed = 0, failed = 0;
+        for (int i = 0; i < logs.length(); i++) {
+            JSONObject item = logs.optJSONObject(i);
+            if (item == null) continue;
+            String result = item.optString("result", "");
+            if ("已阻擋".equals(result)) blocked++;
+            else if ("允許".equals(result)) allowed++;
+            else if ("查詢失敗".equals(result)) failed++;
+        }
+        summary.setText("總計 " + logs.length() + " 筆　 允許 " + allowed + "　阻擋 " + blocked + "　異常 " + failed);
+        if (logs.length() == 0) {
+            TextView empty = label("目前沒有 DNS 紀錄。啟用廣告阻擋並讓 APP 產生網路請求後，紀錄會顯示在這裡。", 17);
+            empty.setTextColor(Color.LTGRAY);
+            empty.setGravity(Gravity.CENTER);
+            rows.addView(empty, new LinearLayout.LayoutParams(-1, dp(130)));
+            return;
+        }
+        SimpleDateFormat format = new SimpleDateFormat("MM/dd HH:mm:ss", Locale.TAIWAN);
+        for (int i = logs.length() - 1; i >= 0; i--) {
+            JSONObject item = logs.optJSONObject(i);
+            if (item == null) continue;
+            String result = item.optString("result", "一般通過");
+            if (filter == 1 && !"已阻擋".equals(result)) continue;
+            if (filter == 2 && !"允許".equals(result)) continue;
+            int color = "已阻擋".equals(result) ? Color.rgb(255, 105, 105)
+                    : ("允許".equals(result) ? Color.rgb(90, 220, 145)
+                    : ("查詢失敗".equals(result) ? Color.rgb(255, 195, 75) : Color.rgb(125, 190, 255)));
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(14), dp(9), dp(14), dp(9));
+            card.setBackground(bg(Color.rgb(39, 42, 50), 0));
+            long time = item.optLong("time", 0);
+            TextView head = label((time > 0 ? format.format(new Date(time)) : "--") + "    " + result, 16);
+            head.setTypeface(null, Typeface.BOLD); head.setTextColor(color);
+            card.addView(head, new LinearLayout.LayoutParams(-1, dp(30)));
+            TextView domain = label(item.optString("domain", "未知網域"), 18);
+            domain.setTypeface(null, Typeface.BOLD);
+            card.addView(domain, new LinearLayout.LayoutParams(-1, dp(32)));
+            TextView response = label("DNS 回應：" + item.optString("response", "無資料"), 14);
+            response.setTextColor(Color.LTGRAY);
+            card.addView(response, new LinearLayout.LayoutParams(-1, dp(28)));
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(96));
+            rp.topMargin = dp(7);
+            rows.addView(card, rp);
+        }
+    }
+
     private void toggleFilter() {
         if (enabled()) {
             Intent stop = new Intent(this, AdsFilterVpnService.class);
