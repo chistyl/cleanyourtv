@@ -797,14 +797,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
-        grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
-            @Override public void onChildViewAttachedToWindow(@NonNull View view) {
-                view.post(updateHeaderRowVisibility);
-            }
-            @Override public void onChildViewDetachedFromWindow(@NonNull View view) { }
-        });
-        grid.post(updateHeaderRowVisibility);
-
         // Hide the weather panel visually while preserving its measured height.
         // Changing a header child to GONE resizes the weighted RecyclerView during DPAD navigation;
         // the grid then recalculates tile height and top padding mid-scroll, causing focus jumps.
