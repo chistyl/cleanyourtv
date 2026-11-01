@@ -4564,13 +4564,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         list.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
         scroll.addView(list, new ScrollView.LayoutParams(-1, -2));
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
+        java.util.ArrayList<View> selectionRows = new java.util.ArrayList<>();
         for (int i = 0; i < packages.size(); i++) {
             final int index = i;
             String pkg = packages.get(i);
             ResolveInfo ri = appInfos.get(pkg);
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setFocusable(true); row.setClickable(true);
+            row.setFocusable(true); row.setFocusableInTouchMode(true); row.setClickable(true);
+            row.setId(View.generateViewId());
+            if (!selectionRows.isEmpty()) {
+                View previous = selectionRows.get(selectionRows.size() - 1);
+                previous.setNextFocusDownId(row.getId());
+                row.setNextFocusUpId(previous.getId());
+            }
+            selectionRows.add(row);
             row.setPadding((int)(8*density), (int)(5*density), (int)(8*density), (int)(5*density));
             FrameLayout art = new FrameLayout(this);
             GradientDrawable artBg = new GradientDrawable();
@@ -4627,7 +4635,38 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             dialog.getWindow().setLayout(Math.min((int)(760*density), getResources().getDisplayMetrics().widthPixels - (int)(48*density)),
                     Math.min((int)(660*density), getResources().getDisplayMetrics().heightPixels - (int)(64*density)));
         }
-        if (list.getChildCount() > 0) list.getChildAt(0).requestFocus();
+        Button cancelButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (cancelButton != null && saveButton != null) {
+            cancelButton.setFocusable(true); saveButton.setFocusable(true);
+            cancelButton.setFocusableInTouchMode(true); saveButton.setFocusableInTouchMode(true);
+            cancelButton.setDefaultFocusHighlightEnabled(false); saveButton.setDefaultFocusHighlightEnabled(false);
+            cancelButton.setMinHeight((int)(48*density)); saveButton.setMinHeight((int)(48*density));
+            cancelButton.setId(View.generateViewId()); saveButton.setId(View.generateViewId());
+            GradientDrawable buttonNormal = new GradientDrawable();
+            buttonNormal.setColor(0xFF343B47); buttonNormal.setCornerRadius(12*density);
+            GradientDrawable buttonFocused = new GradientDrawable();
+            buttonFocused.setColor(0xFF46566B); buttonFocused.setCornerRadius(12*density);
+            buttonFocused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
+            cancelButton.setBackground(buttonNormal); saveButton.setBackground(buttonNormal);
+            View.OnFocusChangeListener buttonFocus = (v, focused) ->
+                    v.setBackground(focused ? buttonFocused : buttonNormal);
+            cancelButton.setOnFocusChangeListener(buttonFocus); saveButton.setOnFocusChangeListener(buttonFocus);
+            cancelButton.setNextFocusRightId(saveButton.getId());
+            saveButton.setNextFocusLeftId(cancelButton.getId());
+            View lastRow = selectionRows.isEmpty() ? null : selectionRows.get(selectionRows.size()-1);
+            if (lastRow != null) {
+                lastRow.setNextFocusDownId(cancelButton.getId());
+                cancelButton.setNextFocusUpId(lastRow.getId());
+            }
+        }
+        if (!selectionRows.isEmpty()) {
+            View first = selectionRows.get(0);
+            first.setNextFocusUpId(cancelButton != null ? cancelButton.getId() : View.NO_ID);
+            first.post(first::requestFocus);
+        } else if (cancelButton != null) {
+            cancelButton.post(cancelButton::requestFocus);
+        }
     }
 
     private void showFolderAppAssignment() {
