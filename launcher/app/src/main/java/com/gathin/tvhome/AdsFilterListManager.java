@@ -1,6 +1,9 @@
 package com.gathin.tvhome;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.util.Log;
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -40,10 +43,12 @@ final class AdsFilterListManager {
             String error = null;
             try {
                 List<String> failedSources = new ArrayList<>();
+                List<Network> downloadNetworks = getPhysicalInternetNetworks(context);
+                Log.i(TAG, "Filter download networks available: " + downloadNetworks.size());
                 int successfulSources = 0;
                 for (String source : SOURCES) {
                     try {
-                        String body = downloadWithRetry(source);
+                        String body = downloadWithRetry(source, downloadNetworks);
                         int before = block.size() + allow.size();
                         parse(body, block, allow);
                         if (block.size() + allow.size() > before || !body.trim().isEmpty()) successfulSources++;
@@ -94,13 +99,52 @@ final class AdsFilterListManager {
         }, "CleanYourTV-FilterListUpdate").start();
     }
 
-    private static String downloadWithRetry(String address) throws Exception {
+    /** Prefer a physical Wi-Fi/Ethernet Network so list downloads do not depend on the local DNS VPN route. */
+    private static List<Network> getPhysicalInternetNetworks(Context context) {
+        List<Network> result = new ArrayList<>();
+        try {
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return result;
+            Network active = cm.getActiveNetwork();
+            if (active != null) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(active);
+                if (isPhysicalInternet(caps)) result.add(active);
+            }
+            for (Network network : cm.getAllNetworks()) {
+                if (result.contains(network)) continue;
+                if (isPhysicalInternet(cm.getNetworkCapabilities(network))) result.add(network);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Cannot enumerate physical networks; using default route", e);
+        }
+        return result;
+    }
+
+    private static boolean isPhysicalInternet(NetworkCapabilities caps) {
+        return caps != null
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                    || caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
+    }
+
+    private static String downloadWithRetry(String address, List<Network> networks) throws Exception {
         Exception last = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
-            try { return download(address); }
-            catch (Exception e) {
-                last = e;
-                if (attempt < 3) {
+            if (networks != null && !networks.isEmpty()) {
+                for (Network network : networks) {
+                    try { return download(address, network); }
+                    catch (Exception e) {
+                        last = e;
+                        Log.w(TAG, "Download failed on physical network " + network + " (attempt " + attempt + ")", e);
+                    }
+                }
+            } else {
+                try { return download(address, null); }
+                catch (Exception e) { last = e; }
+            }
+            if (attempt < 3) {
                     try { Thread.sleep(700L * attempt); }
                     catch (InterruptedException interrupted) {
                         Thread.currentThread().interrupt();
@@ -116,8 +160,9 @@ final class AdsFilterListManager {
         return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
     }
 
-    private static String download(String address) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
+    private static String download(String address, Network network) throws Exception {
+        URL url = new URL(address);
+        HttpURLConnection c = (HttpURLConnection) (network == null ? url.openConnection() : network.openConnection(url));
         c.setConnectTimeout(18000); c.setReadTimeout(30000);
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10) CleanYourTV/1.0");
         c.setRequestProperty("Accept", "text/plain,*/*");
