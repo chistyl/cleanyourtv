@@ -18,8 +18,16 @@ final class AdsFilterListManager {
     private static final String TAG = "AdsFilterLists";
     private static final String FILE_NAME = "adblock-domain-rules.txt";
     private static final String[] SOURCES = {
-        "https://easylist.to/easylist/easylist.txt",
-        "https://easylist.to/easylist/easyprivacy.txt"
+        // uBlock Origin default filter lists (DNS-compatible hostname rules are imported).
+        "https://ublockorigin.github.io/uAssets/filters/filters.txt",
+        "https://ublockorigin.github.io/uAssets/filters/privacy.txt",
+        "https://ublockorigin.github.io/uAssets/filters/badware.txt",
+        "https://ublockorigin.github.io/uAssets/filters/quick-fixes.txt",
+        "https://ublockorigin.github.io/uAssets/filters/unbreak.txt",
+        // uBlock Origin's default third-party lists.
+        "https://ublockorigin.github.io/uAssets/thirdparties/easylist.txt",
+        "https://ublockorigin.github.io/uAssets/thirdparties/easyprivacy.txt",
+        "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext"
     };
     private static final Pattern ABP_RULE = Pattern.compile("^(\\@@)?\\|\\|([a-z0-9.-]+)\\^(?:\\$important)?$", Pattern.CASE_INSENSITIVE);
     private static final Pattern HOST = Pattern.compile("(?i)^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$");
