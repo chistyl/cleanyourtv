@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-     - v17.1-update
-      - cy tv-gold-02
+      - v17.1-update
+      - cytv-gold-02
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
