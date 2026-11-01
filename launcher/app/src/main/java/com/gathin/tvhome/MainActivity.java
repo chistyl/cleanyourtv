@@ -3787,6 +3787,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     popup.dismiss();
                     recreate();
                 });
+        addSettingsMenuRow(rows, popup, "阻擋廣告", () -> startActivity(new Intent(this, AdsBlockerActivity.class)));
         addSettingsMenuRow(rows, popup, "重新開機", this::requestDeviceReboot);
         // 只縮小右上角「設定」下拉選單的選項高度，不影響其他彈出選單。
         for (int i = 0; i < rows.getChildCount(); i++) {
