@@ -22,6 +22,8 @@ import java.net.InetAddress;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AdsFilterVpnService extends VpnService {
@@ -37,6 +39,8 @@ public class AdsFilterVpnService extends VpnService {
     private Thread worker;
     private volatile Network underlyingNetwork;
     private ConnectivityManager.NetworkCallback networkCallback;
+    private volatile Set<String> subscribedBlock = Collections.emptySet();
+    private volatile Set<String> subscribedAllow = Collections.emptySet();
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
@@ -48,6 +52,8 @@ public class AdsFilterVpnService extends VpnService {
         if (running.get()) return START_STICKY;
         try {
             startNotice();
+            subscribedBlock = AdsFilterListManager.load(this, 'B');
+            subscribedAllow = AdsFilterListManager.load(this, 'A');
             // Track real Wi-Fi/Ethernet networks, excluding the VPN itself. The default
             // network can change while the filter is running, so do not capture it only once.
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -233,15 +239,18 @@ public class AdsFilterVpnService extends VpnService {
         return out;
     }
 
-    private boolean isAllowed(String domain) { return matches(domain, "allow_domains"); }
+    private boolean isAllowed(String domain) { return matches(domain, "allow_domains") || matchesSet(domain, subscribedAllow); }
     private boolean isBlocked(String domain) {
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
         String raw = p.getString("block_domains", "");
-        if (raw == null) return false;
-        for (String item : raw.split("\\s+")) {
+        if (raw != null) for (String item : raw.split("\\s+")) {
             String rule = item.trim().toLowerCase(Locale.ROOT);
             if (!rule.isEmpty() && (domain.equals(rule) || domain.endsWith("." + rule))) return true;
         }
+        return matchesSet(domain, subscribedBlock);
+    }
+    private boolean matchesSet(String domain, Set<String> rules) {
+        for (String rule : rules) if (domain.equals(rule) || domain.endsWith("." + rule)) return true;
         return false;
     }
     private boolean matches(String domain, String key) {
