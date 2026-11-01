@@ -763,7 +763,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Keep the complete five-app dock band (including its rounded lower border) inside
             // the screen while leaving the next app row below the resting viewport.
             // DPAD scrolling still brings the remaining apps into view.
-            if (MainActivity.this.dockRow) want += (int) (54 * density);
+            if (MainActivity.this.dockRow) want += (int) (25 * density);
             // A single row never shows the names under its tiles (the title above the row names the app), so the
             // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
             if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
