@@ -9,6 +9,11 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.net.VpnService;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.LinkProperties;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -176,6 +181,10 @@ public class AdsBlockerActivity extends Activity {
         LinearLayout.LayoutParams logButtonParams = new LinearLayout.LayoutParams(-1, dp(56));
         logButtonParams.topMargin = dp(8);
         content.addView(dnsHistory, logButtonParams);
+        Button exportDiagnostics = button("匯出網路診斷紀錄", this::exportDiagnostics);
+        LinearLayout.LayoutParams diagnosticParams = new LinearLayout.LayoutParams(-1, dp(56));
+        diagnosticParams.topMargin = dp(8);
+        content.addView(exportDiagnostics, diagnosticParams);
         TextView note = label("注意：YouTube 影片廣告、加密 DNS／DoH，以及與影片共用網域的廣告，可能無法由 DNS 規則攔截。", 15);
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
@@ -505,6 +514,41 @@ public class AdsBlockerActivity extends Activity {
         Toast.makeText(this, enabled ? "已取消暫時允許：" + domain : "已暫時允許：" + domain,
                 Toast.LENGTH_SHORT).show();
         updateDnsLogRows(summary, rows, filter);
+    }
+
+    private void exportDiagnostics() {
+        StringBuilder report = new StringBuilder();
+        report.append("CleanYourTV 網路診斷報告\\n");
+        report.append("時間：").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.TAIWAN).format(new Date())).append("\\n");
+        report.append("裝置：").append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\\n");
+        report.append("Android：").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\\n");
+        report.append("過濾開關：").append(enabled() ? "開啟" : "關閉").append("\\n");
+        report.append("DNS 模式：").append(prefs.getString("dns_mode", "auto")).append("\\n");
+        report.append("VPN prepare：").append(VpnService.prepare(this) == null ? "已授權/可用" : "尚未授權").append("\\n\\n");
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            if (cm != null) {
+                Network active = cm.getActiveNetwork();
+                report.append("Active network：").append(active).append("\\n");
+                report.append("Active capabilities：").append(active == null ? "null" : cm.getNetworkCapabilities(active)).append("\\n");
+                report.append("Active link properties：").append(active == null ? "null" : cm.getLinkProperties(active)).append("\\n");
+                report.append("All networks：\\n");
+                for (Network network : cm.getAllNetworks()) {
+                    report.append(" - ").append(network).append("\\n   capabilities=").append(cm.getNetworkCapabilities(network))
+                            .append("\\n   linkProperties=").append(cm.getLinkProperties(network)).append("\\n");
+                }
+            } else report.append("ConnectivityManager=null\\n");
+        } catch (Exception e) { report.append("Network snapshot error：").append(e).append("\\n"); }
+        report.append("\\n========== VPN / DNS 診斷事件（最新 60KB）==========\\n");
+        report.append(prefs.getString("diagnostics", "目前沒有服務診斷事件。"));
+        report.append("\\n========== DNS 查詢紀錄（最多 50 筆）==========\\n");
+        report.append(prefs.getString("dns_logs", "[]"));
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(Intent.EXTRA_SUBJECT, "CleanYourTV 網路診斷紀錄");
+        share.putExtra(Intent.EXTRA_TEXT, report.toString());
+        try { startActivity(Intent.createChooser(share, "分享／儲存診斷紀錄")); }
+        catch (Exception e) { Toast.makeText(this, "無法開啟分享功能：" + e.getMessage(), Toast.LENGTH_LONG).show(); }
     }
 
     private void toggleFilter() {
