@@ -9,6 +9,7 @@ import android.net.VpnService;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.LinkProperties;
 import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
@@ -20,6 +21,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,14 +35,27 @@ public class AdsFilterVpnService extends VpnService {
     private static final String DNS_CLIENT = "10.13.0.1";
     private static final String DNS_LOCAL = "10.13.0.2";
     private static final String UPSTREAM = "1.1.1.1";
+    private static final String DNS_MODE_AUTO = "auto";
+    static final String ACTION_REFRESH_NETWORK = "com.gathin.tvhome.action.REFRESH_NETWORK";
     static final String ACTION_STOP = "com.gathin.tvhome.action.STOP_AD_FILTER";
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ParcelFileDescriptor tunnel;
     private Thread worker;
     private volatile Network underlyingNetwork;
+    private volatile List<InetAddress> upstreamServers = Collections.singletonList(parseAddress(UPSTREAM));
     private ConnectivityManager.NetworkCallback networkCallback;
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_REFRESH_NETWORK.equals(intent.getAction())) {
+            if (running.get()) {
+                ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+                if (cm != null) {
+                    Network current = findPhysicalNetwork(cm);
+                    if (current != null) updateUnderlyingNetwork(current);
+                }
+            }
+            return START_STICKY;
+        }
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
             stopFilter();
@@ -74,6 +91,9 @@ public class AdsFilterVpnService extends VpnService {
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
                     if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                }
+                @Override public void onLinkPropertiesChanged(Network network, LinkProperties properties) {
+                    if (network.equals(underlyingNetwork)) updateUpstreamServers(network, cm);
                 }
             };
             cm.registerNetworkCallback(request, networkCallback);
@@ -118,6 +138,8 @@ public class AdsFilterVpnService extends VpnService {
 
     private void updateUnderlyingNetwork(Network network) {
         underlyingNetwork = network;
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (cm != null) updateUpstreamServers(network, cm);
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 setUnderlyingNetworks(new Network[]{network});
@@ -125,6 +147,37 @@ public class AdsFilterVpnService extends VpnService {
         } catch (Exception e) {
             Log.w(TAG, "Unable to update VPN underlying network", e);
         }
+    }
+
+    private void updateUpstreamServers(Network network, ConnectivityManager cm) {
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (!DNS_MODE_AUTO.equals(prefs.getString("dns_mode", DNS_MODE_AUTO))) {
+            upstreamServers = Collections.singletonList(parseAddress(UPSTREAM));
+            return;
+        }
+        try {
+            LinkProperties properties = cm.getLinkProperties(network);
+            List<InetAddress> discovered = new ArrayList<>();
+            if (properties != null) {
+                for (InetAddress address : properties.getDnsServers()) {
+                    if (address != null && !address.isAnyLocalAddress() && !address.isLoopbackAddress()
+                            && !address.isLinkLocalAddress() && !address.isMulticastAddress()) {
+                        discovered.add(address);
+                    }
+                }
+            }
+            if (discovered.isEmpty()) discovered.add(parseAddress(UPSTREAM));
+            upstreamServers = Collections.unmodifiableList(discovered);
+            Log.i(TAG, "Auto DNS negotiated: " + discovered.size() + " upstream server(s)");
+        } catch (Exception e) {
+            upstreamServers = Collections.singletonList(parseAddress(UPSTREAM));
+            Log.w(TAG, "Unable to read network DNS; using fallback", e);
+        }
+    }
+
+    private static InetAddress parseAddress(String address) {
+        try { return InetAddress.getByName(address); }
+        catch (Exception e) { throw new IllegalStateException("Invalid DNS fallback", e); }
     }
 
     private void startNotice() {
@@ -197,27 +250,53 @@ public class AdsFilterVpnService extends VpnService {
     }
 
     private byte[] forward(byte[] query) {
-        DatagramSocket socket = null;
+        Network underlying = underlyingNetwork;
+        if (underlying == null) {
+            Log.w(TAG, "No physical network available for DNS forwarding");
+            return null;
+        }
+        List<InetAddress> candidates = upstreamServers;
+        for (InetAddress dns : candidates) {
+            DatagramSocket socket = null;
+            try {
+                socket = new DatagramSocket();
+                if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
+                underlying.bindSocket(socket);
+                socket.setSoTimeout(1800);
+                socket.send(new DatagramPacket(query, query.length, dns, 53));
+                byte[] buf = new byte[4096];
+                DatagramPacket reply = new DatagramPacket(buf, buf.length);
+                socket.receive(reply);
+                byte[] out = new byte[reply.getLength()];
+                System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
+                return out;
+            } catch (Exception e) {
+                Log.w(TAG, "DNS upstream failed: " + dns.getHostAddress(), e);
+            } finally {
+                if (socket != null) socket.close();
+            }
+        }
         try {
-            socket = new DatagramSocket();
-            if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
-            // Send upstream DNS through the currently selected physical Wi-Fi/Ethernet network.
-            Network underlying = underlyingNetwork;
-            if (underlying == null) throw new IllegalStateException("No physical network for DNS forwarding");
-            underlying.bindSocket(socket);
-            socket.setSoTimeout(3500);
-            byte[] ip = new byte[4]; byte[] raw = InetAddress.getByName(UPSTREAM).getAddress();
-            System.arraycopy(raw, 0, ip, 0, 4);
-            socket.send(new DatagramPacket(query, query.length, InetAddress.getByAddress(ip), 53));
-            byte[] buf = new byte[4096];
-            DatagramPacket reply = new DatagramPacket(buf, buf.length);
-            socket.receive(reply);
-            byte[] out = new byte[reply.getLength()];
-            System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
-            return out;
+            InetAddress fallback = parseAddress(UPSTREAM);
+            if (!candidates.contains(fallback)) {
+                DatagramSocket socket = new DatagramSocket();
+                try {
+                    if (!protect(socket)) throw new IllegalStateException("Could not protect fallback DNS socket");
+                    underlying.bindSocket(socket);
+                    socket.setSoTimeout(1800);
+                    socket.send(new DatagramPacket(query, query.length, fallback, 53));
+                    byte[] buf = new byte[4096];
+                    DatagramPacket reply = new DatagramPacket(buf, buf.length);
+                    socket.receive(reply);
+                    byte[] out = new byte[reply.getLength()];
+                    System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
+                    return out;
+                } finally { socket.close(); }
+            }
         } catch (Exception e) {
-            Log.w(TAG, "Upstream DNS failed", e); return null;
-        } finally { if (socket != null) socket.close(); }
+            Log.w(TAG, "Fallback DNS failed", e);
+        }
+        return null;
     }
 
     private byte[] makeReply(byte[] request, int ihl, int clientPort, byte[] dns) {
