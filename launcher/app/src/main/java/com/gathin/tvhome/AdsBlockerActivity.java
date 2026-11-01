@@ -37,6 +37,8 @@ public class AdsBlockerActivity extends Activity {
     private LinearLayout content;
     private TextView status;
     private Button toggle;
+    private Button autoDnsChoice;
+    private Button manualDnsChoice;
 
     // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK =
@@ -140,6 +142,22 @@ public class AdsBlockerActivity extends Activity {
         content.addView(desc, new LinearLayout.LayoutParams(-1, dp(68)));
         status = label("", 19); status.setPadding(dp(16), 0, dp(16), 0); status.setBackground(bg(Color.rgb(39,42,50), 0));
         content.addView(status, new LinearLayout.LayoutParams(-1, dp(58)));
+        TextView networkModeTitle = label("網路連線模式", 19);
+        networkModeTitle.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams modeTitleParams = new LinearLayout.LayoutParams(-1, dp(42));
+        modeTitleParams.topMargin = dp(12);
+        content.addView(networkModeTitle, modeTitleParams);
+        LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        autoDnsChoice = button("自動（Auto）", () -> setDnsMode("auto"));
+        manualDnsChoice = button("手動（固定 DNS）", () -> setDnsMode("manual"));
+        LinearLayout.LayoutParams modeButtonParams = new LinearLayout.LayoutParams(0, dp(54), 1f);
+        modeButtonParams.rightMargin = dp(8);
+        modeRow.addView(autoDnsChoice, modeButtonParams);
+        LinearLayout.LayoutParams manualParams = new LinearLayout.LayoutParams(0, dp(54), 1f);
+        manualParams.leftMargin = dp(8);
+        modeRow.addView(manualDnsChoice, manualParams);
+        content.addView(modeRow, new LinearLayout.LayoutParams(-1, dp(58)));
         toggle = button("", this::toggleFilter);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(58)); tp.topMargin = dp(12);
         content.addView(toggle, tp);
@@ -171,8 +189,25 @@ public class AdsBlockerActivity extends Activity {
         if (status == null) return;
         status.setText(enabled() ? "狀態：廣告過濾已啟用" : "狀態：廣告過濾已關閉");
         toggle.setText(enabled() ? "停用廣告阻擋" : "啟用廣告阻擋");
+        boolean auto = "auto".equals(prefs.getString("dns_mode", "auto"));
+        autoDnsChoice.setText(auto ? "✓ 自動（Auto）" : "自動（Auto）");
+        manualDnsChoice.setText(auto ? "手動（固定 DNS）" : "✓ 手動（固定 DNS）");
+        autoDnsChoice.setSelected(auto);
+        manualDnsChoice.setSelected(!auto);
         renderRules(BLOCK); renderRules(ALLOW);
     }
+    private void setDnsMode(String mode) {
+        String current = prefs.getString("dns_mode", "auto");
+        if (mode.equals(current)) return;
+        prefs.edit().putString("dns_mode", mode).apply();
+        Intent refreshIntent = new Intent(this, AdsFilterVpnService.class);
+        refreshIntent.setAction(AdsFilterVpnService.ACTION_REFRESH_NETWORK);
+        if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(refreshIntent); else startService(refreshIntent);
+        refresh();
+        Toast.makeText(this, mode.equals("auto")
+                ? "已切換自動 DNS 協商" : "已切換固定 DNS（1.1.1.1）", Toast.LENGTH_SHORT).show();
+    }
+
     private void renderRules(String key) {
         LinearLayout list = content.findViewWithTag("list_" + key);
         if (list == null) return;
