@@ -177,7 +177,7 @@ public class AdsBlockerActivity extends Activity {
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
         content.addView(note, np);
-        addSection("封鎖規則", "封鎖符合網域及其子網域的 DNS 請求。", BLOCK);
+        // 封鎖規則清單隱藏；既有 DNS 封鎖規則仍保留並由服務執行。
         addSection("允許規則", "允許清單優先於封鎖清單，可用來解除誤擋。", ALLOW);
         Button back = button("返回", this::finish);
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(58)); bp.topMargin = dp(20);
