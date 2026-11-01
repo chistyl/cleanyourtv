@@ -1,5 +1,5 @@
 name: Android APK Build
-# Build GOLD-05 immediate weather overlay positioning fix
+# Build GOLD-05 weather overlay post-layout positioning fix
 
 on:
   workflow_dispatch:
