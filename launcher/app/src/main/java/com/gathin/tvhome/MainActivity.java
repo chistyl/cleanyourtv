@@ -4569,6 +4569,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                         AppSelectionListener listener) {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
@@ -4648,6 +4651,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         Button cancelButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         if (cancelButton != null && saveButton != null) {
+            cancelButton.setAllCaps(false); saveButton.setAllCaps(false);
+            cancelButton.setMinWidth((int)(104*density)); saveButton.setMinWidth((int)(112*density));
+            cancelButton.setMinHeight((int)(52*density)); saveButton.setMinHeight((int)(52*density));
+            LinearLayout.LayoutParams cancelParams = (LinearLayout.LayoutParams) cancelButton.getLayoutParams();
+            cancelParams.rightMargin = (int)(18*density);
+            cancelButton.setLayoutParams(cancelParams);
+            LinearLayout.LayoutParams saveParams = (LinearLayout.LayoutParams) saveButton.getLayoutParams();
+            saveParams.leftMargin = (int)(4*density);
+            saveButton.setLayoutParams(saveParams);
             cancelButton.setFocusable(true); saveButton.setFocusable(true);
             cancelButton.setFocusableInTouchMode(true); saveButton.setFocusableInTouchMode(true);
             cancelButton.setDefaultFocusHighlightEnabled(false); saveButton.setDefaultFocusHighlightEnabled(false);
@@ -4668,6 +4680,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (lastRow != null) {
                 lastRow.setNextFocusDownId(cancelButton.getId());
                 cancelButton.setNextFocusUpId(lastRow.getId());
+                saveButton.setNextFocusUpId(lastRow.getId());
             }
         }
         if (!selectionRows.isEmpty()) {
@@ -4831,6 +4844,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // 或 GridLayout 套用預設浮動面板底色，形成多出來的大色塊。
         scroll.setBackgroundColor(Color.TRANSPARENT);
         scroll.setForeground(null);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         scroll.setFillViewport(false);
         android.widget.GridLayout grid = new android.widget.GridLayout(this);
         grid.setBackgroundColor(Color.TRANSPARENT);
@@ -4840,7 +4856,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int folderTileDp = Math.max(92, Math.min(184, (availableWidthDp - 56) / folderColumns));
         grid.setColumnCount(folderColumns);
         grid.setUseDefaultMargins(false);
-        // 五欄等寬填滿內容區，GridLayout 權重分配確保左右邊界留白一致。
+        // 四欄等寬填滿內容區，GridLayout 權重分配確保左右邊界留白一致。
         grid.setAlignmentMode(android.widget.GridLayout.ALIGN_BOUNDS);
         grid.setColumnOrderPreserved(false);
         grid.setFocusable(false);
@@ -5048,10 +5064,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         closeLp.topMargin = (int)(10*density);
         outer.addView(close, closeLp);
         if (!folderFocusTiles.isEmpty()) {
-            folderFocusTiles.get(0).setNextFocusUpId(close.getId());
+            View firstTile = folderFocusTiles.get(0);
             View lastTile = folderFocusTiles.get(folderFocusTiles.size()-1);
+            firstTile.setNextFocusUpId(close.getId());
             lastTile.setNextFocusDownId(close.getId());
             close.setNextFocusUpId(lastTile.getId());
+            close.setNextFocusDownId(firstTile.getId());
+            close.setNextFocusLeftId(lastTile.getId());
         }
         dialog.setContentView(outer);
         dialog.show();
