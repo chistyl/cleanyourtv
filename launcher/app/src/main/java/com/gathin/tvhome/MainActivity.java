@@ -3788,6 +3788,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     recreate();
                 });
         addSettingsMenuRow(rows, popup, "重新開機", this::requestDeviceReboot);
+        // 只縮小右上角「設定」下拉選單的選項高度，不影響其他彈出選單。
+        for (int i = 0; i < rows.getChildCount(); i++) {
+            View menuItem = rows.getChildAt(i);
+            LinearLayout.LayoutParams itemParams = (LinearLayout.LayoutParams) menuItem.getLayoutParams();
+            itemParams.height = (int) (46 * density);
+            menuItem.setLayoutParams(itemParams);
+        }
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (170 * density), Math.min(panel.getMeasuredWidth(), (int) (220 * density))));
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
@@ -6442,7 +6449,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             row.setNextFocusUpId(previous.getId());
         }
         LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
-        rowLp.height = (int)(46*density);
+        rowLp.height = (int)(52*density);
         rowLp.bottomMargin = (int)(2*density);
         row.setLayoutParams(rowLp);
         rows.addView(row);
