@@ -710,7 +710,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
             @Override
             public void onChildViewAttachedToWindow(@NonNull View v) {
-                v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
+                int position = grid.getChildAdapterPosition(v);
+                v.setAlpha(tileAlpha(position));
+                if (dockRow && !singleRow && position >= 0 && position < COLUMNS) {
+                    // A dock tile that has crossed above the visible grid viewport is hidden as a whole;
+                    // it must not remain as a clipped strip under the fixed header.
+                    v.setVisibility(v.getTop() < 0 ? View.INVISIBLE : View.VISIBLE);
+                }
             }
 
             @Override
@@ -784,6 +790,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                updateDockRowVisibility(rv);
                 if (!glassShown) return;
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
@@ -796,6 +803,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         });
+
+        // Hide the first (dock) row completely once it scrolls above the grid viewport.
+        // INVISIBLE preserves each cell's measured size and focus geometry; scrolling back up restores it.
+        private void updateDockRowVisibility(RecyclerView rv) {
+            if (!dockRow || singleRow) return;
+            for (int i = 0; i < rv.getChildCount(); i++) {
+                View child = rv.getChildAt(i);
+                int position = rv.getChildAdapterPosition(child);
+                if (position >= 0 && position < COLUMNS) {
+                    child.setVisibility(child.getTop() < 0 ? View.INVISIBLE : View.VISIBLE);
+                }
+            }
+        }
 
         // Hide the weather panel visually while preserving its measured height.
         // Changing a header child to GONE resizes the weighted RecyclerView during DPAD navigation;
