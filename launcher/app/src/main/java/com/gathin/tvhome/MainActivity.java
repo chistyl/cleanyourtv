@@ -3953,16 +3953,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
         weeklyWeatherView.setVisibility(weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE);
-        // The overlay is outside leftBlock; after its first content arrives, re-anchor it immediately
-        // to the clock and force a fresh measure/layout instead of waiting for the next grid scroll.
-        weeklyWeatherView.post(() -> {
-            if (weeklyWeatherView == null || root == null) return;
-            if (placeWeatherOverlay != null) placeWeatherOverlay.run();
+        // Wait for Android's next completed measure/layout pass. A plain post() can run before
+        // the newly visible wrap-content overlay has been measured, leaving it at stale coordinates
+        // until a later grid scroll happens to trigger another layout.
+        if (!weatherHiddenByScroll) {
+            final android.view.ViewTreeObserver observer = weeklyWeatherView.getViewTreeObserver();
+            observer.addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    if (weeklyWeatherView == null || root == null) {
+                        if (weeklyWeatherView != null && weeklyWeatherView.getViewTreeObserver().isAlive())
+                            weeklyWeatherView.getViewTreeObserver().removeOnPreDrawListener(this);
+                        return true;
+                    }
+                    if (weeklyWeatherView.getWidth() > 0 && weeklyWeatherView.getHeight() > 0
+                            && clockBlock.getWidth() > 0 && clockBlock.getHeight() > 0) {
+                        weeklyWeatherView.getViewTreeObserver().removeOnPreDrawListener(this);
+                        if (placeWeatherOverlay != null) placeWeatherOverlay.run();
+                        weeklyWeatherView.invalidate();
+                        root.invalidate();
+                    }
+                    return true;
+                }
+            });
             weeklyWeatherView.requestLayout();
-            weeklyWeatherView.invalidate();
-            root.requestLayout();
-            root.invalidate();
-        });
+        }
     }
 
     private JSONObject getJson(String address) throws Exception {
