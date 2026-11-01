@@ -4297,7 +4297,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     check.setFocusable(false);
                     check.setOnCheckedChangeListener((button, value) -> selected.put("folder:" + folder, value));
                     row.addView(check, new LinearLayout.LayoutParams((int)(56*density), (int)(64*density)));
-                    row.setFocusable(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    row.setFocusable(true); row.setFocusableInTouchMode(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    row.setId(View.generateViewId());
+                    if (previousFocusableRow[0] != null) {
+                        previousFocusableRow[0].setNextFocusDownId(row.getId());
+                        row.setNextFocusUpId(previousFocusableRow[0].getId());
+                    } else {
+                        row.setNextFocusUpId(folderTab.getId());
+                    }
+                    previousFocusableRow[0] = row;
+                    row.setOnFocusChangeListener((v, focused) -> {
+                        if (focused) scroll.post(() -> scroll.requestChildRectangleOnScreen(v,
+                                new android.graphics.Rect(0, 0, v.getWidth(), v.getHeight()), false));
+                    });
                     GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x00222832); rowBg.setCornerRadius(10*density);
                     row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
                     row.setOnFocusChangeListener((v, focused) -> {
@@ -4393,7 +4405,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Explicit remote-control path: tabs -> list rows -> Cancel -> Save.
         appTab.setNextFocusDownId(list.getChildCount() > 0 ? list.getChildAt(0).getId() : cancel.getId());
         folderTab.setNextFocusDownId(list.getChildCount() > 0 ? list.getChildAt(0).getId() : cancel.getId());
-        cancel.setNextFocusUpId(list.getChildCount() > 0 ? list.getChildAt(list.getChildCount() - 2).getId() : appTab.getId());
+        View lastRow = list.getChildCount() > 1 ? list.getChildAt(list.getChildCount() - 2) : null;
+        if (lastRow != null) lastRow.setNextFocusDownId(cancel.getId());
+        cancel.setNextFocusUpId(lastRow != null ? lastRow.getId() : appTab.getId());
         save.setNextFocusUpId(cancel.getId());
         cancel.setNextFocusRightId(save.getId()); save.setNextFocusLeftId(cancel.getId());
         outer.post(() -> appTab.requestFocus());
