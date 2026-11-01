@@ -177,7 +177,7 @@ public class AdsBlockerActivity extends Activity {
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
         content.addView(note, np);
-        // 封鎖規則清單隱藏；既有 DNS 封鎖規則仍保留並由服務執行。
+        addSection("封鎖規則", "目前封鎖規則不顯示；仍可新增網域。", BLOCK);
         addSection("允許規則", "允許清單優先於封鎖清單，可用來解除誤擋。", ALLOW);
         Button back = button("返回", this::finish);
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(58)); bp.topMargin = dp(20);
@@ -190,8 +190,11 @@ public class AdsBlockerActivity extends Activity {
         content.addView(h, hp);
         TextView sub = label(hint, 15); sub.setTextColor(Color.LTGRAY);
         content.addView(sub, new LinearLayout.LayoutParams(-1, dp(32)));
-        LinearLayout list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        list.setTag("list_" + key); content.addView(list);
+        // 封鎖規則只隱藏既有清單，不顯示任何已設定網域；保留新增入口。
+        if (!BLOCK.equals(key)) {
+            LinearLayout list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
+            list.setTag("list_" + key); content.addView(list);
+        }
         Button add = button("＋ 新增網域", () -> promptDomain(key));
         LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(52)); ap.topMargin = dp(8);
         content.addView(add, ap);
