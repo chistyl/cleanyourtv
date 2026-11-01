@@ -112,11 +112,17 @@ public class AdsFilterVpnService extends VpnService {
                 @Override public void onLost(Network network) {
                     diag("onLost " + networkSnapshot(network, cm));
                     if (network.equals(underlyingNetwork)) {
-                        underlyingNetwork = null;
+                        // Android 9 TV firmware may report onLost for the physical network
+                        // immediately after VpnService establishes tun0, even while Ethernet
+                        // remains connected in system settings. Keep the last known handle;
+                        // a protected socket can still use the system's underlying default route.
                         Network replacement = findPhysicalNetwork(cm);
-                        if (replacement != null) updateUnderlyingNetwork(replacement);
-                        // Do not change Android's system-wide underlying-network selection.
-                        // The DNS socket is explicitly bound to the physical network in forward().
+                        if (replacement != null) {
+                            updateUnderlyingNetwork(replacement);
+                        } else {
+                            diag("onLost retained last physical network handle=" + network
+                                    + "; will try protected default-route DNS");
+                        }
                     }
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
@@ -359,9 +365,11 @@ public class AdsFilterVpnService extends VpnService {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm == null) return underlyingNetwork;
         Network current = underlyingNetwork;
-        if (current != null && isPhysicalNetwork(cm.getNetworkCapabilities(current))) {
-            return current;
-        }
+        // Do not discard a previously verified physical Network merely because
+        // Android 9 temporarily hides it from getNetworkCapabilities() after VPN
+        // establishment. Try the handle first; DNS forwarding has a protected
+        // default-route fallback if binding to this handle is no longer possible.
+        if (current != null) return current;
         Network replacement = findPhysicalNetwork(cm);
         if (replacement != null) updateUnderlyingNetwork(replacement);
         return replacement;
@@ -372,7 +380,22 @@ public class AdsFilterVpnService extends VpnService {
         try {
             socket = new DatagramSocket();
             if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
-            network.bindSocket(socket);
+            if (network != null) {
+                try {
+                    network.bindSocket(socket);
+                    diag("DNS socket bound to physical network=" + network);
+                } catch (Exception bindError) {
+                    // The cached handle may have been invalidated by Android 9's VPN
+                    // network handoff. A protected, unbound socket bypasses tun0 and
+                    // follows Android's current physical default route instead.
+                    socket.close();
+                    socket = new DatagramSocket();
+                    if (!protect(socket)) throw new IllegalStateException("Could not protect fallback DNS socket");
+                    diag("DNS socket using protected default-route fallback; bind failed=" + bindError);
+                }
+            } else {
+                diag("DNS socket using protected default-route fallback; no physical handle");
+            }
             socket.setSoTimeout(2200);
             socket.send(new DatagramPacket(query, query.length, dns, 53));
             byte[] buf = new byte[4096];
