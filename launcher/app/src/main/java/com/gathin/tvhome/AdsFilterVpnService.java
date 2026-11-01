@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -41,13 +42,35 @@ public class AdsFilterVpnService extends VpnService {
     static final String ACTION_REFRESH_NETWORK = "com.gathin.tvhome.action.REFRESH_NETWORK";
     static final String ACTION_STOP = "com.gathin.tvhome.action.STOP_AD_FILTER";
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicLong packetsSeen = new AtomicLong();
+    private final AtomicLong dnsForwardOk = new AtomicLong();
+    private final AtomicLong dnsForwardFail = new AtomicLong();
+    private final AtomicLong dnsBlocked = new AtomicLong();
     private ParcelFileDescriptor tunnel;
     private Thread worker;
     private volatile Network underlyingNetwork;
     private volatile List<InetAddress> upstreamServers = Collections.singletonList(parseAddress(UPSTREAM));
     private ConnectivityManager.NetworkCallback networkCallback;
 
+    private void diag(String message) {
+        try {
+            SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+            String old = p.getString("diagnostics", "");
+            String next = (old == null ? "" : old) + System.currentTimeMillis() + " | " + message + "\n";
+            if (next.length() > 60000) next = next.substring(next.length() - 60000);
+            p.edit().putString("diagnostics", next).apply();
+            Log.i(TAG, "DIAG " + message);
+        } catch (Exception e) { Log.w(TAG, "Unable to save diagnostic", e); }
+    }
+
+    private String networkSnapshot(Network network, ConnectivityManager cm) {
+        if (network == null) return "network=null";
+        try { return "network=" + network + ", caps=" + cm.getNetworkCapabilities(network) + ", link=" + cm.getLinkProperties(network); }
+        catch (Exception e) { return "network=" + network + ", snapshotError=" + e; }
+    }
+
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        diag("service start action=" + (intent == null ? "null" : intent.getAction()));
         if (intent != null && ACTION_REFRESH_NETWORK.equals(intent.getAction())) {
             if (running.get()) {
                 ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -80,12 +103,14 @@ public class AdsFilterVpnService extends VpnService {
                     .build();
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override public void onAvailable(Network network) {
+                    diag("onAvailable " + networkSnapshot(network, cm));
                     NetworkCapabilities caps = cm.getNetworkCapabilities(network);
                     if (isPhysicalNetwork(caps) && shouldSelectNetwork(network, cm)) {
                         updateUnderlyingNetwork(network);
                     }
                 }
                 @Override public void onLost(Network network) {
+                    diag("onLost " + networkSnapshot(network, cm));
                     if (network.equals(underlyingNetwork)) {
                         underlyingNetwork = null;
                         Network replacement = findPhysicalNetwork(cm);
@@ -95,6 +120,7 @@ public class AdsFilterVpnService extends VpnService {
                     }
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
+                    diag("onCapabilitiesChanged " + network + " caps=" + caps);
                     if (isPhysicalNetwork(caps) && shouldSelectNetwork(network, cm)) {
                         updateUnderlyingNetwork(network);
                     }
@@ -106,6 +132,7 @@ public class AdsFilterVpnService extends VpnService {
             cm.registerNetworkCallback(request, networkCallback);
             Network initial = findPhysicalNetwork(cm);
             if (initial == null) throw new IllegalStateException("No active Wi-Fi or Ethernet network");
+            diag("initial physical network " + networkSnapshot(initial, cm));
             updateUnderlyingNetwork(initial);
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
@@ -118,6 +145,7 @@ public class AdsFilterVpnService extends VpnService {
                     .addRoute(DNS_LOCAL, 32);
             tunnel = builder.establish();
             if (tunnel == null) throw new IllegalStateException("VPN establish returned null");
+            diag("VPN established; mtu=1500; dns=" + DNS_LOCAL + "; route=" + DNS_LOCAL + "/32");
             // The VPN must publish the physical network carrying its protected,
             // explicitly-bound upstream DNS sockets. This must happen AFTER establish();
             // setUnderlyingNetworks() returns false before the VPN interface exists.
@@ -126,6 +154,7 @@ public class AdsFilterVpnService extends VpnService {
             worker = new Thread(this::runDnsLoop, "CleanYourTV-DNS");
             worker.start();
         } catch (Exception e) {
+            diag("START FAILURE " + Log.getStackTraceString(e));
             Log.e(TAG, "Unable to start DNS filter", e);
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
             stopSelf();
@@ -189,6 +218,7 @@ public class AdsFilterVpnService extends VpnService {
         // Calls made before establish() are deferred until the VPN interface is ready.
         applyUnderlyingNetworkToVpn(network);
         Log.i(TAG, "Physical DNS network selected: " + network);
+        diag("physical network selected " + networkSnapshot(network, cm));
     }
 
     private void applyUnderlyingNetworkToVpn(Network network) {
@@ -260,6 +290,8 @@ public class AdsFilterVpnService extends VpnService {
                 // EOF means the interface has been closed. Do not spin on EOF.
                 if (n < 0) break;
                 if (n == 0) continue;
+                long seen = packetsSeen.incrementAndGet();
+                if (seen == 1 || seen % 100 == 0) diag("TUN packet count=" + seen + " bytes=" + n);
                 try {
                     byte[] response = processPacket(packet, n);
                     if (response != null) out.write(response);
@@ -268,7 +300,7 @@ public class AdsFilterVpnService extends VpnService {
                 }
             }
         } catch (Exception e) {
-            if (running.get()) Log.e(TAG, "DNS tunnel stopped", e);
+            if (running.get()) { diag("TUN LOOP FAILURE " + Log.getStackTraceString(e)); Log.e(TAG, "DNS tunnel stopped", e); }
         } finally {
             stopSelf();
         }
@@ -292,13 +324,17 @@ public class AdsFilterVpnService extends VpnService {
         if (isAllowed(domain)) {
             byte[] answer = forward(query);
             if (answer == null) {
+                dnsForwardFail.incrementAndGet(); diag("DNS forward FAIL domain=" + domain + " allowed=true");
                 appendDnsLog(domain, "查詢失敗", "上游 DNS 無回應");
                 return null;
             }
+            dnsForwardOk.incrementAndGet();
             appendDnsLog(domain, "允許", dnsResponseSummary(answer));
             return makeReply(p, ihl, srcPort, answer);
         }
         if (isBlocked(domain)) {
+            long count = dnsBlocked.incrementAndGet();
+            if (count == 1 || count % 50 == 0) diag("DNS blocked count=" + count + " domain=" + domain);
             byte[] blocked = query.clone();
             int flags = u16(blocked, 2);
             put16(blocked, 2, (flags & 0x0100) | 0x8083); // NXDOMAIN; retain RD
@@ -308,9 +344,11 @@ public class AdsFilterVpnService extends VpnService {
         }
         byte[] answer = forward(query);
         if (answer == null) {
+            dnsForwardFail.incrementAndGet(); diag("DNS forward FAIL domain=" + domain + " allowed=false");
             appendDnsLog(domain, "查詢失敗", "上游 DNS 無回應");
             return null;
         }
+        dnsForwardOk.incrementAndGet();
         appendDnsLog(domain, "一般通過", dnsResponseSummary(answer));
         return makeReply(p, ihl, srcPort, answer);
     }
@@ -354,6 +392,7 @@ public class AdsFilterVpnService extends VpnService {
     private byte[] forward(byte[] query) {
         Network network = refreshNetworkForDns();
         if (network == null) {
+            diag("DNS forward has no physical network");
             Log.w(TAG, "No physical network available for DNS forwarding");
             return null;
         }
@@ -380,6 +419,7 @@ public class AdsFilterVpnService extends VpnService {
                 if (answer != null) return answer;
             }
         }
+        diag("DNS forwarding exhausted candidates; ok=" + dnsForwardOk.get() + " fail=" + dnsForwardFail.get() + " packets=" + packetsSeen.get());
         Log.w(TAG, "DNS forwarding failed after network refresh and fallback retry");
         return null;
     }
@@ -485,6 +525,7 @@ public class AdsFilterVpnService extends VpnService {
     }
     @Override public void onDestroy() { stopFilter(); super.onDestroy(); }
     private void stopFilter() {
+        diag("stopFilter packets=" + packetsSeen.get() + " dnsOk=" + dnsForwardOk.get() + " dnsFail=" + dnsForwardFail.get() + " blocked=" + dnsBlocked.get());
         running.set(false);
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm != null && networkCallback != null) {
