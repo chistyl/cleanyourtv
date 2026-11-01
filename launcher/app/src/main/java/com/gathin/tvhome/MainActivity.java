@@ -1936,15 +1936,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Dock: park it at the bottom of the screen and show the top shelf for this app. In a single row
             // every tile is in the dock's row, which never scrolls vertically.
             int decoratedTop = item.getTop() - (int) (6 * density);
-            // The dock is a bottom-anchored shelf: it may scroll upward into its parking
-            // position, but must never be pushed downward when focus returns from the top bar.
-            // A negative dy was moving the whole dock row down and clipping its cards.
-            int dy = Math.max(0, decoratedTop - grid.getPaddingTop());
-            // Ignore tiny layout-rounding differences; only correct a genuinely displaced row.
-            boolean scroll = !singleRow && dy > (int) (8 * density);
+            // Keep the dock row anchored to the grid's visible top boundary in both directions.
+            // After moving down through the grid, RecyclerView may leave the dock above that boundary;
+            // a positive-only correction cannot restore it when focus returns to row zero.
+            int dy = decoratedTop - grid.getPaddingTop();
+            int tolerance = (int) (8 * density);
+            boolean scroll = !singleRow && Math.abs(dy) > tolerance;
             if (scroll) {
-                if (!animations || reducedMotion) grid.scrollBy(0, dy);
-                else grid.smoothScrollBy(0, dy);
+                // Use an immediate bounded correction: a spring/smooth scroll here can race with the
+                // next D-pad event and make the dock drift across the header.
+                grid.stopScroll();
+                grid.scrollBy(0, dy);
             }
             showHero(position, scroll ? r.top - dy : r.top);
         } else {
