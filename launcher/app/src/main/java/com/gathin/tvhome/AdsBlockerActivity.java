@@ -52,7 +52,7 @@ public class AdsBlockerActivity extends Activity {
             "*.svc.litv.tv\n";
     private static final String DEFAULT_ALLOW =
             "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\n";
-    private static final String DEFAULT_RULES_VERSION = "3";
+    private static final String DEFAULT_RULES_VERSION = "4";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -215,6 +215,9 @@ public class AdsBlockerActivity extends Activity {
         if (list == null) return;
         list.removeAllViews();
         for (String domain : rules(key)) {
+            // These six bundled playback/ad-control domains are fixed internally:
+            // keep filtering them, but never expose them in the editable rule list.
+            if (isLockedRule(key, domain)) continue;
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dp(12), 0, dp(8), 0); row.setBackground(bg(Color.rgb(39,42,50), 0));
             TextView name = label(domain, 17); row.addView(name, new LinearLayout.LayoutParams(0, dp(48), 1));
@@ -232,6 +235,20 @@ public class AdsBlockerActivity extends Activity {
             list.addView(empty, new LinearLayout.LayoutParams(-1, dp(40)));
         }
     }
+    private boolean isLockedRule(String key, String domain) {
+        if (BLOCK.equals(key)) {
+            return "googleads.g.doubleclick.net".equals(domain)
+                    || "securepubads.g.doubleclick.net".equals(domain);
+        }
+        if (ALLOW.equals(key)) {
+            return "vid.dbokutv.com".equals(domain)
+                    || "firebaselogging-pa.googleapis.com".equals(domain)
+                    || "pic.dbokutv.com".equals(domain)
+                    || "events.ads.vungle.com".equals(domain);
+        }
+        return false;
+    }
+
     private Set<String> rules(String key) {
         String raw = prefs.getString(key, "");
         LinkedHashSet<String> out = new LinkedHashSet<>();
