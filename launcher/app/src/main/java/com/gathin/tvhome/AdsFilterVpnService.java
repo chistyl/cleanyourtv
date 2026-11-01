@@ -177,18 +177,23 @@ public class AdsFilterVpnService extends VpnService {
     }
 
     /**
-     * Keep every usable physical Wi-Fi/Ethernet network attached to the VPN.
-     * Put Android's current default network first, then retain the other link as
-     * a fallback so plugging/unplugging Ethernet or toggling Wi-Fi does not tear
-     * down the DNS tunnel.
+     * Track the physical network used only by protected upstream DNS sockets.
+     *
+     * Do not publish a manually selected underlay with setUnderlyingNetworks().
+     * Some Android TV Ethernet implementations renegotiate or drop the wired
+     * default route when a VPN advertises a single underlay while Wi-Fi is also
+     * present. Leaving VPN underlay selection to Android keeps the system's
+     * Ethernet/Wi-Fi routing intact; DNS sockets are still explicitly bound to
+     * the selected physical network below.
      */
     private synchronized void refreshUnderlyingNetworks(ConnectivityManager cm) {
         try {
             Network active = cm.getActiveNetwork();
-            Network selected = isPhysicalInternet(cm.getNetworkCapabilities(active)) ? active : null;
+            Network selected = active != null
+                    && isPhysicalInternet(cm.getNetworkCapabilities(active)) ? active : null;
 
-            // The VPN itself becomes Android's default network after establish().
-            // In that case keep the already selected physical network until it is lost.
+            // After VPN establishment Android may report the VPN as active.
+            // Retain the physical network selected immediately before that.
             if (selected == null && underlyingNetwork != null
                     && isPhysicalInternet(cm.getNetworkCapabilities(underlyingNetwork))) {
                 selected = underlyingNetwork;
@@ -206,17 +211,10 @@ public class AdsFilterVpnService extends VpnService {
             }
 
             underlyingNetwork = selected;
-
-            // Advertise exactly one physical underlay. Passing Wi-Fi and Ethernet
-            // together can make Android route the VPN through the wrong interface
-            // on some TV firmware and can interrupt the wired connection.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                setUnderlyingNetworks(selected == null ? new Network[0] : new Network[]{selected});
-            }
             if (selected == null) Log.w(TAG, "No physical Wi-Fi/Ethernet network currently available");
-            else Log.i(TAG, "VPN underlay selected: " + selected);
+            else Log.i(TAG, "DNS socket network selected: " + selected);
         } catch (Exception e) {
-            Log.w(TAG, "Unable to refresh VPN underlying network", e);
+            Log.w(TAG, "Unable to refresh physical DNS network", e);
         }
     }
 
