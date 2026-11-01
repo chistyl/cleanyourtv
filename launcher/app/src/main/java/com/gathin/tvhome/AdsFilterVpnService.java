@@ -266,6 +266,7 @@ public class AdsFilterVpnService extends VpnService {
         if (domain == null) return null;
 
         if (isAllowed(domain)) {
+            recordDnsDiagnosticOnce("ALLOW", domain + " [允許清單]");
             byte[] answer = forward(query);
             if (answer == null) return null;
             return makeReply(p, ihl, srcPort, answer);
@@ -279,6 +280,7 @@ public class AdsFilterVpnService extends VpnService {
             put16(blocked, 6, 0); put16(blocked, 8, 0); put16(blocked, 10, 0);
             return makeReply(p, ihl, srcPort, blocked);
         }
+        recordDnsDiagnosticOnce("PASS", domain + " [未命中封鎖規則，正常轉送]");
         byte[] answer = forward(query);
         return answer == null ? null : makeReply(p, ihl, srcPort, answer);
     }
@@ -330,6 +332,32 @@ public class AdsFilterVpnService extends VpnService {
             if (!rule.isEmpty() && matchesRule(domain, rule)) return "自訂封鎖規則";
         }
         return matchesSet(domain, subscribedBlock) ? "uBlock 訂閱清單" : null;
+    }
+
+    private synchronized void recordDnsDiagnosticOnce(String type, String detail) {
+        try {
+            SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+            String domain = detail;
+            int marker = detail.indexOf(" [");
+            if (marker > 0) domain = detail.substring(0, marker);
+            String seenRaw = p.getString("dns_diagnostics_seen", "");
+            Set<String> seen = new LinkedHashSet<>();
+            if (seenRaw != null && !seenRaw.isEmpty()) {
+                for (String item : seenRaw.split("\\n")) if (!item.isEmpty()) seen.add(item);
+            }
+            if (seen.contains(domain)) return;
+            if (seen.size() >= 120) seen.clear();
+            seen.add(domain);
+            StringBuilder saved = new StringBuilder();
+            for (String item : seen) {
+                if (saved.length() > 0) saved.append('\\n');
+                saved.append(item);
+            }
+            p.edit().putString("dns_diagnostics_seen", saved.toString()).apply();
+            recordDnsDiagnostic(type, detail);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to save DNS pass diagnostic", e);
+        }
     }
 
     private void recordDnsDiagnostic(String type, String detail) {
