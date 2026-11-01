@@ -1954,6 +1954,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Scroll just enough so the whole glass (not only the tile) is visible.
             revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
             grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
+            // Plain grid: once focus moves below the first row, scroll the first row completely
+            // above the viewport. This keeps it from remaining partially visible behind the
+            // fixed header while the focused row continues as one uninterrupted grid.
+            if (!singleRow && !dockRow && position >= COLUMNS) {
+                RecyclerView.LayoutManager lm = grid.getLayoutManager();
+                if (lm instanceof GridLayoutManager) {
+                    View firstRowTile = lm.findViewByPosition(0);
+                    if (firstRowTile != null) {
+                        int firstRowBottom = ((GridLayoutManager) lm)
+                                .getDecoratedBottom(firstRowTile);
+                        if (firstRowBottom > 0) {
+                            if (!animations || reducedMotion) grid.scrollBy(0, firstRowBottom);
+                            else grid.smoothScrollBy(0, firstRowBottom);
+                        }
+                    }
+                }
+            }
         }
     }
 
