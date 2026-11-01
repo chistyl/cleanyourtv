@@ -710,7 +710,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
             @Override
             public void onChildViewAttachedToWindow(@NonNull View v) {
-                v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
+                int position = grid.getChildAdapterPosition(v);
+                v.setAlpha(tileAlpha(position));
+                if (dockRow && !singleRow && position >= 0 && position < COLUMNS) {
+                    v.setTranslationY(dockRowHidden ? -grid.getHeight() : 0f);
+                }
             }
 
             @Override
@@ -1868,6 +1872,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         appLibrary.show();
     }
 
+    /**
+     * The dock is laid out as a bottom shelf and can exceed the RecyclerView's available scroll range.
+     * Translate the entire first row (including its decoration) outside the clipped viewport while a
+     * lower row owns focus; restore it when focus returns to the dock.
+     */
+    private void setDockRowHidden(boolean hidden) {
+        if (!dockRow || singleRow || grid == null || dockRowHidden == hidden) return;
+        dockRowHidden = hidden;
+        float offset = hidden ? -grid.getHeight() : 0f;
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int position = grid.getChildAdapterPosition(child);
+            if (position >= 0 && position < COLUMNS) child.setTranslationY(offset);
+        }
+        grid.invalidateItemDecorations();
+    }
+
     @Override
     public void onTileFocused(int position, View card) {
         lastFocused = position;
@@ -1932,6 +1953,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             springY.animateToFinalPosition(y - glassScrollShift);
         }
         View item = (View) card.getParent();
+        setDockRowHidden(dockRow && !singleRow && position >= COLUMNS);
         if (dockRow && (singleRow || position < COLUMNS)) {
             // Dock: park it at the bottom of the screen and show the top shelf for this app. In a single row
             // every tile is in the dock's row, which never scrolls vertically.
@@ -1948,19 +1970,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             showHero(position, scroll ? r.top - dy : r.top);
         } else {
-            // Once focus moves below the dock, move the complete dock row above the viewport.
-            // Keeping dock_row enabled preserves its original card sizing, spacing and decoration;
-            // this is only a scroll adjustment, not a second grid or a layout change.
-            if (dockRow && !singleRow) {
-                RecyclerView.ViewHolder dockHolder = grid.findViewHolderForAdapterPosition(0);
-                if (dockHolder != null) {
-                    View dockItem = dockHolder.itemView;
-                    int dockBottom = grid.getLayoutManager() instanceof GridLayoutManager
-                            ? ((GridLayoutManager) grid.getLayoutManager()).getDecoratedBottom(dockItem)
-                            : dockItem.getBottom();
-                    if (dockBottom > 0) grid.scrollBy(0, dockBottom);
-                }
-            }
             // Below the dock the glow follows the tile without the big name.
             showGlowOnly(position);
             // Scroll just enough so the whole glass (not only the tile) is visible.
