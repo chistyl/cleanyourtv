@@ -56,8 +56,8 @@ public class AdsBlockerActivity extends Activity {
             "p-app.dhub.hinet.net\nads.aralego.com\nadsv.svc.litv.tv\nacs2.svc.litv.tv\n" +
             "*.svc.litv.tv\n";
     private static final String DEFAULT_ALLOW =
-            "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\n";
-    private static final String DEFAULT_RULES_VERSION = "4";
+            "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\np-cdnstatic.svc.litv.tv\n";
+    private static final String DEFAULT_RULES_VERSION = "5";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -82,7 +82,7 @@ public class AdsBlockerActivity extends Activity {
         block.remove("googleapis.com");
         block.remove("www.googleapis.com");
         block.remove("youtubei.googleapis.com");
-        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
+        // This playback CDN host must be explicitly allowed even though *.svc.litv.tv is blocked.\n        block.remove("p-cdnstatic.svc.litv.tv");\n        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));\n        allow.add("p-cdnstatic.svc.litv.tv");
         for (String item : DEFAULT_BLOCK.split("\\s+")) {
             String domain = normalize(item);
             if (!domain.isEmpty()) block.add(domain);
@@ -253,7 +253,7 @@ public class AdsBlockerActivity extends Activity {
             return "vid.dbokutv.com".equals(domain)
                     || "firebaselogging-pa.googleapis.com".equals(domain)
                     || "pic.dbokutv.com".equals(domain)
-                    || "events.ads.vungle.com".equals(domain);
+                     || "events.ads.vungle.com".equals(domain)\n                    || "p-cdnstatic.svc.litv.tv".equals(domain);
         }
         return false;
     }
