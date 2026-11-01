@@ -4024,11 +4024,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private android.graphics.drawable.Drawable remoteWeatherFocusBackground(boolean focused) {
+        // Clean weather settings: no outlined boxes around individual fields.
         GradientDrawable shape = new GradientDrawable();
-        shape.setColor(focused ? 0xFF344B52 : 0x22343B47);
+        shape.setColor(focused ? 0x223FC8BE : Color.TRANSPARENT);
         shape.setCornerRadius(12 * density);
-        if (focused) shape.setStroke(Math.max(3, (int)(3 * density)), Color.WHITE);
-        else shape.setStroke(Math.max(1, (int)density), 0x558A929F);
         return shape;
     }
 
@@ -4044,7 +4043,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         toggle.setDefaultFocusHighlightEnabled(false);
         toggle.setPadding((int)(10*density), (int)(8*density), (int)(10*density), (int)(8*density));
         toggle.setBackground(remoteWeatherFocusBackground(false));
-        toggle.setOnFocusChangeListener((v, focused) -> v.setBackground(remoteWeatherFocusBackground(focused)));
+        toggle.setOnFocusChangeListener((v, focused) -> {
+            v.setBackground(remoteWeatherFocusBackground(focused));
+            toggle.setTextColor(focused ? 0xFF80DED5 : Color.WHITE);
+            v.setScaleX(focused ? 1.01f : 1f); v.setScaleY(focused ? 1.01f : 1f);
+        });
         toggle.setChecked(prefs.getBoolean("enabled", false));
         toggle.setClickable(true);
         toggle.setOnKeyListener((v, keyCode, event) -> {
@@ -4071,7 +4074,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             option.setMinHeight((int)(48*density));
             option.setPadding((int)(10*density), (int)(5*density), (int)(10*density), (int)(5*density));
             option.setBackground(remoteWeatherFocusBackground(false));
-            option.setOnFocusChangeListener((v, focused) -> v.setBackground(remoteWeatherFocusBackground(focused)));
+            option.setOnFocusChangeListener((v, focused) -> {
+                v.setBackground(remoteWeatherFocusBackground(focused));
+                ((android.widget.RadioButton) v).setTextColor(focused ? 0xFF80DED5 : Color.WHITE);
+                v.setScaleX(focused ? 1.01f : 1f); v.setScaleY(focused ? 1.01f : 1f);
+            });
         }
         modes.addView(device); modes.addView(cityMode);
         boolean fixed = "city".equals(prefs.getString("location_mode", "device"));
@@ -4082,17 +4089,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         city.setHint("輸入城市，例如：桃園市"); city.setText(prefs.getString("city", "桃園市"));
         city.setTextColor(Color.WHITE); city.setHintTextColor(0xFFB8BEC8); city.setTextSize(20);
         city.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
-        GradientDrawable cityNormal = new GradientDrawable();
-        cityNormal.setColor(0x22343B47); cityNormal.setCornerRadius(12*density);
-        cityNormal.setStroke(Math.max(1,(int)density), 0x668A929F);
-        GradientDrawable cityFocused = new GradientDrawable();
-        cityFocused.setColor(0x3348DAD0); cityFocused.setCornerRadius(12*density);
-        cityFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
-        city.setBackground(cityNormal);
+        city.setBackgroundColor(Color.TRANSPARENT);
         city.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setBackground(hasFocus ? cityFocused : cityNormal);
-            v.setElevation(hasFocus ? 6*density : 0f);
-            v.setScaleX(hasFocus ? 1.015f : 1f); v.setScaleY(hasFocus ? 1.04f : 1f);
+            v.setBackgroundColor(Color.TRANSPARENT);
+            city.setTextColor(hasFocus ? 0xFF80DED5 : Color.WHITE);
+            v.setScaleX(hasFocus ? 1.01f : 1f); v.setScaleY(hasFocus ? 1.01f : 1f);
         });
         content.addView(city, new LinearLayout.LayoutParams(-1, (int)(54*density)));
         city.setVisibility(fixed ? View.VISIBLE : View.GONE);
