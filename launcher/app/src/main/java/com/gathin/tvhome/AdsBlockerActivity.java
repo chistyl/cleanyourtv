@@ -41,7 +41,11 @@ public class AdsBlockerActivity extends Activity {
     private TextView listStatus;
 
     // Bundled starter rules. Allow rules take precedence over block rules.
-    private static final String DEFAULT_BLOCK = "";
+    private static final String DEFAULT_BLOCK =
+            "doubleclick.net\\ngooglesyndication.com\\ngoogleadservices.com\\nadservice.google.com\\n" +
+            "app-measurement.com\\nadcolony.com\\nunityads.unity3d.com\\n" +
+            "applovin.com\\nmoatads.com\\nadsrvr.org\\n" +
+            "";
     private static final String DEFAULT_ALLOW = "";
     private static final String DEFAULT_RULES_VERSION = "7";
 
@@ -57,27 +61,34 @@ public class AdsBlockerActivity extends Activity {
 
     private void installBundledRules() {
         if (DEFAULT_RULES_VERSION.equals(prefs.getString("bundled_rules_version", ""))) return;
-        // Remove the user's specified domains from both manual lists and downloaded subscriptions.
-        String[] excluded = {
+
+        // Remove only the exact domains the user previously asked to add.
+        // Preserve all other custom rules and all downloaded subscription rules.
+        String[] removeFromAllow = {
                 "vid.dbokutv.com", "firebaselogging-pa.googleapis.com",
-                "pic.dbokutv.com", "events.ads.vungle.com",
+                "pic.dbokutv.com", "events.ads.vungle.com"
+        };
+        String[] removeFromBlock = {
                 "googleads.g.doubleclick.net", "securepubads.g.doubleclick.net",
                 "pubads.g.doubleclick.net", "pagead2.googlesyndication.com",
                 "av1.xdrig.com", "me.xdrig.com", "www.xdrig.com", "xdrig.com",
-                "googlevideo.com", "rr2---sn-un57sne7.googlevideo.com",
-                "eligibility-panelresearch.googlevideo.com", "www.googlevideo.com",
-                "footprints-pa.googleapis.com", "www.googleapis.com",
+                "googlevideo.com", "footprints-pa.googleapis.com", "www.googleapis.com",
                 "www.googleadservices.com", "youtubei.googleapis.com",
-                "p-app.dhub.hinet.net", "ads.aralego.com",
-                "adsv.svc.litv.tv", "acs2.svc.litv.tv",
-                "googleapis.com", "svc.litv.tv"
+                "rr2---sn-un57sne7.googlevideo.com", "eligibility-panelresearch.googlevideo.com",
+                "www.googlevideo.com", "p-app.dhub.hinet.net", "ads.aralego.com",
+                "adsv.svc.litv.tv", "acs2.svc.litv.tv", "googleapis.com", "svc.litv.tv"
         };
-        for (String key : new String[]{BLOCK, ALLOW}) {
-            LinkedHashSet<String> set = new LinkedHashSet<>(rules(key));
-            for (String domain : excluded) set.remove(domain);
-            saveRules(key, set);
+        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
+        for (String domain : removeFromAllow) allow.remove(domain);
+        saveRules(ALLOW, allow);
+
+        LinkedHashSet<String> block = new LinkedHashSet<>(rules(BLOCK));
+        for (String domain : removeFromBlock) block.remove(domain);
+        for (String item : DEFAULT_BLOCK.split("\\s+")) {
+            String domain = normalize(item);
+            if (!domain.isEmpty()) block.add(domain);
         }
-        AdsFilterListManager.removeExcluded(this);
+        saveRules(BLOCK, block);
         prefs.edit().putString("bundled_rules_version", DEFAULT_RULES_VERSION).apply();
     }
 
