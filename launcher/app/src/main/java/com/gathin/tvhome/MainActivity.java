@@ -4129,6 +4129,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ScrollView scroll = new ScrollView(this);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding((int)(5*density), (int)(5*density), (int)(5*density), (int)(5*density));
         GradientDrawable listSurface = new GradientDrawable();
         listSurface.setColor(0xFF222832); listSurface.setCornerRadius(16*density);
         scroll.setBackground(listSurface); scroll.setClipToOutline(true);
@@ -4214,7 +4215,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         }
                         return false;
                     });
-                    list.addView(row, new LinearLayout.LayoutParams(-1, -2));
+                    LinearLayout.LayoutParams appRowLp = new LinearLayout.LayoutParams(-1, -2);
+                    appRowLp.setMargins((int)(3*density), (int)(3*density), (int)(3*density), (int)(3*density));
+                    list.addView(row, appRowLp);
                     View divider = new View(this); divider.setBackgroundColor(0x22FFFFFF);
                     list.addView(divider, new LinearLayout.LayoutParams(-1, Math.max(1, (int)density)));
                 }
@@ -4255,7 +4258,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         }
                         return false;
                     });
-                    list.addView(row, new LinearLayout.LayoutParams(-1, -2));
+                    LinearLayout.LayoutParams folderRowLp = new LinearLayout.LayoutParams(-1, -2);
+                    folderRowLp.setMargins((int)(3*density), (int)(3*density), (int)(3*density), (int)(3*density));
+                    list.addView(row, folderRowLp);
                     View divider = new View(this); divider.setBackgroundColor(0x22FFFFFF);
                     list.addView(divider, new LinearLayout.LayoutParams(-1, Math.max(1, (int)density)));
                 }
@@ -4296,8 +4301,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancel.setDefaultFocusHighlightEnabled(false); save.setDefaultFocusHighlightEnabled(false);
         cancel.setTextColor(0xFFE0E5EC); save.setTextColor(Color.WHITE);
         cancel.setGravity(Gravity.CENTER); save.setGravity(Gravity.CENTER);
-        cancel.setPadding((int)(18*density), (int)(10*density), (int)(18*density), (int)(10*density));
-        save.setPadding((int)(22*density), (int)(10*density), (int)(22*density), (int)(10*density));
+        cancel.setPadding((int)(22*density), (int)(12*density), (int)(22*density), (int)(12*density));
+        save.setPadding((int)(24*density), (int)(12*density), (int)(24*density), (int)(12*density));
+        cancel.setMinWidth((int)(92*density)); save.setMinWidth((int)(104*density));
+        cancel.setMinHeight((int)(52*density)); save.setMinHeight((int)(52*density));
         GradientDrawable saveBg = new GradientDrawable(); saveBg.setColor(0xFF52647B); saveBg.setCornerRadius(10*density); save.setBackground(saveBg);
         GradientDrawable actionNormal = new GradientDrawable(); actionNormal.setColor(0xFF343B47); actionNormal.setCornerRadius(10*density);
         GradientDrawable actionFocused = new GradientDrawable(); actionFocused.setColor(0xFF46566B); actionFocused.setCornerRadius(10*density);
@@ -4308,7 +4315,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancel.setOnFocusChangeListener(actionFocus); save.setOnFocusChangeListener(actionFocus);
         cancel.setId(View.generateViewId()); save.setId(View.generateViewId());
         cancel.setNextFocusRightId(save.getId()); save.setNextFocusLeftId(cancel.getId());
-        actions.addView(cancel); actions.addView(save);
+        LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(-2, -2);
+        cancelLp.rightMargin = (int)(12*density);
+        LinearLayout.LayoutParams saveLp = new LinearLayout.LayoutParams(-2, -2);
+        actions.addView(cancel, cancelLp); actions.addView(save, saveLp);
         outer.addView(actions, new LinearLayout.LayoutParams(-1, -2));
         cancel.setOnClickListener(v -> dialog.dismiss());
         save.setOnClickListener(v -> {
@@ -4826,8 +4836,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.setBackgroundColor(Color.TRANSPARENT);
         grid.setForeground(null);
         int availableWidthDp = Math.max(320, (int) (getResources().getDisplayMetrics().widthPixels / density) - 64);
-        int folderColumns = 5;
-        int folderTileDp = Math.max(72, Math.min(156, (availableWidthDp - 48) / folderColumns));
+        int folderColumns = 4;
+        int folderTileDp = Math.max(92, Math.min(184, (availableWidthDp - 56) / folderColumns));
         grid.setColumnCount(folderColumns);
         grid.setUseDefaultMargins(false);
         // 五欄等寬填滿內容區，GridLayout 權重分配確保左右邊界留白一致。
@@ -5021,9 +5031,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
         }
         Button close = new Button(this);
-        close.setText("關閉");
+        close.setText("關閉"); close.setAllCaps(false);
+        close.setFocusable(true); close.setFocusableInTouchMode(true);
+        close.setDefaultFocusHighlightEnabled(false);
+        close.setMinHeight((int)(52*density));
+        close.setId(View.generateViewId());
+        GradientDrawable closeNormal = new GradientDrawable();
+        closeNormal.setColor(0xFF343B47); closeNormal.setCornerRadius(14*density);
+        GradientDrawable closeFocused = new GradientDrawable();
+        closeFocused.setColor(0xFF46566B); closeFocused.setCornerRadius(14*density);
+        closeFocused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
+        close.setBackground(closeNormal);
+        close.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? closeFocused : closeNormal));
         close.setOnClickListener(v -> dialog.dismiss());
-        outer.addView(close, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(-1, -2);
+        closeLp.topMargin = (int)(10*density);
+        outer.addView(close, closeLp);
+        if (!folderFocusTiles.isEmpty()) {
+            folderFocusTiles.get(0).setNextFocusUpId(close.getId());
+            View lastTile = folderFocusTiles.get(folderFocusTiles.size()-1);
+            lastTile.setNextFocusDownId(close.getId());
+            close.setNextFocusUpId(lastTile.getId());
+        }
         dialog.setContentView(outer);
         dialog.show();
         if (dialog.getWindow() != null) {
