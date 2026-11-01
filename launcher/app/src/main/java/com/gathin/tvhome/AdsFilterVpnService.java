@@ -51,6 +51,7 @@ public class AdsFilterVpnService extends VpnService {
     private static final String[] HIDDEN_ALLOW_RULES = {
             // Allow the Duboku app domain and all its subdomains for playback.
             "dbokutv.com",
+            "imasdk.googleapis.com",
             "vid.dbokutv.com",
             "firebaselogging-pa.googleapis.com",
             "pic.dbokutv.com",
