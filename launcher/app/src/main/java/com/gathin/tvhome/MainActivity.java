@@ -945,6 +945,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         btnLibraryTop.setVisibility(cfg.libraryButton && cfg.appLibrary ? View.VISIBLE : View.GONE);
         addTopBarApps(cfg.topBarApps, cfg.launchActions);
+        // DPAD_DOWN from a top-bar pill must enter the first dock tile, not RecyclerView's
+        // previously focused child. Letting focus search target the grid container can restore
+        // an old lower-row tile and make the header shelf disappear on the first Down press.
+        ViewGroup topBarForNavigation = findViewById(R.id.topButtons);
+        for (int i = 0; i < topBarForNavigation.getChildCount(); i++) {
+            View topButton = topBarForNavigation.getChildAt(i);
+            topButton.setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getAction() == KeyEvent.ACTION_DOWN) {
+                    focusTile(0);
+                    return true;
+                }
+                return false;
+            });
+        }
         iconOnlyButtons = cfg.iconOnlyButtons;
         topMenu = cfg.topMenu;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
