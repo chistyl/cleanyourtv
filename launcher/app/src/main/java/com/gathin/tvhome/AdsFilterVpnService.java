@@ -115,6 +115,10 @@ public class AdsFilterVpnService extends VpnService {
                     .addRoute(DNS_LOCAL, 32);
             tunnel = builder.establish();
             if (tunnel == null) throw new IllegalStateException("VPN establish returned null");
+            // The VPN must publish the physical network carrying its protected,
+            // explicitly-bound upstream DNS sockets. This must happen AFTER establish();
+            // setUnderlyingNetworks() returns false before the VPN interface exists.
+            applyUnderlyingNetworkToVpn(initial);
             running.set(true);
             worker = new Thread(this::runDnsLoop, "CleanYourTV-DNS");
             worker.start();
@@ -177,12 +181,22 @@ public class AdsFilterVpnService extends VpnService {
         underlyingNetwork = network;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm != null) updateUpstreamServers(network, cm);
-        // Keep the platform's default/underlying network association untouched.
-        // This DNS-only VPN routes only DNS_LOCAL/32; upstream sockets are protected
-        // and explicitly bound to the selected Ethernet/Wi-Fi Network. Some Android TV
-        // firmware drops its Ethernet link state when setUnderlyingNetworks() is applied.
-        Log.i(TAG, "Physical DNS network selected: " + network
-                + "; platform underlying-network association unchanged");
+        // Publish the network actually carrying protected/bound upstream DNS sockets.
+        // Android uses this association for VPN connectivity and status-bar network state.
+        // Calls made before establish() are deferred until the VPN interface is ready.
+        applyUnderlyingNetworkToVpn(network);
+        Log.i(TAG, "Physical DNS network selected: " + network);
+    }
+
+    private void applyUnderlyingNetworkToVpn(Network network) {
+        if (tunnel == null || network == null) return;
+        try {
+            boolean applied = setUnderlyingNetworks(new Network[]{network});
+            Log.i(TAG, "VPN underlying network association applied=" + applied
+                    + " network=" + network);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to publish VPN underlying network", e);
+        }
     }
 
     private void updateUpstreamServers(Network network, ConnectivityManager cm) {
