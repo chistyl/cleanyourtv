@@ -111,6 +111,12 @@
         </activity>
 
         <activity
+            android:name=".AdsBlockerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape" />
+
+        <activity
             android:name=".LauncherSettingsActivity"
             android:exported="false"
             android:excludeFromRecents="true"
