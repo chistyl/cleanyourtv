@@ -10,6 +10,7 @@ on:
       - cytv-gold05-hide-dock-row
       - cytv-gold05-weather-initial-visible
       - cytv-system-folder-dialog-focus-fix
+      - cytv-r140-ethernet-vpn-fix-r1
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
