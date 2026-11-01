@@ -4811,8 +4811,84 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         List<String> folders = new ArrayList<>(prefs.getStringSet("home_folders", java.util.Collections.<String>emptySet()));
         if (folders.isEmpty()) { Toast.makeText(this, "請先新增資料夾", Toast.LENGTH_SHORT).show(); return; }
-        new AlertDialog.Builder(this).setTitle("選擇資料夾").setItems(folders.toArray(new String[0]),
-                (d, which) -> showFolderAppAssignment(folders.get(which))).show();
+        final AlertDialog[] folderDialogRef = new AlertDialog[1];
+        Runnable dismissFolderPicker = () -> { if (folderDialogRef[0] != null) folderDialogRef[0].dismiss(); };
+        float d = density;
+        ScrollView scroll = new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout options = new LinearLayout(this);
+        options.setOrientation(LinearLayout.VERTICAL);
+        options.setPadding((int)(12*d), (int)(8*d), (int)(12*d), (int)(8*d));
+        scroll.addView(options, new ScrollView.LayoutParams(-1, -2));
+        java.util.ArrayList<View> folderRows = new java.util.ArrayList<>();
+        for (String folder : folders) {
+            TextView item = new TextView(this);
+            item.setText(folder); item.setTextColor(Color.WHITE); item.setTextSize(17);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setPadding((int)(18*d), 0, (int)(18*d), 0);
+            item.setMinHeight((int)(62*d));
+            item.setFocusable(true); item.setFocusableInTouchMode(true); item.setClickable(true);
+            item.setId(View.generateViewId());
+            GradientDrawable normal = new GradientDrawable();
+            normal.setColor(0xFF343B47); normal.setCornerRadius(12*d);
+            GradientDrawable focused = new GradientDrawable();
+            focused.setColor(0xFF00AFA5); focused.setCornerRadius(12*d);
+            focused.setStroke(Math.max(3,(int)(3*d)), Color.WHITE);
+            item.setBackground(normal); item.setDefaultFocusHighlightEnabled(false);
+            item.setOnFocusChangeListener((v, hasFocus) -> {
+                v.setBackground(hasFocus ? focused : normal);
+                v.setScaleX(hasFocus ? 1.015f : 1f); v.setScaleY(hasFocus ? 1.015f : 1f);
+            });
+            item.setOnClickListener(v -> { dismissFolderPicker.run(); showFolderAppAssignment(folder); });
+            item.setOnKeyListener((v, keyCode, event) -> {
+                if (event.getAction() == KeyEvent.ACTION_UP
+                        && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    dismissFolderPicker.run(); showFolderAppAssignment(folder); return true;
+                }
+                return false;
+            });
+            if (!folderRows.isEmpty()) {
+                View previous = folderRows.get(folderRows.size()-1);
+                previous.setNextFocusDownId(item.getId()); item.setNextFocusUpId(previous.getId());
+            }
+            folderRows.add(item);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.bottomMargin = (int)(8*d); options.addView(item, lp);
+        }
+        AlertDialog folderDialog = new AlertDialog.Builder(this).setTitle("選擇資料夾")
+                .setView(scroll).setNegativeButton("取消", null).create();
+        folderDialogRef[0] = folderDialog;
+        folderDialog.show();
+        if (folderDialog.getWindow() != null) {
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.rgb(28,32,40)); bg.setCornerRadius(22*d);
+            bg.setStroke(Math.max(1,(int)d), 0x28FFFFFF);
+            folderDialog.getWindow().setBackgroundDrawable(bg);
+            folderDialog.getWindow().setLayout(Math.min((int)(620*d), getResources().getDisplayMetrics().widthPixels-(int)(48*d)),
+                    Math.min((int)(560*d), getResources().getDisplayMetrics().heightPixels-(int)(64*d)));
+        }
+        Button cancel = folderDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        if (cancel != null) {
+            cancel.setFocusable(true); cancel.setFocusableInTouchMode(true);
+            cancel.setDefaultFocusHighlightEnabled(false);
+            GradientDrawable normal = new GradientDrawable();
+            normal.setColor(0xFF343B47); normal.setCornerRadius(14*d);
+            GradientDrawable focused = new GradientDrawable();
+            focused.setColor(0xFF00AFA5); focused.setCornerRadius(14*d);
+            focused.setStroke(Math.max(3,(int)(3*d)), Color.WHITE);
+            cancel.setBackground(normal);
+            cancel.setOnFocusChangeListener((v, hasFocus) -> {
+                v.setBackground(hasFocus ? focused : normal);
+                ((Button)v).setTextColor(hasFocus ? Color.WHITE : 0xFF80CBC4);
+            });
+            if (!folderRows.isEmpty()) {
+                View last = folderRows.get(folderRows.size()-1);
+                last.setNextFocusDownId(cancel.getId()); cancel.setNextFocusUpId(last.getId());
+            }
+        }
+        if (!folderRows.isEmpty()) folderRows.get(0).post(folderRows.get(0)::requestFocus);
+        else if (cancel != null) cancel.post(cancel::requestFocus);
     }
 
     private void showFolderAppAssignment(String folder) {
