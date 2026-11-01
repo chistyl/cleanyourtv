@@ -173,14 +173,12 @@ public class AdsFilterVpnService extends VpnService {
         underlyingNetwork = network;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm != null) updateUpstreamServers(network, cm);
-        // Explicitly tell Android which physical network carries this split-tunnel VPN.
-        // Only DNS_LOCAL/32 is routed into the VPN; ordinary LAN traffic remains direct.
-        try {
-            boolean applied = setUnderlyingNetworks(new Network[]{network});
-            Log.i(TAG, "VPN underlying network set: " + network + ", applied=" + applied);
-        } catch (Exception e) {
-            Log.w(TAG, "Unable to update VPN underlying network; DNS sockets remain explicitly bound", e);
-        }
+        // Keep the platform's default/underlying network association untouched.
+        // This DNS-only VPN routes only DNS_LOCAL/32; upstream sockets are protected
+        // and explicitly bound to the selected Ethernet/Wi-Fi Network. Some Android TV
+        // firmware drops its Ethernet link state when setUnderlyingNetworks() is applied.
+        Log.i(TAG, "Physical DNS network selected: " + network
+                + "; platform underlying-network association unchanged");
     }
 
     private void updateUpstreamServers(Network network, ConnectivityManager cm) {
