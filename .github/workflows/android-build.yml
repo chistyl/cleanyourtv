@@ -1,5 +1,5 @@
 name: Android APK Build
-# Build GOLD-05 dock-row visibility and decoration fixes
+# Build GOLD-05 weather initial overlay visibility fix
 
 on:
   workflow_dispatch:
