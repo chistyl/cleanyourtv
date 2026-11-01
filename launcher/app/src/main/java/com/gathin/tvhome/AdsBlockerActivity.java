@@ -200,9 +200,11 @@ public class AdsBlockerActivity extends Activity {
         String current = prefs.getString("dns_mode", "auto");
         if (mode.equals(current)) return;
         prefs.edit().putString("dns_mode", mode).apply();
-        Intent refreshIntent = new Intent(this, AdsFilterVpnService.class);
-        refreshIntent.setAction(AdsFilterVpnService.ACTION_REFRESH_NETWORK);
-        if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(refreshIntent); else startService(refreshIntent);
+        if (enabled()) {
+            Intent refreshIntent = new Intent(this, AdsFilterVpnService.class);
+            refreshIntent.setAction(AdsFilterVpnService.ACTION_REFRESH_NETWORK);
+            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(refreshIntent); else startService(refreshIntent);
+        }
         refresh();
         Toast.makeText(this, mode.equals("auto")
                 ? "已切換自動 DNS 協商" : "已切換固定 DNS（1.1.1.1）", Toast.LENGTH_SHORT).show();
