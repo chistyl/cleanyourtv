@@ -47,9 +47,22 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon :app:assembleDebug
 
+      - name: Package complete source
+        run: |
+          zip -r CleanYourTV-complete-source.zip . \
+            -x './.git/*' './**/.git/*' './**/build/*' './**/.gradle/*' \
+               './CleanYourTV-complete-source.zip' './launcher/app/build/*'
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CleanYourTV-debug-apk
           path: launcher/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload complete source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanYourTV-complete-source
+          path: CleanYourTV-complete-source.zip
           if-no-files-found: error
