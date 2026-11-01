@@ -8,6 +8,7 @@ on:
       - v17.1-update
       - cytv-gold04-scroll-stability
       - cytv-gold05-hide-dock-row
+      - cytv-gold05-weather-initial-visible
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
