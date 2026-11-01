@@ -83,10 +83,8 @@ public class AdsFilterVpnService extends VpnService {
                         underlyingNetwork = null;
                         Network replacement = findPhysicalNetwork(cm);
                         if (replacement != null) updateUnderlyingNetwork(replacement);
-                        else {
-                            try { setUnderlyingNetworks(new Network[0]); }
-                            catch (Exception e) { Log.w(TAG, "Unable to clear lost underlying network", e); }
-                        }
+                        // Do not change Android's system-wide underlying-network selection.
+                        // The DNS socket is explicitly bound to the physical network in forward().
                     }
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
@@ -140,13 +138,10 @@ public class AdsFilterVpnService extends VpnService {
         underlyingNetwork = network;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm != null) updateUpstreamServers(network, cm);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                setUnderlyingNetworks(new Network[]{network});
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Unable to update VPN underlying network", e);
-        }
+        // Intentionally do not call setUnderlyingNetworks(). This VPN only routes
+        // the local DNS endpoint (/32); changing the platform's underlying-network
+        // association can disrupt Ethernet routing on some Android TV firmware.
+        // forward() protects and binds each upstream DNS socket to this physical network.
     }
 
     private void updateUpstreamServers(Network network, ConnectivityManager cm) {
