@@ -7,6 +7,7 @@ on:
     branches:
       - v17.1-update
       - cytv-gold04-scroll-stability
+      - cytv-gold05-hide-dock-row
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
