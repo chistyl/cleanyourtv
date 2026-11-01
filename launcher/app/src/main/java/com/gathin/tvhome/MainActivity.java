@@ -851,13 +851,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) restoreWeatherAtTop(rv);
             }
         });
-        grid.post(() -> {
-            if (grid != null && weeklyWeatherView != null
-                    && grid.canScrollVertically(-1)) {
-                weatherHiddenByScroll = true;
-                weeklyWeatherView.setVisibility(View.INVISIBLE);
-            }
-        });
+        // Do not infer the initial weather visibility from RecyclerView's restored scroll offset.
+        // A restored focus can leave the grid offset before the user interacts; hiding here made the
+        // forecast stay INVISIBLE until the next up/down movement. Start visible and let real scroll
+        // callbacks hide it while browsing, then restore it when the grid returns to the top.
 
         // game_day: the panel above the dock rides up with the cards instead of being covered by them, and fades
         // out by the time it reaches the clock. The grid's own offset is read, so a jump (Home, a restored focus)
