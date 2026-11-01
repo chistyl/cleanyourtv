@@ -102,6 +102,28 @@ final class AdsFilterListManager {
         return d;
     }
 
+    /** Removes every cached block rule while preserving cached allow exceptions. */
+    static void clearBlocked(Context context) {
+        File target = new File(context.getFilesDir(), FILE_NAME);
+        File temp = new File(context.getFilesDir(), FILE_NAME + ".tmp");
+        try {
+            if (!target.isFile()) return;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(target), StandardCharsets.UTF_8));
+                 FileOutputStream out = new FileOutputStream(temp)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("A ")) out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+                }
+                out.getFD().sync();
+            }
+            if (target.exists() && !target.delete()) throw new IOException("Cannot delete old rules file");
+            if (!temp.renameTo(target)) throw new IOException("Cannot save cleared rules file");
+        } catch (Exception e) {
+            Log.w(TAG, "Cannot clear cached block rules", e);
+            if (temp.exists()) temp.delete();
+        }
+    }
+
     static Set<String> load(Context context, char type) {
         LinkedHashSet<String> out = new LinkedHashSet<>();
         File file = new File(context.getFilesDir(), FILE_NAME);
