@@ -5931,6 +5931,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).create();
         colorDialog.setOnCancelListener(dialog -> reopenPendingFolderAfterAppEdit());
         colorDialog.show();
+        if (colorDialog.getWindow() != null) {
+            GradientDrawable dialogSurface = new GradientDrawable();
+            dialogSurface.setColor(0xFF3B3B3B);
+            dialogSurface.setCornerRadius(22 * density);
+            dialogSurface.setStroke(Math.max(1, (int)density), 0x24FFFFFF);
+            colorDialog.getWindow().setBackgroundDrawable(dialogSurface);
+            colorDialog.getWindow().getDecorView().setClipToOutline(true);
+        }
+        panel.setBackgroundColor(Color.TRANSPARENT);
 
         Button cancel = colorDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         Button reset = colorDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
@@ -6090,6 +6099,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).create();
         sizeDialog.setOnCancelListener(dialog -> reopenPendingFolderAfterAppEdit());
         sizeDialog.show();
+        if (sizeDialog.getWindow() != null) {
+            GradientDrawable dialogSurface = new GradientDrawable();
+            dialogSurface.setColor(0xFF3B3B3B);
+            dialogSurface.setCornerRadius(22 * density);
+            dialogSurface.setStroke(Math.max(1, (int)density), 0x24FFFFFF);
+            sizeDialog.getWindow().setBackgroundDrawable(dialogSurface);
+            sizeDialog.getWindow().getDecorView().setClipToOutline(true);
+        }
+        panel.setBackgroundColor(Color.TRANSPARENT);
         Button cancel = sizeDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         Button reset = sizeDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
         Button apply = sizeDialog.getButton(AlertDialog.BUTTON_POSITIVE);
