@@ -67,7 +67,6 @@ public class AdsFilterVpnService extends VpnService {
             "ads.aralego.com",
             "adsv.svc.litv.tv",
             "acs2.svc.litv.tv",
-            "*.googleapis.com",
             "*.svc.litv.tv",
             "rr2---sn-un57sne7.googlevideo.com",
             "eligibility-panelresearch.googlevideo.com"
