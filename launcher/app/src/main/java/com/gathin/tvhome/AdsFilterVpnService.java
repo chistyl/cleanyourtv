@@ -6,6 +6,9 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.VpnService;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -42,6 +45,14 @@ public class AdsFilterVpnService extends VpnService {
         if (running.get()) return START_STICKY;
         try {
             startNotice();
+            // Bind the DNS-only VPN to the physical network so Ethernet remains the upstream.
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            Network active = cm == null ? null : cm.getActiveNetwork();
+            NetworkCapabilities caps = active == null || cm == null ? null : cm.getNetworkCapabilities(active);
+            if (active == null || caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                throw new IllegalStateException("No active physical network for DNS forwarding");
+            }
+            setUnderlyingNetworks(new Network[]{active});
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
                     .setMtu(1500)
@@ -135,6 +146,10 @@ public class AdsFilterVpnService extends VpnService {
         try {
             socket = new DatagramSocket();
             if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
+            // Keep upstream DNS traffic on the active physical Ethernet/Wi-Fi network.
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            Network underlying = cm == null ? null : cm.getActiveNetwork();
+            if (underlying != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) underlying.bindSocket(socket);
             socket.setSoTimeout(3500);
             byte[] ip = new byte[4]; byte[] raw = InetAddress.getByName(UPSTREAM).getAddress();
             System.arraycopy(raw, 0, ip, 0, 4);
