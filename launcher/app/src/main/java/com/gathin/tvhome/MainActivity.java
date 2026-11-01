@@ -5813,15 +5813,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding((int)(18 * density), (int)(12 * density), (int)(18 * density), (int)(8 * density));
+        panel.setClipChildren(false); panel.setClipToPadding(false);
         View preview = new View(this);
-        preview.setBackgroundColor(initial);
+        GradientDrawable previewShape = new GradientDrawable();
+        previewShape.setColor(initial); previewShape.setCornerRadius(14*density);
+        preview.setBackground(previewShape);
         LinearLayout.LayoutParams previewLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * density));
         previewLp.bottomMargin = (int) (12 * density);
         panel.addView(preview, previewLp);
         String[] channels = {"紅色", "綠色", "藍色"};
         SeekBar[] bars = new SeekBar[3];
-        Runnable update = () -> preview.setBackgroundColor(Color.rgb(rgb[0], rgb[1], rgb[2]));
+        Runnable update = () -> {
+            GradientDrawable swatch = new GradientDrawable();
+            swatch.setColor(Color.rgb(rgb[0], rgb[1], rgb[2]));
+            swatch.setCornerRadius(14*density);
+            preview.setBackground(swatch);
+        };
         for (int i = 0; i < 3; i++) {
             TextView label = new TextView(this);
             label.setText(channels[i] + "：" + rgb[i]);
@@ -5836,15 +5844,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             bar.setFocusableInTouchMode(true);
             bar.setDefaultFocusHighlightEnabled(false);
             GradientDrawable barNormal = new GradientDrawable();
-            barNormal.setColor(0x18333333);
-            barNormal.setCornerRadius(12 * density);
+            barNormal.setColor(Color.TRANSPARENT);
+            barNormal.setCornerRadius(14 * density);
             GradientDrawable barFocused = new GradientDrawable();
-            barFocused.setColor(0xFF263B43);
-            barFocused.setCornerRadius(12 * density);
-            barFocused.setStroke(Math.max(3, (int)(3 * density)), 0xFF00D5C8);
+            barFocused.setColor(0xFFF4F4F4);
+            barFocused.setCornerRadius(14 * density);
             bar.setBackground(barNormal);
             bar.setPadding((int)(10 * density), (int)(5 * density), (int)(10 * density), (int)(5 * density));
-            bar.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? barFocused : barNormal));
+            bar.setOnFocusChangeListener((v, focused) -> {
+                v.setBackground(focused ? barFocused : barNormal);
+                v.setElevation(0f);
+            });
             bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
                     rgb[channel] = value;
@@ -5884,9 +5894,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         actionNormal.setColor(0xFF343B47);
         actionNormal.setCornerRadius(14 * density);
         GradientDrawable actionFocused = new GradientDrawable();
-        actionFocused.setColor(0xFF00AFA5);
+        actionFocused.setColor(0xFFF4F4F4);
         actionFocused.setCornerRadius(14 * density);
-        actionFocused.setStroke(Math.max(3, (int)(3 * density)), Color.WHITE);
         for (int i = 0; i < actions.length; i++) {
             Button button = actions[i];
             if (button == null) continue;
@@ -5897,12 +5906,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             button.setMinWidth((int)(104 * density));
             button.setMinHeight((int)(52 * density));
             button.setBackground(actionNormal);
-            button.setTextColor(0xFF80CBC4);
+            button.setTextColor(0xFFF1F2F4);
             button.setOnFocusChangeListener((v, focused) -> {
                 v.setBackground(focused ? actionFocused : actionNormal);
-                ((Button)v).setTextColor(Color.WHITE);
-                v.setScaleX(focused ? 1.025f : 1f);
-                v.setScaleY(focused ? 1.025f : 1f);
+                ((Button)v).setTextColor(focused ? 0xFF202124 : 0xFFF1F2F4);
+                v.setScaleX(1f); v.setScaleY(1f);
             });
             button.setId(View.generateViewId());
             if (i > 0 && actions[i - 1] != null) {
@@ -5987,8 +5995,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         GradientDrawable seekNormal = new GradientDrawable();
         seekNormal.setColor(0x18333333); seekNormal.setCornerRadius(12*density);
         GradientDrawable seekFocused = new GradientDrawable();
-        seekFocused.setColor(0xFF263B43); seekFocused.setCornerRadius(12*density);
-        seekFocused.setStroke(Math.max(3,(int)(3*density)), 0xFF00D5C8);
+        seekFocused.setColor(0xFFF4F4F4); seekFocused.setCornerRadius(14*density);
         seekWrap.setBackground(seekNormal);
         seekWrap.setDefaultFocusHighlightEnabled(false);
         seekWrap.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? seekFocused : seekNormal));
@@ -6044,8 +6051,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         GradientDrawable actionNormal = new GradientDrawable();
         actionNormal.setColor(0xFF343B47); actionNormal.setCornerRadius(14*density);
         GradientDrawable actionFocused = new GradientDrawable();
-        actionFocused.setColor(0xFF00AFA5); actionFocused.setCornerRadius(14*density);
-        actionFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        actionFocused.setColor(0xFFF4F4F4); actionFocused.setCornerRadius(14*density);
         for (int i = 0; i < actions.length; i++) {
             Button button = actions[i];
             if (button == null) continue;
@@ -6055,8 +6061,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             button.setBackground(actionNormal);
             button.setOnFocusChangeListener((v, focused) -> {
                 v.setBackground(focused ? actionFocused : actionNormal);
-                ((Button)v).setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
-                v.setScaleX(focused ? 1.025f : 1f); v.setScaleY(focused ? 1.025f : 1f);
+                ((Button)v).setTextColor(focused ? 0xFF202124 : 0xFFF1F2F4);
+                v.setScaleX(1f); v.setScaleY(1f);
             });
             button.setId(View.generateViewId());
             if (i > 0 && actions[i-1] != null) {
