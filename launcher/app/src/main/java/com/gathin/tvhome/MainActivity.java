@@ -797,26 +797,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
-        // Hide an entire app row as soon as its top edge enters the header boundary.
-        // INVISIBLE preserves RecyclerView measurements, Dock positions and focus navigation.
-        Runnable updateHeaderRowVisibility = () -> {
-            if (grid == null) return;
-            int boundary = grid.getPaddingTop();
-            for (int i = 0; i < grid.getChildCount(); i++) {
-                View child = grid.getChildAt(i);
-                if (child == null) continue;
-                boolean rowTouchesHeader = child.getTop() < boundary;
-                child.setVisibility(rowTouchesHeader ? View.INVISIBLE : View.VISIBLE);
-            }
-        };
-        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                updateHeaderRowVisibility.run();
-            }
-            @Override public void onScrollStateChanged(@NonNull RecyclerView rv, int state) {
-                updateHeaderRowVisibility.run();
-            }
-        });
         grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
             @Override public void onChildViewAttachedToWindow(@NonNull View view) {
                 view.post(updateHeaderRowVisibility);
