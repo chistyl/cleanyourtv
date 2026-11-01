@@ -88,6 +88,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         int cardWidth = 0;
         for (int i = 0; i < parent.getChildCount(); i++) {
             View child = parent.getChildAt(i);
+            // The dock row is hidden by the scroll listener; do not keep drawing its separate glass band.
+            if (child.getVisibility() != View.VISIBLE) continue;
             int pos = parent.getChildAdapterPosition(child);
             if (pos < 0 || (!bandAll && pos >= dockSize)) continue;
             RecyclerView.ViewHolder vh = parent.getChildViewHolder(child);
