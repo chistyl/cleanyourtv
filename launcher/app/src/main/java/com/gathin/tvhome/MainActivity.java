@@ -4024,10 +4024,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private android.graphics.drawable.Drawable remoteWeatherFocusBackground(boolean focused) {
-        // Clean weather settings: no outlined boxes around individual fields.
+        // Match the launcher menu: subtle transparent rows, white selected pill.
         GradientDrawable shape = new GradientDrawable();
-        shape.setColor(focused ? 0x223FC8BE : Color.TRANSPARENT);
-        shape.setCornerRadius(12 * density);
+        shape.setColor(focused ? 0xFFF4F4F4 : Color.TRANSPARENT);
+        shape.setCornerRadius(16 * density);
         return shape;
     }
 
@@ -4045,8 +4045,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         toggle.setBackground(remoteWeatherFocusBackground(false));
         toggle.setOnFocusChangeListener((v, focused) -> {
             v.setBackground(remoteWeatherFocusBackground(focused));
-            toggle.setTextColor(focused ? 0xFF80DED5 : Color.WHITE);
-            v.setScaleX(focused ? 1.01f : 1f); v.setScaleY(focused ? 1.01f : 1f);
+            toggle.setTextColor(focused ? 0xFF202124 : Color.WHITE);
+            v.setScaleX(1f); v.setScaleY(1f);
         });
         toggle.setChecked(prefs.getBoolean("enabled", false));
         toggle.setClickable(true);
@@ -4076,8 +4076,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             option.setBackground(remoteWeatherFocusBackground(false));
             option.setOnFocusChangeListener((v, focused) -> {
                 v.setBackground(remoteWeatherFocusBackground(focused));
-                ((android.widget.RadioButton) v).setTextColor(focused ? 0xFF80DED5 : Color.WHITE);
-                v.setScaleX(focused ? 1.01f : 1f); v.setScaleY(focused ? 1.01f : 1f);
+                ((android.widget.RadioButton) v).setTextColor(focused ? 0xFF202124 : Color.WHITE);
+                v.setScaleX(1f); v.setScaleY(1f);
             });
         }
         modes.addView(device); modes.addView(cityMode);
@@ -4090,10 +4090,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         city.setTextColor(Color.WHITE); city.setHintTextColor(0xFFB8BEC8); city.setTextSize(20);
         city.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
         city.setBackgroundColor(Color.TRANSPARENT);
+        GradientDrawable cityFocused = new GradientDrawable();
+        cityFocused.setColor(0xFFF4F4F4); cityFocused.setCornerRadius(14*density);
         city.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setBackgroundColor(Color.TRANSPARENT);
-            city.setTextColor(hasFocus ? 0xFF80DED5 : Color.WHITE);
-            v.setScaleX(hasFocus ? 1.01f : 1f); v.setScaleY(hasFocus ? 1.01f : 1f);
+            v.setBackground(hasFocus ? cityFocused : new ColorDrawable(Color.TRANSPARENT));
+            city.setTextColor(hasFocus ? 0xFF202124 : Color.WHITE);
+            v.setScaleX(1f); v.setScaleY(1f);
         });
         content.addView(city, new LinearLayout.LayoutParams(-1, (int)(54*density)));
         city.setVisibility(fixed ? View.VISIBLE : View.GONE);
@@ -4128,14 +4130,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelLp.rightMargin = (int)(22*density); cancelWeather.setLayoutParams(cancelLp);
             LinearLayout.LayoutParams saveLp = (LinearLayout.LayoutParams) saveWeather.getLayoutParams();
             saveLp.leftMargin = (int)(6*density); saveWeather.setLayoutParams(saveLp);
-            GradientDrawable normal = new GradientDrawable(); normal.setColor(0xFF343B47); normal.setCornerRadius(12*density);
-            GradientDrawable focused = new GradientDrawable(); focused.setColor(0xFF46566B);
-            focused.setCornerRadius(12*density); focused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
+            GradientDrawable normal = new GradientDrawable(); normal.setColor(0xFF343B47); normal.setCornerRadius(14*density);
+            GradientDrawable focused = new GradientDrawable(); focused.setColor(0xFFF4F4F4); focused.setCornerRadius(14*density);
             View.OnFocusChangeListener focus = (v, hasFocus) -> {
                 v.setBackground(hasFocus ? focused : normal);
-                ((Button) v).setTextColor(Color.WHITE);
-                v.setScaleX(hasFocus ? 1.02f : 1f);
-                v.setScaleY(hasFocus ? 1.02f : 1f);
+                ((Button) v).setTextColor(hasFocus ? 0xFF202124 : 0xFFF1F2F4);
+                v.setScaleX(1f); v.setScaleY(1f);
             };
             cancelWeather.setBackground(normal); saveWeather.setBackground(normal);
             cancelWeather.setOnFocusChangeListener(focus); saveWeather.setOnFocusChangeListener(focus);
@@ -4155,14 +4155,61 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             city.setNextFocusLeftId(cityMode.getId());
             device.setNextFocusDownId(cityMode.getId());
             toggle.setNextFocusDownId(device.getId());
+            device.setNextFocusUpId(toggle.getId());
+            device.setNextFocusDownId(cityMode.getId());
+            cityMode.setNextFocusUpId(device.getId());
+            cityMode.setNextFocusDownId(city.getVisibility() == View.VISIBLE ? city.getId() : cancelWeather.getId());
+            cityMode.setNextFocusRightId(city.getVisibility() == View.VISIBLE ? city.getId() : saveWeather.getId());
             cancelWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
             saveWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
+            cancelWeather.setNextFocusDownId(toggle.getId());
+            saveWeather.setNextFocusDownId(toggle.getId());
             toggle.setNextFocusUpId(saveWeather.getId());
             toggle.setOnFocusChangeListener((v, hasFocus) -> {
                 v.setBackground(remoteWeatherFocusBackground(hasFocus));
-                v.setAlpha(hasFocus ? 1f : 0.92f);
-                v.setElevation(hasFocus ? 4f * density : 0f);
+                toggle.setTextColor(hasFocus ? 0xFF202124 : Color.WHITE);
+                v.setAlpha(1f);
+                v.setElevation(0f);
             });
+            // Explicit DPAD routing prevents Android's layout-based focus search from skipping rows.
+            View.OnKeyListener weatherDpad = (v, keyCode, event) -> {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    if (v == toggle) device.requestFocus();
+                    else if (v == device) cityMode.requestFocus();
+                    else if (v == cityMode) {
+                        if (city.getVisibility() == View.VISIBLE) city.requestFocus();
+                        else cancelWeather.requestFocus();
+                    } else if (v == city) cancelWeather.requestFocus();
+                    else if (v == cancelWeather) toggle.requestFocus();
+                    else if (v == saveWeather) toggle.requestFocus();
+                    else return false;
+                    return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    if (v == device) toggle.requestFocus();
+                    else if (v == cityMode) device.requestFocus();
+                    else if (v == city) cityMode.requestFocus();
+                    else if (v == cancelWeather || v == saveWeather) {
+                        if (city.getVisibility() == View.VISIBLE) city.requestFocus();
+                        else cityMode.requestFocus();
+                    } else return false;
+                    return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v == cancelWeather) {
+                    saveWeather.requestFocus(); return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && v == saveWeather) {
+                    cancelWeather.requestFocus(); return true;
+                }
+                return false;
+            };
+            toggle.setOnKeyListener(weatherDpad);
+            device.setOnKeyListener(weatherDpad);
+            cityMode.setOnKeyListener(weatherDpad);
+            city.setOnKeyListener(weatherDpad);
+            cancelWeather.setOnKeyListener(weatherDpad);
+            saveWeather.setOnKeyListener(weatherDpad);
             device.setNextFocusRightId(cityMode.getId()); cityMode.setNextFocusLeftId(device.getId());
             toggle.post(toggle::requestFocus);
         }
