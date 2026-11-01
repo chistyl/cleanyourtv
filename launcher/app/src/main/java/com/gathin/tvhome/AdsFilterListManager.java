@@ -22,20 +22,6 @@ final class AdsFilterListManager {
         "https://easylist.to/easylist/easyprivacy.txt"
     };
     private static final Pattern ABP_RULE = Pattern.compile("^(\\@@)?\\|\\|([a-z0-9.-]+)\\^(?:\\$important)?$", Pattern.CASE_INSENSITIVE);
-    private static final Set<String> EXCLUDED = new HashSet<>(Arrays.asList(
-        "vid.dbokutv.com", "firebaselogging-pa.googleapis.com",
-        "pic.dbokutv.com", "events.ads.vungle.com",
-        "googleads.g.doubleclick.net", "securepubads.g.doubleclick.net",
-        "pubads.g.doubleclick.net", "pagead2.googlesyndication.com",
-        "av1.xdrig.com", "me.xdrig.com", "www.xdrig.com", "xdrig.com",
-        "googlevideo.com", "rr2---sn-un57sne7.googlevideo.com",
-        "eligibility-panelresearch.googlevideo.com", "www.googlevideo.com",
-        "footprints-pa.googleapis.com", "www.googleapis.com",
-        "www.googleadservices.com", "youtubei.googleapis.com",
-        "p-app.dhub.hinet.net", "ads.aralego.com",
-        "adsv.svc.litv.tv", "acs2.svc.litv.tv",
-        "googleapis.com", "svc.litv.tv"
-    ));
     private static final Pattern HOST = Pattern.compile("(?i)^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$");
     private AdsFilterListManager() {}
     interface Callback { void onComplete(int blocked, int allowed, String error); }
@@ -97,13 +83,13 @@ final class AdsFilterListManager {
             Matcher m = ABP_RULE.matcher(line);
             if (m.matches()) {
                 String domain = normalize(m.group(2));
-                if (!domain.isEmpty() && !EXCLUDED.contains(domain)) (m.group(1) == null ? block : allow).add(domain);
+                if (!domain.isEmpty()) (m.group(1) == null ? block : allow).add(domain);
                 continue;
             }
             String[] parts = line.split("\\s+");
             if (parts.length >= 2 && (parts[0].equals("0.0.0.0") || parts[0].equals("127.0.0.1") || parts[0].equals("::"))) {
                 String domain = normalize(parts[1]);
-                if (!domain.isEmpty() && !domain.equals("localhost") && !EXCLUDED.contains(domain)) block.add(domain);
+                if (!domain.isEmpty() && !domain.equals("localhost")) block.add(domain);
             }
         }
     }
@@ -114,32 +100,6 @@ final class AdsFilterListManager {
         if (d.length() > 253 || !HOST.matcher(d).matches() || d.contains("..")) return "";
         for (String label : d.split("\\.")) if (label.isEmpty() || label.length() > 63 || label.startsWith("-") || label.endsWith("-")) return "";
         return d;
-    }
-
-    /** Removes explicitly excluded domains from both cached subscription lists. */
-    static void removeExcluded(Context context) {
-        File target = new File(context.getFilesDir(), FILE_NAME);
-        File temp = new File(context.getFilesDir(), FILE_NAME + ".tmp");
-        try {
-            if (!target.isFile()) return;
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(target), StandardCharsets.UTF_8));
-                 FileOutputStream out = new FileOutputStream(temp)) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.length() > 2 && (line.charAt(0) == 'A' || line.charAt(0) == 'B') && line.charAt(1) == ' ') {
-                        String domain = line.substring(2).trim().toLowerCase(Locale.ROOT);
-                        if (EXCLUDED.contains(domain)) continue;
-                    }
-                    out.write((line + "\\n").getBytes(StandardCharsets.UTF_8));
-                }
-                out.getFD().sync();
-            }
-            if (target.exists() && !target.delete()) throw new IOException("Cannot replace filter rules file");
-            if (!temp.renameTo(target)) throw new IOException("Cannot save filtered rules file");
-        } catch (Exception e) {
-            Log.w(TAG, "Cannot remove excluded filter rules", e);
-            if (temp.exists()) temp.delete();
-        }
     }
 
     /** Removes every cached block rule while preserving cached allow exceptions. */
