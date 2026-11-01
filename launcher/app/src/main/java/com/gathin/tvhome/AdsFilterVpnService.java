@@ -36,6 +36,7 @@ public class AdsFilterVpnService extends VpnService {
     private static final String DNS_LOCAL = "10.13.0.2";
     private static final String UPSTREAM = "1.1.1.1";
     static final String ACTION_STOP = "com.gathin.tvhome.action.STOP_AD_FILTER";
+    static final String ACTION_RELOAD_LISTS = "com.gathin.tvhome.action.RELOAD_AD_FILTER_LISTS";
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ParcelFileDescriptor tunnel;
     private Thread worker;
@@ -90,6 +91,11 @@ public class AdsFilterVpnService extends VpnService {
             stopFilter();
             stopSelf(startId);
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_RELOAD_LISTS.equals(intent.getAction())) {
+            subscribedBlock = AdsFilterListManager.load(this, 'B');
+            subscribedAllow = AdsFilterListManager.load(this, 'A');
+            return START_STICKY;
         }
         if (running.get()) return START_STICKY;
         try {
@@ -179,37 +185,38 @@ public class AdsFilterVpnService extends VpnService {
     private synchronized void refreshUnderlyingNetworks(ConnectivityManager cm) {
         try {
             Network active = cm.getActiveNetwork();
-            List<Network> ordered = new ArrayList<>();
-            if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) {
-                physicalNetworks.add(active);
-                ordered.add(active);
+            Network selected = isPhysicalInternet(cm.getNetworkCapabilities(active)) ? active : null;
+
+            // The VPN itself becomes Android's default network after establish().
+            // In that case keep the already selected physical network until it is lost.
+            if (selected == null && underlyingNetwork != null
+                    && isPhysicalInternet(cm.getNetworkCapabilities(underlyingNetwork))) {
+                selected = underlyingNetwork;
             }
-            synchronized (physicalNetworks) {
-                for (Network candidate : physicalNetworks) {
-                    if (candidate != null && !candidate.equals(active)
-                            && isPhysicalInternet(cm.getNetworkCapabilities(candidate))) {
-                        ordered.add(candidate);
+
+            if (selected == null) {
+                synchronized (physicalNetworks) {
+                    for (Network candidate : physicalNetworks) {
+                        if (candidate != null && isPhysicalInternet(cm.getNetworkCapabilities(candidate))) {
+                            selected = candidate;
+                            break;
+                        }
                     }
                 }
             }
-            // Also reconcile against the system's current network list. Callback
-            // delivery can lag briefly during Wi-Fi/Ethernet handover.
-            for (Network candidate : cm.getAllNetworks()) {
-                if (!candidate.equals(active)
-                        && isPhysicalInternet(cm.getNetworkCapabilities(candidate))
-                        && !ordered.contains(candidate)) {
-                    physicalNetworks.add(candidate);
-                    ordered.add(candidate);
-                }
-            }
-            physicalNetworks.retainAll(ordered);
-            underlyingNetwork = ordered.isEmpty() ? null : ordered.get(0);
+
+            underlyingNetwork = selected;
+
+            // Advertise exactly one physical underlay. Passing Wi-Fi and Ethernet
+            // together can make Android route the VPN through the wrong interface
+            // on some TV firmware and can interrupt the wired connection.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                setUnderlyingNetworks(ordered.toArray(new Network[0]));
+                setUnderlyingNetworks(selected == null ? new Network[0] : new Network[]{selected});
             }
-            if (ordered.isEmpty()) Log.w(TAG, "No physical Wi-Fi/Ethernet network currently available");
+            if (selected == null) Log.w(TAG, "No physical Wi-Fi/Ethernet network currently available");
+            else Log.i(TAG, "VPN underlay selected: " + selected);
         } catch (Exception e) {
-            Log.w(TAG, "Unable to refresh VPN underlying networks", e);
+            Log.w(TAG, "Unable to refresh VPN underlying network", e);
         }
     }
 
