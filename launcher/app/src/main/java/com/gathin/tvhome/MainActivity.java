@@ -2034,6 +2034,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 y = safeTop;
             }
         }
+        final float heroY = y;
         boolean changed = !label.contentEquals(heroName.getText());
         if (cinematic && heroArtAlpha > 0f) showHeroArt(position);
 
@@ -2043,7 +2044,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hero.animate().cancel();
             ambient.animate().cancel();
             fillHero(position, label);
-            hero.setY(y);
+            hero.setY(heroY);
             hero.setTranslationX(0f);
             hero.setAlpha(1f);
             if (ambientGlow && !customWallpaperActive) {
@@ -2059,7 +2060,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hero.animate().cancel();
             ambient.animate().cancel();
             fillHero(position, label);
-            hero.setY(y);
+            hero.setY(heroY);
             hero.setTranslationX(0f);
             hero.animate().alpha(1f).setDuration(260).start();
             if (ambientGlow && !customWallpaperActive) {
@@ -2071,7 +2072,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (advancedEffects) hero.animate().cancel();
             hero.animate().alpha(0f).translationX(-12 * density).setDuration(120).withEndAction(() -> {
                 fillHero(position, label);
-                hero.setY(y);
+                hero.setY(heroY);
                 hero.setTranslationX(12 * density);
                 hero.animate().alpha(1f).translationX(0f).setDuration(200).start();
             }).start();
@@ -2084,7 +2085,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).start();
             }
         } else {
-            hero.setY(y);
+            hero.setY(heroY);
             // onPause cancels the fade-ins, and a second Home during one lands on the same tile, which starts none:
             // finish them, or the shelf and the glow stay dim until focus moves to another app.
             if (hero.getAlpha() < 1f) hero.animate().alpha(1f).setDuration(260).start();
