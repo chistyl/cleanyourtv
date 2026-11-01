@@ -4891,6 +4891,51 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         else if (cancel != null) cancel.post(cancel::requestFocus);
     }
 
+    private void styleRemoteEditField(EditText edit) {
+        edit.setFocusable(true);
+        edit.setFocusableInTouchMode(true);
+        edit.setSelectAllOnFocus(false);
+        edit.setTextColor(Color.WHITE);
+        edit.setHintTextColor(0xFF9AA4B2);
+        edit.setPadding((int)(12*density), (int)(10*density), (int)(12*density), (int)(10*density));
+        edit.setBackgroundTintList(new ColorStateList(
+                new int[][]{new int[]{android.R.attr.state_focused}, new int[]{}},
+                new int[]{0xFF00D5C8, 0xFF80CBC4}));
+        edit.setOnFocusChangeListener((v, focused) -> {
+            v.setBackgroundTintList(ColorStateList.valueOf(focused ? 0xFF00D5C8 : 0xFF80CBC4));
+            v.setElevation(focused ? 4f*density : 0f);
+        });
+    }
+
+    private void styleRemoteDialogActions(AlertDialog dialog) {
+        Button cancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button save = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (cancel == null || save == null) return;
+        cancel.setFocusable(true); save.setFocusable(true);
+        cancel.setFocusableInTouchMode(true); save.setFocusableInTouchMode(true);
+        cancel.setDefaultFocusHighlightEnabled(false); save.setDefaultFocusHighlightEnabled(false);
+        cancel.setAllCaps(false); save.setAllCaps(false);
+        GradientDrawable normal = new GradientDrawable();
+        normal.setColor(0xFF343B47); normal.setCornerRadius(14*density);
+        GradientDrawable focused = new GradientDrawable();
+        focused.setColor(0xFF00AFA5); focused.setCornerRadius(14*density);
+        focused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        View.OnFocusChangeListener focus = (v, hasFocus) -> {
+            v.setBackground(hasFocus ? focused : normal);
+            ((Button)v).setTextColor(hasFocus ? Color.WHITE : 0xFF80CBC4);
+            v.setScaleX(hasFocus ? 1.03f : 1f); v.setScaleY(hasFocus ? 1.03f : 1f);
+        };
+        cancel.setBackground(normal); save.setBackground(normal);
+        cancel.setOnFocusChangeListener(focus); save.setOnFocusChangeListener(focus);
+        cancel.setMinWidth((int)(108*density)); save.setMinWidth((int)(108*density));
+        cancel.setMinHeight((int)(52*density)); save.setMinHeight((int)(52*density));
+        LinearLayout.LayoutParams cp = (LinearLayout.LayoutParams) cancel.getLayoutParams();
+        cp.rightMargin = (int)(16*density); cancel.setLayoutParams(cp);
+        LinearLayout.LayoutParams sp = (LinearLayout.LayoutParams) save.getLayoutParams();
+        sp.leftMargin = (int)(8*density); save.setLayoutParams(sp);
+        cancel.setNextFocusRightId(save.getId()); save.setNextFocusLeftId(cancel.getId());
+    }
+
     private void showFolderAppAssignment(String folder) {
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         List<String> folders = new ArrayList<>(prefs.getStringSet("home_folders", java.util.Collections.<String>emptySet()));
@@ -5296,7 +5341,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
             edit.setText(prefs.getString("label_" + packageName, currentLabel));
             edit.setSelection(edit.getText().length());
-            new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
+            AlertDialog renameDialog = new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
                     .setNegativeButton("取消", null)
                     .setPositiveButton("儲存", (d, which) -> {
                         String value = edit.getText().toString().trim();
@@ -5304,7 +5349,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         reloadApps(false);
                         folderDialog.dismiss();
                         showFolderContents(folderName, systemFolder);
-                    }).show();
+                    }).create();
+            renameDialog.show();
+            styleRemoteDialogActions(renameDialog);
+            styleRemoteEditField(edit);
+            edit.post(edit::requestFocus);
         });
 
         boolean allNamesHidden = prefs.getBoolean("hide_all_names", true);
@@ -5716,7 +5765,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     EditText edit = new EditText(this);
                     edit.setSingleLine(true);
                     edit.setText(oldName);
-                    new AlertDialog.Builder(this).setTitle("重新命名").setView(edit)
+                    AlertDialog renameDialog = new AlertDialog.Builder(this).setTitle("重新命名").setView(edit)
                             .setNegativeButton("取消", null).setPositiveButton("儲存", (dialog, which) -> {
                                 String newName = edit.getText().toString().trim();
                                 if (newName.isEmpty() || "系統".equals(newName)) {
@@ -5731,7 +5780,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                         .putStringSet("folder_apps_" + newName, new java.util.HashSet<>(members))
                                         .remove("folder_apps_" + oldName).apply();
                                 reloadApps(false);
-                            }).show();
+                            }).create();
+                    renameDialog.show();
+                    styleRemoteDialogActions(renameDialog);
+                    styleRemoteEditField(edit);
+                    edit.post(edit::requestFocus);
                 });
             }
 
@@ -5791,13 +5844,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
             edit.setText(savedLabel);
             edit.setSelection(edit.getText().length());
-            new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
+            AlertDialog renameDialog = new AlertDialog.Builder(this).setTitle("修改 APP 名稱").setView(edit)
                     .setNegativeButton("取消", null)
                     .setPositiveButton("儲存", (dialog, which) -> {
                         String value = edit.getText().toString().trim();
                         if (!value.isEmpty()) appPrefs.edit().putString("label_" + pkg, value).apply();
                         reloadApps(false);
-                    }).show();
+                    }).create();
+            renameDialog.show();
+            styleRemoteDialogActions(renameDialog);
+            styleRemoteEditField(edit);
+            edit.post(edit::requestFocus);
         });
         boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", true);
         addSettingsMenuRow(rows, popup, allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
