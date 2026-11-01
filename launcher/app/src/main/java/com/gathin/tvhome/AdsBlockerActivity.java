@@ -368,8 +368,11 @@ public class AdsBlockerActivity extends Activity {
         JSONArray logs;
         try { logs = new JSONArray(prefs.getString("dns_logs", "[]")); }
         catch (Exception e) { logs = new JSONArray(); }
+        // 僅顯示最新 50 筆；較早紀錄仍保留在本機儲存中。
+        int startIndex = Math.max(0, logs.length() - 50);
+        int visibleCount = logs.length() - startIndex;
         int blocked = 0, allowed = 0, failed = 0;
-        for (int i = 0; i < logs.length(); i++) {
+        for (int i = startIndex; i < logs.length(); i++) {
             JSONObject item = logs.optJSONObject(i);
             if (item == null) continue;
             String result = item.optString("result", "");
@@ -377,7 +380,7 @@ public class AdsBlockerActivity extends Activity {
             else if ("允許".equals(result)) allowed++;
             else if ("查詢失敗".equals(result)) failed++;
         }
-        summary.setText("總計 " + logs.length() + " 筆　 允許 " + allowed + "　阻擋 " + blocked + "　異常 " + failed);
+        summary.setText("顯示最新 " + visibleCount + " / " + logs.length() + " 筆　允許 " + allowed + "　阻擋 " + blocked + "　異常 " + failed);
         if (logs.length() == 0) {
             TextView empty = label("目前沒有 DNS 紀錄。啟用廣告阻擋並讓 APP 產生網路請求後，紀錄會顯示在這裡。", 17);
             empty.setTextColor(Color.LTGRAY);
@@ -386,7 +389,7 @@ public class AdsBlockerActivity extends Activity {
             return;
         }
         SimpleDateFormat format = new SimpleDateFormat("MM/dd HH:mm:ss", Locale.TAIWAN);
-        for (int i = logs.length() - 1; i >= 0; i--) {
+        for (int i = logs.length() - 1; i >= startIndex; i--) {
             JSONObject item = logs.optJSONObject(i);
             if (item == null) continue;
             String result = item.optString("result", "一般通過");
