@@ -71,14 +71,17 @@ public class AdsFilterVpnService extends VpnService {
             // network can change while the filter is running, so do not capture it only once.
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             if (cm == null) throw new IllegalStateException("Connectivity service unavailable");
+            // Track physical interfaces even when Android temporarily removes INTERNET
+            // during network validation. INTERNET is a validation state, not cable state.
             NetworkRequest request = new NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
                     .build();
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override public void onAvailable(Network network) {
                     NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-                    if (isPhysicalInternet(caps) && shouldSelectNetwork(network, cm)) {
+                    if (isPhysicalNetwork(caps) && shouldSelectNetwork(network, cm)) {
                         updateUnderlyingNetwork(network);
                     }
                 }
@@ -92,7 +95,7 @@ public class AdsFilterVpnService extends VpnService {
                     }
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
-                    if (isPhysicalInternet(caps) && shouldSelectNetwork(network, cm)) {
+                    if (isPhysicalNetwork(caps) && shouldSelectNetwork(network, cm)) {
                         updateUnderlyingNetwork(network);
                     }
                 }
@@ -123,9 +126,10 @@ public class AdsFilterVpnService extends VpnService {
         return START_STICKY;
     }
 
-    private boolean isPhysicalInternet(NetworkCapabilities caps) {
+    private boolean isPhysicalNetwork(NetworkCapabilities caps) {
+        // Do not require INTERNET: Android can drop this validation capability while
+        // the Ethernet link remains physically connected (e.g. during VPN DNS checks).
         return caps != null
-                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
                 && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                     || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
@@ -133,7 +137,7 @@ public class AdsFilterVpnService extends VpnService {
 
     private boolean isEthernet(Network network, ConnectivityManager cm) {
         NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-        return isPhysicalInternet(caps)
+        return isPhysicalNetwork(caps)
                 && caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
     }
 
@@ -155,7 +159,7 @@ public class AdsFilterVpnService extends VpnService {
         Network wifi = null;
         for (Network candidate : cm.getAllNetworks()) {
             NetworkCapabilities caps = cm.getNetworkCapabilities(candidate);
-            if (!isPhysicalInternet(caps)) continue;
+            if (!isPhysicalNetwork(caps)) continue;
             if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
                 if (ethernet == null) ethernet = candidate;
             } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && wifi == null) {
@@ -164,7 +168,7 @@ public class AdsFilterVpnService extends VpnService {
         }
         if (ethernet != null) return ethernet;
         Network active = cm.getActiveNetwork();
-        if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
+        if (active != null && isPhysicalNetwork(cm.getNetworkCapabilities(active))) return active;
         return wifi;
     }
 
@@ -297,7 +301,7 @@ public class AdsFilterVpnService extends VpnService {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm == null) return underlyingNetwork;
         Network current = underlyingNetwork;
-        if (current != null && isPhysicalInternet(cm.getNetworkCapabilities(current))) {
+        if (current != null && isPhysicalNetwork(cm.getNetworkCapabilities(current))) {
             return current;
         }
         Network replacement = findPhysicalNetwork(cm);
