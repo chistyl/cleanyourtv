@@ -7,11 +7,13 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -96,6 +98,19 @@ public class AdsBlockerActivity extends Activity {
         if (stroke != 0) d.setStroke(dp(2), stroke);
         return d;
     }
+    private android.graphics.drawable.Drawable focusBg(int normal, int focused) {
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_focused}, bg(focused, Color.rgb(255, 205, 120)));
+        states.addState(new int[]{android.R.attr.state_pressed}, bg(focused, Color.WHITE));
+        states.addState(new int[]{}, bg(normal, Color.TRANSPARENT));
+        return states;
+    }
+    private void keepFocusedVisible(View view) {
+        view.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) v.post(() -> v.requestRectangleOnScreen(
+                    new android.graphics.Rect(0, 0, v.getWidth(), v.getHeight()), true));
+        });
+    }
     private TextView label(String text, int size) {
         TextView v = new TextView(this); v.setText(text); v.setTextColor(Color.WHITE);
         v.setTextSize(size); v.setGravity(Gravity.CENTER_VERTICAL); return v;
@@ -103,13 +118,17 @@ public class AdsBlockerActivity extends Activity {
     private Button button(String text, Runnable action) {
         Button b = new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(18);
         b.setAllCaps(false); b.setFocusable(true); b.setMinHeight(dp(54));
-        b.setBackground(bg(Color.rgb(48, 51, 60), Color.rgb(105, 108, 118)));
+        b.setBackground(focusBg(Color.rgb(48, 51, 60), Color.rgb(74, 79, 92)));
+        b.setPadding(dp(18), dp(8), dp(18), dp(8));
+        keepFocusedVisible(b);
         b.setOnClickListener(v -> action.run());
         return b;
     }
     private void buildUi() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true); scroll.setBackgroundColor(Color.rgb(22, 24, 31));
+        scroll.setFocusable(false);
+        scroll.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
         content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(28), dp(22), dp(28), dp(30));
         scroll.addView(content);
@@ -163,7 +182,9 @@ public class AdsBlockerActivity extends Activity {
             row.setPadding(dp(12), 0, dp(8), 0); row.setBackground(bg(Color.rgb(39,42,50), 0));
             TextView name = label(domain, 17); row.addView(name, new LinearLayout.LayoutParams(0, dp(48), 1));
             Button del = new Button(this); del.setText("刪除"); del.setTextSize(14); del.setAllCaps(false);
-            del.setTextColor(Color.WHITE); del.setFocusable(true); del.setBackground(bg(Color.rgb(85,47,49), 0));
+            del.setTextColor(Color.WHITE); del.setFocusable(true); del.setMinHeight(dp(48));
+            del.setBackground(focusBg(Color.rgb(85,47,49), Color.rgb(126,58,62)));
+            keepFocusedVisible(del);
             del.setOnClickListener(v -> { LinkedHashSet<String> set = new LinkedHashSet<>(rules(key)); set.remove(domain); saveRules(key, set); refresh(); });
             row.addView(del, new LinearLayout.LayoutParams(dp(76), dp(42)));
             LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(50)); rp.topMargin = dp(5);
@@ -202,6 +223,9 @@ public class AdsBlockerActivity extends Activity {
     }
     private void promptDomain(String key) {
         EditText input = new EditText(this); input.setSingleLine(true);
+        input.setFocusable(true); input.setFocusableInTouchMode(true);
+        input.setPadding(dp(12), dp(10), dp(12), dp(10));
+        input.setBackground(focusBg(Color.rgb(39,42,50), Color.rgb(54,59,70)));
         input.setHint("例如 ads.example.com"); input.setTextColor(Color.WHITE); input.setHintTextColor(Color.GRAY);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         new AlertDialog.Builder(this).setTitle(key.equals(BLOCK) ? "新增封鎖網域" : "新增允許網域")
