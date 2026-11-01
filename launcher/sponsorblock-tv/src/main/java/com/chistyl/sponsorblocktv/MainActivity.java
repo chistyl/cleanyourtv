@@ -14,6 +14,9 @@ import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.Inet4Address;
+import java.util.Enumeration;
 import java.net.SocketTimeoutException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -56,7 +59,7 @@ public class MainActivity extends Activity {
         root.addView(title, new LinearLayout.LayoutParams(-1, 72));
 
         TextView intro = new TextView(this);
-        intro.setText("官方 YouTube TV 裝置偵測\n請確認電視與本裝置位於同一個區域網路。");
+        intro.setText("本機官方 YouTube TV 偵測\n此程式安裝在電視本機，會先直接檢查電視自己的 DIAL 服務，再嘗試區域網路探索。");
         intro.setTextColor(0xffc6ccd5);
         intro.setTextSize(18);
         intro.setPadding(0, 8, 0, 18);
@@ -83,7 +86,7 @@ public class MainActivity extends Activity {
 
     private void startScan() {
         scan.setEnabled(false);
-        status.setText("正在搜尋同網路上的 YouTube TV…");
+        status.setText("正在檢查本機 YouTube TV 服務…");
         worker.execute(() -> {
             Map<String, Device> found = new LinkedHashMap<>();
             try {
@@ -130,12 +133,74 @@ public class MainActivity extends Activity {
                            .append("\nDIAL：").append(d.appUrl == null ? "已偵測" : d.appUrl)
                            .append("\n\n");
                     }
-                    out.append("目前完成裝置探索；尚未配對或控制播放。");
+                    out.append("目前完成 DIAL 服務探索；尚未配對或控制播放。");
                     status.setText(out.toString());
                 }
                 scan.setEnabled(true);
             });
         });
+    }
+
+
+    // When this helper itself runs on the TV, SSDP multicast may not loop back to
+    // the same device. Probe the TV's own IPv4 interfaces and the standard DIAL
+    // HTTP service directly before relying on multicast discovery.
+    private Device probeLocalDial() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface ni = interfaces.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress address = addresses.nextElement();
+                    if (!(address instanceof Inet4Address) || address.isLoopbackLinkLocal()) continue;
+                    String ip = address.getHostAddress();
+                    String[] paths = {"/ssdp/device-desc.xml", "/dd.xml", "/device.xml"};
+                    for (String path : paths) {
+                        try {
+                            String base = "http://" + ip + ":8008";
+                            HttpURLConnection conn = (HttpURLConnection) new URL(base + path).openConnection();
+                            conn.setConnectTimeout(700); conn.setReadTimeout(900);
+                            conn.setRequestMethod("GET");
+                            int code = conn.getResponseCode();
+                            String xml = "";
+                            if (code >= 200 && code < 300) {
+                                try (InputStream in = conn.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                                    byte[] b = new byte[2048]; int n;
+                                    while ((n = in.read(b)) > 0 && out.size() < 128 * 1024) out.write(b, 0, n);
+                                    xml = out.toString("UTF-8");
+                                }
+                            }
+                            String appBase = conn.getHeaderField("Application-URL");
+                            conn.disconnect();
+                            if (appBase == null) appBase = tag(xml, "application-url");
+                            if (appBase == null) continue;
+                            String youtubeUrl = appBase.replaceAll("/+$", "") + "/YouTube";
+                            String appXml = httpGetWithOrigin(youtubeUrl);
+                            if (!appXml.toLowerCase(Locale.ROOT).contains("youtube")) continue;
+                            String screenId = tag(appXml, "screenId");
+                            if (screenId == null) screenId = tag(appXml, "screenId");
+                            String name = tag(xml, "friendlyName");
+                            return new Device(name == null ? "本機 Android TV / Google TV" : name,
+                                    ip, youtubeUrl, screenId, true);
+                        } catch (Exception ignored) { }
+                    }
+                }
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    private String httpGetWithOrigin(String address) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
+        c.setConnectTimeout(1200); c.setReadTimeout(1200); c.setRequestMethod("GET");
+        c.setRequestProperty("Origin", "https://www.youtube.com");
+        try (InputStream in = c.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] b = new byte[2048]; int n;
+            while ((n = in.read(b)) > 0 && out.size() < 128 * 1024) out.write(b, 0, n);
+            return out.toString("UTF-8");
+        } finally { c.disconnect(); }
     }
 
     private Device readDevice(String location, String ip) {
