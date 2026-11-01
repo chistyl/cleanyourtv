@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - v17.1-update
+      - cytv-gold-03
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
