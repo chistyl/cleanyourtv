@@ -4495,6 +4495,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         Dialog dialog = new Dialog(this);
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setClipChildren(false); panel.setClipToPadding(false);
         panel.setPadding((int)(22*density), (int)(18*density), (int)(22*density), (int)(16*density));
         GradientDrawable bg = new GradientDrawable(); bg.setColor(Color.rgb(28, 32, 40));
         bg.setCornerRadius(22*density); bg.setStroke(Math.max(1, (int)density), 0x28FFFFFF); panel.setBackground(bg);
@@ -4523,16 +4524,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancel.setDefaultFocusHighlightEnabled(false); cancel.setId(View.generateViewId());
         GradientDrawable cancelNormal = new GradientDrawable();
         cancelNormal.setColor(0xFF343B47); cancelNormal.setCornerRadius(14*density);
-        cancelNormal.setStroke(Math.max(1,(int)density), 0x3348DAD0);
         GradientDrawable cancelFocused = new GradientDrawable();
-        cancelFocused.setColor(0xFF00AFA5); cancelFocused.setCornerRadius(14*density);
-        cancelFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        cancelFocused.setColor(0xFF46566B); cancelFocused.setCornerRadius(14*density);
+        cancelFocused.setStroke(Math.max(2,(int)(2*density)), 0xFFF4F6F8);
         cancel.setBackground(cancelNormal);
         cancel.setOnFocusChangeListener((v, focused) -> {
             v.setBackground(focused ? cancelFocused : cancelNormal);
             cancel.setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
-            v.setElevation(focused ? 8*density : 0f);
-            v.setScaleX(focused ? 1.02f : 1f); v.setScaleY(focused ? 1.02f : 1f);
+            v.setElevation(focused ? 4*density : 0f);
         });
         LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(-1, (int)(48*density));
         cancelLp.topMargin = (int)(10*density); panel.addView(cancel, cancelLp);
@@ -4641,11 +4640,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.setPadding((int)(14*density), 0, (int)(14*density), 0);
         GradientDrawable rowNormal = new GradientDrawable();
         rowNormal.setColor(0xFF343B47);
-        rowNormal.setCornerRadius(12*density);
+        rowNormal.setCornerRadius(14*density);
         GradientDrawable rowFocused = new GradientDrawable();
-        rowFocused.setColor(0xFF00AFA5);
-        rowFocused.setCornerRadius(12*density);
-        rowFocused.setStroke(Math.max(3, (int)(3*density)), Color.WHITE);
+        rowFocused.setColor(0xFF46566B);
+        rowFocused.setCornerRadius(14*density);
+        rowFocused.setStroke(Math.max(2, (int)(2*density)), 0xFFF4F6F8);
         row.setBackground(rowNormal);
         row.setClipToOutline(true);
         row.setFocusable(true);
@@ -4655,9 +4654,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.setId(View.generateViewId());
         row.setOnFocusChangeListener((v, focused) -> {
             v.setBackground(focused ? rowFocused : rowNormal);
-            v.setElevation(focused ? 7*density : 0f);
-            v.setScaleX(focused ? 1.015f : 1f);
-            v.setScaleY(focused ? 1.015f : 1f);
+            row.setTextColor(focused ? Color.WHITE : 0xFFE8EBF0);
+            v.setElevation(focused ? 4*density : 0f);
+            // No scaling: keep the complete rounded focus outline inside the dialog.
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, (int)(48*density));
         lp.bottomMargin = (int)(8*density);
