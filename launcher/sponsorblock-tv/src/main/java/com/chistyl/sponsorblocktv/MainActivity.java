@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.text.InputType;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -34,6 +36,8 @@ import java.util.regex.Pattern;
 public class MainActivity extends Activity {
     private TextView status;
     private Button scan;
+    private EditText pairingCode;
+    private Button pairButton;
     private WifiManager.MulticastLock multicastLock;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
 
@@ -61,20 +65,37 @@ public class MainActivity extends Activity {
         root.addView(title, new LinearLayout.LayoutParams(-1, 72));
 
         TextView intro = new TextView(this);
-        intro.setText("本機官方 YouTube TV 偵測\n此程式安裝在電視本機，會先直接檢查電視自己的 DIAL 服務，再嘗試區域網路探索。");
+        intro.setText("改用 YouTube Lounge 配對\n不再依賴電視自我 SSDP 搜尋。請先到官方 YouTube 的「設定 → 連結電視與手機／使用電視代碼」取得配對碼，再輸入下方。");
         intro.setTextColor(0xffc6ccd5);
         intro.setTextSize(18);
         intro.setPadding(0, 8, 0, 18);
         root.addView(intro);
 
+        pairingCode = new EditText(this);
+        pairingCode.setSingleLine(true);
+        pairingCode.setInputType(InputType.TYPE_CLASS_NUMBER);
+        pairingCode.setHint("輸入 YouTube 電視配對碼");
+        pairingCode.setTextColor(0xffffffff);
+        pairingCode.setHintTextColor(0xff9ba6b5);
+        pairingCode.setTextSize(22);
+        pairingCode.setPadding(18, 8, 18, 8);
+        pairingCode.setBackgroundColor(0xff273344);
+        root.addView(pairingCode, new LinearLayout.LayoutParams(520, 68));
+
+        pairButton = new Button(this);
+        pairButton.setText("使用 YouTube Lounge 配對");
+        pairButton.setTextSize(18);
+        pairButton.setOnClickListener(v -> pairWithLoungeCode());
+        root.addView(pairButton, new LinearLayout.LayoutParams(520, 68));
+
         scan = new Button(this);
-        scan.setText("搜尋 YouTube TV");
-        scan.setTextSize(18);
+        scan.setText("舊版 DIAL 搜尋（備用）");
+        scan.setTextSize(16);
         scan.setOnClickListener(v -> startScan());
-        root.addView(scan, new LinearLayout.LayoutParams(420, 64));
+        root.addView(scan, new LinearLayout.LayoutParams(420, 60));
 
         status = new TextView(this);
-        status.setText("尚未搜尋。\n\n此版本只負責 DIAL 裝置探索與配對資訊讀取，尚未啟用播放控制或 SponsorBlock 自動跳段。");
+        status.setText("尚未配對。\n\n配對成功後，下一階段會建立 Lounge 連線並讀取播放狀態。");
         status.setTextColor(0xffffffff);
         status.setTextSize(17);
         status.setPadding(0, 26, 0, 0);
@@ -83,7 +104,78 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
         setContentView(scroll);
-        scan.requestFocus();
+        pairButton.requestFocus();
+    }
+
+
+    private void pairWithLoungeCode() {
+        String code = pairingCode.getText().toString().replaceAll("[^0-9]", "");
+        if (code.length() < 8 || code.length() > 16) {
+            status.setText("配對碼格式不正確，請輸入 YouTube 電視畫面顯示的數字代碼。");
+            pairingCode.requestFocus();
+            return;
+        }
+        pairButton.setEnabled(false);
+        status.setText("正在向 YouTube Lounge 驗證配對碼…");
+        worker.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL("https://www.youtube.com/api/lounge/pairing/get_screen");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setConnectTimeout(12000);
+                conn.setReadTimeout(12000);
+                conn.setDoOutput(true);
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setRequestProperty("Origin", "https://www.youtube.com");
+                String body = "pairing_code=" + java.net.URLEncoder.encode(code, "UTF-8");
+                try (java.io.OutputStream os = conn.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+                int http = conn.getResponseCode();
+                InputStream stream = http >= 200 && http < 400 ? conn.getInputStream() : conn.getErrorStream();
+                String response = "";
+                if (stream != null) {
+                    try (InputStream in = stream; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        byte[] b = new byte[4096]; int n;
+                        while ((n = in.read(b)) > 0 && out.size() < 256 * 1024) out.write(b, 0, n);
+                        response = out.toString("UTF-8");
+                    }
+                }
+                if (http < 200 || http >= 300) {
+                    final String msg = "YouTube Lounge 回應 HTTP " + http + "\n" + response.substring(0, Math.min(500, response.length()));
+                    runOnUiThread(() -> status.setText(msg));
+                    return;
+                }
+                String screenId = jsonString(response, "screenId");
+                String loungeToken = jsonString(response, "loungeToken");
+                String screenName = jsonString(response, "name");
+                if (screenId == null || loungeToken == null) {
+                    final String msg = "收到回應，但找不到 screenId／loungeToken。\n" + response.substring(0, Math.min(500, response.length()));
+                    runOnUiThread(() -> status.setText(msg));
+                    return;
+                }
+                getSharedPreferences("lounge_auth", MODE_PRIVATE).edit()
+                        .putString("screen_id", screenId)
+                        .putString("lounge_token", loungeToken)
+                        .putString("screen_name", screenName == null ? "YouTube TV" : screenName)
+                        .apply();
+                final String success = "YouTube Lounge 配對成功！\n\n裝置：" + (screenName == null ? "YouTube TV" : screenName)
+                        + "\nscreen ID：" + screenId + "\n\n已安全保存在此電視。下一階段將測試 Lounge 連線與播放狀態讀取。";
+                runOnUiThread(() -> status.setText(success));
+            } catch (Exception e) {
+                final String msg = "配對連線失敗：" + e.getClass().getSimpleName() + " - " + String.valueOf(e.getMessage());
+                runOnUiThread(() -> status.setText(msg));
+            } finally {
+                if (conn != null) conn.disconnect();
+                runOnUiThread(() -> pairButton.setEnabled(true));
+            }
+        });
+    }
+
+    private String jsonString(String json, String key) {
+        Matcher m = Pattern.compile("[\\\"]" + Pattern.quote(key) + "[\\\"]\\s*:\\s*[\\\"]([^\\\"]*)[\\\"]").matcher(json);
+        return m.find() ? m.group(1) : null;
     }
 
     private void startScan() {
