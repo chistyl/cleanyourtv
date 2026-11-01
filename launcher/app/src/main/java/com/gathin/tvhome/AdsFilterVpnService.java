@@ -149,9 +149,8 @@ public class AdsFilterVpnService extends VpnService {
     }
 
     private Network findPhysicalNetwork(ConnectivityManager cm) {
-        Network active = cm.getActiveNetwork();
-        if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
-
+        // Prefer a usable Ethernet transport on TV devices. getActiveNetwork() can
+        // temporarily report Wi-Fi during boot/callback races even when LAN is connected.
         Network ethernet = null;
         Network wifi = null;
         for (Network candidate : cm.getAllNetworks()) {
@@ -163,17 +162,25 @@ public class AdsFilterVpnService extends VpnService {
                 wifi = candidate;
             }
         }
-        return ethernet != null ? ethernet : wifi;
+        if (ethernet != null) return ethernet;
+        Network active = cm.getActiveNetwork();
+        if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
+        return wifi;
     }
 
     private void updateUnderlyingNetwork(Network network) {
+        if (network == null) return;
         underlyingNetwork = network;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (cm != null) updateUpstreamServers(network, cm);
-        // Intentionally do not call setUnderlyingNetworks(). This VPN only routes
-        // the local DNS endpoint (/32); changing the platform's underlying-network
-        // association can disrupt Ethernet routing on some Android TV firmware.
-        // forward() protects and binds each upstream DNS socket to this physical network.
+        // Explicitly tell Android which physical network carries this split-tunnel VPN.
+        // Only DNS_LOCAL/32 is routed into the VPN; ordinary LAN traffic remains direct.
+        try {
+            boolean applied = setUnderlyingNetworks(new Network[]{network});
+            Log.i(TAG, "VPN underlying network set: " + network + ", applied=" + applied);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to update VPN underlying network; DNS sockets remain explicitly bound", e);
+        }
     }
 
     private void updateUpstreamServers(Network network, ConnectivityManager cm) {
