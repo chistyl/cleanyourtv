@@ -1,287 +1,222 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
-import android.net.VpnService;
+import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 public class AdsBlockerActivity extends Activity {
-    private static final int VPN_REQUEST = 7412;
-    private static final String PREFS = "ad_filter";
-    private static final String BLOCK = "block_domains";
-    private static final String ALLOW = "allow_domains";
-    private SharedPreferences prefs;
-    private LinearLayout content;
-    private TextView status;
-    private Button toggle;
-    private Button updateLists;
-    private TextView listStatus;
+    private static final String OFFICIAL_APK =
+            "https://github.com/blokadaorg/blokada/releases/download/archive/blokada4-final.apk";
+    // Blokada 4 builds have used different package IDs depending on the official/F-Droid channel.
+    private static final String[] BLOKADA_PACKAGES = {
+            "org.blokada.origin.alarm",
+            "org.blokada.fyra",
+            "org.blokada.alarm"
+    };
 
-    // Bundled starter rules. Allow rules take precedence over block rules.
-    private static final String DEFAULT_BLOCK =
-            "doubleclick.net\ngooglesyndication.com\ngoogleadservices.com\nadservice.google.com\n" +
-            "app-measurement.com\nadcolony.com\nunityads.unity3d.com\n" +
-            "applovin.com\nmoatads.com\nadsrvr.org\n" +
-            "";
-    private static final String DEFAULT_ALLOW = "";
-    private static final String DEFAULT_RULES_VERSION = "10";
+    private TextView status;
+    private TextView details;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        installBundledRules();
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setStatusBarColor(Color.rgb(20, 21, 27));
         getWindow().setNavigationBarColor(Color.rgb(20, 21, 27));
+
+        // V210's built-in DNS VPN and Blokada both require Android's single active VPN slot.
+        // Stop the old internal engine before handing control to Blokada.
+        stopService(new Intent(this, AdsFilterVpnService.class));
+        getSharedPreferences("ad_filter", MODE_PRIVATE).edit()
+                .putBoolean("enabled", false).apply();
         buildUi();
     }
 
-    private void installBundledRules() {
-        if (DEFAULT_RULES_VERSION.equals(prefs.getString("bundled_rules_version", ""))) return;
-
-        // Remove only the exact domains the user previously asked to add.
-        // Preserve all other custom rules and all downloaded subscription rules.
-        String[] removeFromAllow = {
-                "vid.dbokutv.com", "firebaselogging-pa.googleapis.com",
-                "pic.dbokutv.com", "events.ads.vungle.com"
-        };
-        String[] removeFromBlock = {
-                "googleads.g.doubleclick.net", "securepubads.g.doubleclick.net",
-                "pubads.g.doubleclick.net", "pagead2.googlesyndication.com",
-                "av1.xdrig.com", "me.xdrig.com", "www.xdrig.com", "xdrig.com",
-                "googlevideo.com", "footprints-pa.googleapis.com", "www.googleapis.com",
-                "www.googleadservices.com", "youtubei.googleapis.com",
-                "rr2---sn-un57sne7.googlevideo.com", "eligibility-panelresearch.googlevideo.com",
-                "www.googlevideo.com", "p-app.dhub.hinet.net", "ads.aralego.com",
-                "adsv.svc.litv.tv", "acs2.svc.litv.tv", "googleapis.com", "svc.litv.tv"
-        };
-        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
-        for (String domain : removeFromAllow) allow.remove(domain);
-        saveRules(ALLOW, allow);
-
-        LinkedHashSet<String> block = new LinkedHashSet<>(rules(BLOCK));
-        for (String domain : removeFromBlock) block.remove(domain);
-        for (String item : DEFAULT_BLOCK.split("\\s+")) {
-            String domain = normalize(item);
-            if (!domain.isEmpty()) block.add(domain);
-        }
-        saveRules(BLOCK, block);
-        prefs.edit().putString("bundled_rules_version", DEFAULT_RULES_VERSION).apply();
+    @Override protected void onResume() {
+        super.onResume();
+        refreshStatus();
     }
 
-    @Override protected void onResume() { super.onResume(); if (content != null) refresh(); }
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + .5f);
+    }
 
-    private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
     private GradientDrawable bg(int color, int stroke) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color); d.setCornerRadius(dp(18));
-        if (stroke != 0) d.setStroke(dp(2), stroke);
-        return d;
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(18));
+        if (stroke != 0) drawable.setStroke(dp(2), stroke);
+        return drawable;
     }
+
     private android.graphics.drawable.Drawable focusBg(int normal, int focused) {
         StateListDrawable states = new StateListDrawable();
-        states.addState(new int[]{android.R.attr.state_focused}, bg(focused, Color.rgb(255, 205, 120)));
-        states.addState(new int[]{android.R.attr.state_pressed}, bg(focused, Color.WHITE));
+        states.addState(new int[]{android.R.attr.state_focused},
+                bg(focused, Color.rgb(255, 205, 120)));
+        states.addState(new int[]{android.R.attr.state_pressed},
+                bg(focused, Color.WHITE));
         states.addState(new int[]{}, bg(normal, Color.TRANSPARENT));
         return states;
     }
+
     private void keepFocusedVisible(View view) {
         view.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) v.post(() -> v.requestRectangleOnScreen(
                     new android.graphics.Rect(0, 0, v.getWidth(), v.getHeight()), true));
         });
     }
+
     private TextView label(String text, int size) {
-        TextView v = new TextView(this); v.setText(text); v.setTextColor(Color.WHITE);
-        v.setTextSize(size); v.setGravity(Gravity.CENTER_VERTICAL); return v;
-    }
-    private Button button(String text, Runnable action) {
-        Button b = new Button(this); b.setText(text); b.setTextColor(Color.WHITE); b.setTextSize(18);
-        b.setAllCaps(false); b.setFocusable(true); b.setMinHeight(dp(54));
-        b.setBackground(focusBg(Color.rgb(48, 51, 60), Color.rgb(74, 79, 92)));
-        b.setPadding(dp(18), dp(8), dp(18), dp(8));
-        keepFocusedVisible(b);
-        b.setOnClickListener(v -> action.run());
-        return b;
-    }
-    private void buildUi() {
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true); scroll.setBackgroundColor(Color.rgb(22, 24, 31));
-        scroll.setFocusable(false);
-        scroll.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
-        content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(28), dp(22), dp(28), dp(30));
-        scroll.addView(content);
-        setContentView(scroll);
-        TextView title = label("阻擋廣告", 30); title.setTypeface(null, Typeface.BOLD);
-        content.addView(title, new LinearLayout.LayoutParams(-1, dp(58)));
-        TextView desc = label("使用 uBlock Origin 清單擷取可由 DNS 阻擋的廣告／追蹤網域。首次啟用時，Android 會詢問是否允許 VPN 連線。", 17);
-        desc.setTextColor(Color.LTGRAY); desc.setGravity(Gravity.TOP);
-        content.addView(desc, new LinearLayout.LayoutParams(-1, dp(68)));
-        status = label("", 19); status.setPadding(dp(16), 0, dp(16), 0); status.setBackground(bg(Color.rgb(39,42,50), 0));
-        content.addView(status, new LinearLayout.LayoutParams(-1, dp(58)));
-        toggle = button("", this::toggleFilter);
-        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(58)); tp.topMargin = dp(12);
-        content.addView(toggle, tp);
-        updateLists = button("更新 uBlock 過濾清單", this::updateFilterLists);
-        LinearLayout.LayoutParams up = new LinearLayout.LayoutParams(-1, dp(58)); up.topMargin = dp(10);
-        content.addView(updateLists, up);
-        listStatus = label("過濾清單：尚未下載", 15); listStatus.setTextColor(Color.LTGRAY);
-        content.addView(listStatus, new LinearLayout.LayoutParams(-1, dp(42)));
-        TextView note = label("注意：此版本採用 uBlock Origin 清單，但本機 DNS 僅能攔截網域層級規則；網頁元素隱藏、腳本及網址路徑規則不支援。YouTube 影片廣告、加密 DNS／DoH 及與影片共用網域的廣告，可能無法攔截。", 15);
-        note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
-        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
-        content.addView(note, np);
-        addSection("封鎖規則", "封鎖符合網域及其子網域的 DNS 請求。", BLOCK);
-        addSection("允許規則", "允許清單優先於封鎖清單，可用來解除誤擋。", ALLOW);
-        Button back = button("返回", this::finish);
-        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(58)); bp.topMargin = dp(20);
-        content.addView(back, bp);
-        refresh();
-    }
-    private void addSection(String heading, String hint, String key) {
-        TextView h = label(heading, 22); h.setTypeface(null, Typeface.BOLD);
-        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, dp(46)); hp.topMargin = dp(20);
-        content.addView(h, hp);
-        TextView sub = label(hint, 15); sub.setTextColor(Color.LTGRAY);
-        content.addView(sub, new LinearLayout.LayoutParams(-1, dp(32)));
-        LinearLayout list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        list.setTag("list_" + key); content.addView(list);
-        Button add = button("＋ 新增網域", () -> promptDomain(key));
-        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(52)); ap.topMargin = dp(8);
-        content.addView(add, ap);
-    }
-    private boolean enabled() { return prefs.getBoolean("enabled", false); }
-    private void refresh() {
-        if (status == null) return;
-        status.setText(enabled() ? "狀態：廣告過濾已啟用" : "狀態：廣告過濾已關閉");
-        toggle.setText(enabled() ? "停用廣告阻擋" : "啟用廣告阻擋");
-        int cachedBlock = AdsFilterListManager.load(this, 'B').size();
-        int cachedAllow = AdsFilterListManager.load(this, 'A').size();
-        long updated = prefs.getLong("filter_lists_updated_at", 0L);
-        if (updated == 0L) listStatus.setText("過濾清單：尚未下載");
-        else listStatus.setText("已載入網域規則：封鎖 " + cachedBlock + "／允許 " + cachedAllow + "；更新時間 " +
-                android.text.format.DateFormat.format("yyyy/MM/dd HH:mm", updated));
-        renderRules(BLOCK); renderRules(ALLOW);
-    }
-    private void updateFilterLists() {
-        updateLists.setEnabled(false);
-        updateLists.setText("正在下載與整理過濾規則…");
-        AdsFilterListManager.update(this, (blocked, allowed, error) -> {
-            updateLists.setEnabled(true);
-            updateLists.setText("更新過濾清單（EasyList + EasyPrivacy）");
-            if (error != null) Toast.makeText(this, "更新失敗：" + error, Toast.LENGTH_LONG).show();
-            else Toast.makeText(this, "更新完成：封鎖 " + blocked + "、允許 " + allowed + " 個網域。重新啟動阻擋服務後生效。", Toast.LENGTH_LONG).show();
-            refresh();
-        });
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextColor(Color.WHITE);
+        view.setTextSize(size);
+        view.setGravity(Gravity.CENTER_VERTICAL);
+        return view;
     }
 
-    private void renderRules(String key) {
-        LinearLayout list = content.findViewWithTag("list_" + key);
-        if (list == null) return;
-        list.removeAllViews();
-        for (String domain : rules(key)) {
-            LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(12), 0, dp(8), 0); row.setBackground(bg(Color.rgb(39,42,50), 0));
-            TextView name = label(domain, 17); row.addView(name, new LinearLayout.LayoutParams(0, dp(48), 1));
-            Button del = new Button(this); del.setText("刪除"); del.setTextSize(14); del.setAllCaps(false);
-            del.setTextColor(Color.WHITE); del.setFocusable(true); del.setMinHeight(dp(48));
-            del.setBackground(focusBg(Color.rgb(85,47,49), Color.rgb(126,58,62)));
-            keepFocusedVisible(del);
-            del.setOnClickListener(v -> { LinkedHashSet<String> set = new LinkedHashSet<>(rules(key)); set.remove(domain); saveRules(key, set); refresh(); });
-            row.addView(del, new LinearLayout.LayoutParams(dp(76), dp(42)));
-            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(50)); rp.topMargin = dp(5);
-            list.addView(row, rp);
+    private Button button(String text, Runnable action) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(18);
+        button.setAllCaps(false);
+        button.setFocusable(true);
+        button.setMinHeight(dp(56));
+        button.setBackground(focusBg(Color.rgb(48, 51, 60), Color.rgb(74, 79, 92)));
+        button.setPadding(dp(18), dp(8), dp(18), dp(8));
+        keepFocusedVisible(button);
+        button.setOnClickListener(v -> action.run());
+        return button;
+    }
+
+    private void buildUi() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(Color.rgb(22, 24, 31));
+        scroll.setFocusable(false);
+        scroll.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(30), dp(24), dp(30), dp(30));
+        scroll.addView(content);
+        setContentView(scroll);
+
+        TextView title = label("阻擋廣告｜Blokada 4", 30);
+        title.setTypeface(null, Typeface.BOLD);
+        content.addView(title, new LinearLayout.LayoutParams(-1, dp(60)));
+
+        TextView desc = label(
+                "本版本改由 Blokada 4 負責廣告與追蹤網域阻擋。請使用下方按鈕開啟已安裝的 Blokada，或下載官方 APK 安裝。",
+                18);
+        desc.setTextColor(Color.LTGRAY);
+        desc.setGravity(Gravity.TOP);
+        content.addView(desc, new LinearLayout.LayoutParams(-1, dp(82)));
+
+        status = label("", 20);
+        status.setPadding(dp(16), 0, dp(16), 0);
+        status.setBackground(bg(Color.rgb(39, 42, 50), 0));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, dp(58));
+        sp.topMargin = dp(8);
+        content.addView(status, sp);
+
+        details = label("", 16);
+        details.setTextColor(Color.LTGRAY);
+        details.setGravity(Gravity.TOP);
+        LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(-1, dp(72));
+        dp.topMargin = dp(10);
+        content.addView(details, dp);
+
+        Button open = button("開啟 Blokada 4", this::openBlokada);
+        LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, dp(58));
+        op.topMargin = dp(12);
+        content.addView(open, op);
+
+        Button install = button("下載／安裝 Blokada 4", this::downloadBlokada);
+        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(-1, dp(58));
+        ip.topMargin = dp(10);
+        content.addView(install, ip);
+
+        TextView note = label(
+                "重要：Android 同一時間只能由一個一般 VPN App 取得 VPN 連線。CleanYourTV 內建 DNS 過濾已停用，請在 Blokada 4 首次啟動時允許 VPN 連線，並在 Blokada 內按下啟動按鈕。若電視已啟用其他 VPN，也請先關閉。",
+                16);
+        note.setTextColor(Color.rgb(255, 205, 120));
+        note.setGravity(Gravity.TOP);
+        LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(104));
+        np.topMargin = dp(16);
+        content.addView(note, np);
+
+        Button back = button("返回", this::finish);
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(58));
+        bp.topMargin = dp(14);
+        content.addView(back, bp);
+
+        refreshStatus();
+    }
+
+    private String installedBlokadaPackage() {
+        for (String packageName : BLOKADA_PACKAGES) {
+            try {
+                getPackageManager().getPackageInfo(packageName, 0);
+                return packageName;
+            } catch (Exception ignored) {
+                // Try the next known Blokada 4 distribution package.
+            }
         }
-        if (list.getChildCount() == 0) {
-            TextView empty = label("尚未新增自訂網域", 15); empty.setTextColor(Color.LTGRAY);
-            list.addView(empty, new LinearLayout.LayoutParams(-1, dp(40)));
+        return null;
+    }
+
+    private void refreshStatus() {
+        if (status == null) return;
+        String packageName = installedBlokadaPackage();
+        if (packageName == null) {
+            status.setText("狀態：尚未偵測到 Blokada 4");
+            details.setText("請先下載並安裝 Blokada 4。安裝完成後返回此頁，再選擇「開啟 Blokada 4」。");
+        } else {
+            status.setText("狀態：已安裝 Blokada 4");
+            details.setText("套件：" + packageName +
+                    "\n阻擋啟用狀態請以 Blokada 4 App 內顯示為準。");
         }
     }
-    private Set<String> rules(String key) {
-        String raw = prefs.getString(key, "");
-        LinkedHashSet<String> out = new LinkedHashSet<>();
-        if (raw != null) for (String s : raw.split("\\s+")) {
-            String d = normalize(s); if (!d.isEmpty()) out.add(d);
-        }
-        return out;
-    }
-    private void saveRules(String key, Set<String> set) {
-        StringBuilder b = new StringBuilder(); for (String d : set) b.append(d).append('\n');
-        prefs.edit().putString(key, b.toString()).apply();
-    }
-    private String normalize(String value) {
-        String d = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
-        while (d.startsWith(".")) d = d.substring(1);
-        while (d.endsWith(".")) d = d.substring(0, d.length()-1);
-        if (d.startsWith("http://")) d = d.substring(7);
-        if (d.startsWith("https://")) d = d.substring(8);
-        int slash = d.indexOf('/'); if (slash >= 0) d = d.substring(0, slash);
-        if (d.startsWith("*.") ) d = d.substring(2);
-        if (d.length() > 253 || d.isEmpty() || d.contains(" ") || d.contains(":")) return "";
-        for (String part : d.split("\\.")) {
-            if (part.isEmpty() || part.length() > 63 || !part.matches("[a-z0-9_-]+")) return "";
-        }
-        return d;
-    }
-    private void promptDomain(String key) {
-        EditText input = new EditText(this); input.setSingleLine(true);
-        input.setFocusable(true); input.setFocusableInTouchMode(true);
-        input.setPadding(dp(12), dp(10), dp(12), dp(10));
-        input.setBackground(focusBg(Color.rgb(39,42,50), Color.rgb(54,59,70)));
-        input.setHint("例如 ads.example.com"); input.setTextColor(Color.WHITE); input.setHintTextColor(Color.GRAY);
-        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        new AlertDialog.Builder(this).setTitle(key.equals(BLOCK) ? "新增封鎖網域" : "新增允許網域")
-                .setView(input).setNegativeButton("取消", null).setPositiveButton("新增", (d, w) -> {
-                    String domain = normalize(input.getText().toString());
-                    if (domain.isEmpty()) { Toast.makeText(this, "網域格式不正確", Toast.LENGTH_LONG).show(); return; }
-                    LinkedHashSet<String> set = new LinkedHashSet<>(rules(key)); set.add(domain); saveRules(key, set); refresh();
-                }).show();
-    }
-    private void toggleFilter() {
-        if (enabled()) {
-            Intent stop = new Intent(this, AdsFilterVpnService.class);
-            stop.setAction(AdsFilterVpnService.ACTION_STOP);
-            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(stop); else startService(stop);
-            prefs.edit().putBoolean("enabled", false).apply();
-            refresh();
+
+    private void openBlokada() {
+        String packageName = installedBlokadaPackage();
+        if (packageName == null) {
+            Toast.makeText(this, "尚未安裝 Blokada 4，請先下載安裝。", Toast.LENGTH_LONG).show();
+            downloadBlokada();
             return;
         }
-        Intent prepare = VpnService.prepare(this);
-        if (prepare != null) startActivityForResult(prepare, VPN_REQUEST);
-        else startFilter();
+        Intent launch = getPackageManager().getLaunchIntentForPackage(packageName);
+        if (launch == null) {
+            Toast.makeText(this, "找不到 Blokada 4 的啟動畫面。", Toast.LENGTH_LONG).show();
+            return;
+        }
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(launch);
     }
-    @Override protected void onActivityResult(int request, int result, Intent data) {
-        super.onActivityResult(request, result, data);
-        if (request == VPN_REQUEST && result == RESULT_OK) startFilter();
-    }
-    private void startFilter() {
-        prefs.edit().putBoolean("enabled", true).apply();
-        Intent service = new Intent(this, AdsFilterVpnService.class);
-        if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(service); else startService(service);
-        refresh();
+
+    private void downloadBlokada() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(OFFICIAL_APK));
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "無法開啟下載頁面：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 }
