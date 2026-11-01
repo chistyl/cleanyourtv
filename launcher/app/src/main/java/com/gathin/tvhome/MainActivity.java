@@ -3768,9 +3768,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weeklyWeatherView == null) return;
         SharedPreferences prefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
         boolean enabled = prefs.getBoolean("enabled", false);
-        weeklyWeatherView.setVisibility(!enabled ? View.GONE : (weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE));
-        if (!enabled) return;
+        if (!enabled) {
+            weeklyWeatherView.setVisibility(View.GONE);
+            return;
+        }
+        // Keep the overlay out of the first desktop frame while the forecast is loading.
+        // It becomes visible only after the final content has been laid out.
+        weeklyWeatherView.setVisibility(View.INVISIBLE);
         showWeeklyWeatherStatus("一週天氣  ·  正在取得預報…");
+        weeklyWeatherView.setVisibility(View.INVISIBLE);
         loadWeeklyWeather();
     }
 
@@ -3945,7 +3951,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             } catch (Exception ignored) { }
         }
         weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
-        weeklyWeatherView.setVisibility(View.VISIBLE);
+        weeklyWeatherView.setVisibility(weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE);
     }
 
     private JSONObject getJson(String address) throws Exception {
@@ -3959,7 +3965,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showWeatherError(String message) {
-        weatherHandler.post(() -> { if (weeklyWeatherView != null) showWeeklyWeatherStatus("一週天氣：" + message); });
+        weatherHandler.post(() -> {
+            if (weeklyWeatherView == null) return;
+            showWeeklyWeatherStatus("一週天氣：" + message);
+            weeklyWeatherView.setVisibility(weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE);
+        });
     }
 
     /** Weather symbols follow the reference card: distinct, instantly scannable icons per condition. */
