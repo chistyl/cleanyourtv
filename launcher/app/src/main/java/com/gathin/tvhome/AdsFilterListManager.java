@@ -21,7 +21,7 @@ final class AdsFilterListManager {
         "https://easylist.to/easylist/easylist.txt",
         "https://easylist.to/easylist/easyprivacy.txt"
     };
-    private static final Pattern ABP_RULE = Pattern.compile("^(\\@@)?\\|\\|([a-z0-9.-]+)\\^(?:\\$.*)?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ABP_RULE = Pattern.compile("^(\\@@)?\\|\\|([a-z0-9.-]+)\\^(?:\\$important)?$", Pattern.CASE_INSENSITIVE);
     private static final Pattern HOST = Pattern.compile("(?i)^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$");
     private AdsFilterListManager() {}
     interface Callback { void onComplete(int blocked, int allowed, String error); }
