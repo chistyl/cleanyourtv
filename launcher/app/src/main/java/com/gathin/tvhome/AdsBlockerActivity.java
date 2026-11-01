@@ -47,7 +47,7 @@ public class AdsBlockerActivity extends Activity {
             "applovin.com\nmoatads.com\nadsrvr.org\n" +
             "";
     private static final String DEFAULT_ALLOW = "";
-    private static final String DEFAULT_RULES_VERSION = "7";
+    private static final String DEFAULT_RULES_VERSION = "10";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -138,7 +138,7 @@ public class AdsBlockerActivity extends Activity {
         setContentView(scroll);
         TextView title = label("阻擋廣告", 30); title.setTypeface(null, Typeface.BOLD);
         content.addView(title, new LinearLayout.LayoutParams(-1, dp(58)));
-        TextView desc = label("透過本機 DNS 過濾常見廣告網域。首次啟用時，Android 會詢問是否允許 VPN 連線。", 17);
+        TextView desc = label("使用 uBlock Origin 清單擷取可由 DNS 阻擋的廣告／追蹤網域。首次啟用時，Android 會詢問是否允許 VPN 連線。", 17);
         desc.setTextColor(Color.LTGRAY); desc.setGravity(Gravity.TOP);
         content.addView(desc, new LinearLayout.LayoutParams(-1, dp(68)));
         status = label("", 19); status.setPadding(dp(16), 0, dp(16), 0); status.setBackground(bg(Color.rgb(39,42,50), 0));
@@ -146,12 +146,12 @@ public class AdsBlockerActivity extends Activity {
         toggle = button("", this::toggleFilter);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(58)); tp.topMargin = dp(12);
         content.addView(toggle, tp);
-        updateLists = button("更新過濾清單（EasyList + EasyPrivacy）", this::updateFilterLists);
+        updateLists = button("更新 uBlock 過濾清單", this::updateFilterLists);
         LinearLayout.LayoutParams up = new LinearLayout.LayoutParams(-1, dp(58)); up.topMargin = dp(10);
         content.addView(updateLists, up);
         listStatus = label("過濾清單：尚未下載", 15); listStatus.setTextColor(Color.LTGRAY);
         content.addView(listStatus, new LinearLayout.LayoutParams(-1, dp(42)));
-        TextView note = label("注意：YouTube 影片廣告、加密 DNS／DoH，以及與影片共用網域的廣告，可能無法由 DNS 規則攔截。", 15);
+        TextView note = label("注意：此版本採用 uBlock Origin 清單，但本機 DNS 僅能攔截網域層級規則；網頁元素隱藏、腳本及網址路徑規則不支援。YouTube 影片廣告、加密 DNS／DoH 及與影片共用網域的廣告，可能無法攔截。", 15);
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
         content.addView(note, np);
