@@ -5864,8 +5864,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.addView(value, new LinearLayout.LayoutParams(-1, -2));
         panel.addView(previewStage);
         FrameLayout seekWrap = new FrameLayout(this);
-        seekWrap.setFocusable(true);
-        seekWrap.setFocusableInTouchMode(true);
+        // The SeekBar itself must receive D-pad focus so Android can process LEFT/RIGHT
+        // as value changes; the wrapper only draws the rounded focus frame.
+        seekWrap.setFocusable(false);
+        seekWrap.setFocusableInTouchMode(false);
         seekWrap.setPadding((int)(12*density), (int)(6*density), (int)(12*density), (int)(6*density));
         GradientDrawable seekNormal = new GradientDrawable();
         seekNormal.setColor(0x18333333); seekNormal.setCornerRadius(12*density);
@@ -5875,7 +5877,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         seekWrap.setBackground(seekNormal);
         seekWrap.setDefaultFocusHighlightEnabled(false);
         seekWrap.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? seekFocused : seekNormal));
-        size.setFocusable(false);
+        size.setFocusable(true);
+        size.setFocusableInTouchMode(true);
+        size.setOnFocusChangeListener((v, focused) -> {
+            seekWrap.setBackground(focused ? seekFocused : seekNormal);
+            seekWrap.setElevation(focused ? 4f * density : 0f);
+        });
         seekWrap.addView(size, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
         panel.addView(seekWrap, new LinearLayout.LayoutParams(-1, -2));
 
@@ -5955,10 +5962,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) apply.getLayoutParams();
             lp.leftMargin = (int)(10*density); apply.setLayoutParams(lp);
         }
-        seekWrap.setId(View.generateViewId());
-        if (cancel != null) seekWrap.setNextFocusDownId(cancel.getId());
-        if (cancel != null) cancel.setNextFocusUpId(seekWrap.getId());
-        seekWrap.post(seekWrap::requestFocus);
+        size.setId(View.generateViewId());
+        if (cancel != null) size.setNextFocusDownId(cancel.getId());
+        if (cancel != null) cancel.setNextFocusUpId(size.getId());
+        size.post(size::requestFocus);
     }
 
     @Override
