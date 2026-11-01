@@ -211,6 +211,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView greeting;
     private View clockBlock;
     private HorizontalScrollView weeklyWeatherView;
+    private Runnable placeWeatherOverlay;
     private LinearLayout weeklyWeatherDays;
     private boolean weatherHiddenByScroll;
     private View btnInputs;
@@ -558,7 +559,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 clockBlock.getWidth(), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
         int glassIndex = root.indexOfChild(findViewById(R.id.glass));
         root.addView(weeklyWeatherView, Math.max(0, glassIndex), weatherOverlayLp);
-        Runnable placeWeatherOverlay = () -> {
+        placeWeatherOverlay = () -> {
             if (weeklyWeatherView == null || clockBlock == null || root == null) return;
             int[] rootPos = new int[2], clockPos = new int[2];
             root.getLocationInWindow(rootPos);
@@ -3952,6 +3953,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         weeklyWeatherDays.addView(forecast, new LinearLayout.LayoutParams(-1, -2));
         weeklyWeatherView.setVisibility(weatherHiddenByScroll ? View.INVISIBLE : View.VISIBLE);
+        // The overlay is outside leftBlock; after its first content arrives, re-anchor it immediately
+        // to the clock and force a fresh measure/layout instead of waiting for the next grid scroll.
+        weeklyWeatherView.post(() -> {
+            if (weeklyWeatherView == null || root == null) return;
+            if (placeWeatherOverlay != null) placeWeatherOverlay.run();
+            weeklyWeatherView.requestLayout();
+            weeklyWeatherView.invalidate();
+            root.requestLayout();
+            root.invalidate();
+        });
     }
 
     private JSONObject getJson(String address) throws Exception {
