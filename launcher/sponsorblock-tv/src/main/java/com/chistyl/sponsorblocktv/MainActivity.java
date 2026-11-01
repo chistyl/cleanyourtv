@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
                 Enumeration<InetAddress> addresses = ni.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress address = addresses.nextElement();
-                    if (!(address instanceof Inet4Address) || address.isLoopbackLinkLocal()) continue;
+                    if (!(address instanceof Inet4Address) || address.isLinkLocalAddress()) continue;
                     String ip = address.getHostAddress();
                     String[] paths = {"/ssdp/device-desc.xml", "/dd.xml", "/device.xml"};
                     for (String path : paths) {
