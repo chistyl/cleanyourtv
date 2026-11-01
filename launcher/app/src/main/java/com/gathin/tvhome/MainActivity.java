@@ -760,9 +760,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
             // No dock to push down: the grid starts at the top, with room for the first row's zoom and glass.
             if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
-            // Nudge the five-app dock down slightly so the complete first row remains visible
-            // on TV screens where the original bottom spacing made the app tiles look clipped.
-            if (MainActivity.this.dockRow) want += (int) (18 * density);
+            // Anchor the five-app dock close to the lower edge: the complete first row remains
+            // visible, while the next row starts below the viewport at rest. DPAD scrolling still
+            // brings the remaining apps into view.
+            if (MainActivity.this.dockRow) want += (int) (72 * density);
             // A single row never shows the names under its tiles (the title above the row names the app), so the
             // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
             if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
