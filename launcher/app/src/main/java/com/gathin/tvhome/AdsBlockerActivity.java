@@ -36,20 +36,47 @@ public class AdsBlockerActivity extends Activity {
     private TextView status;
     private Button toggle;
 
+    // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK =
             "doubleclick.net\ngooglesyndication.com\ngoogleadservices.com\nadservice.google.com\n" +
             "pagead2.googlesyndication.com\napp-measurement.com\nadcolony.com\nunityads.unity3d.com\n" +
-            "applovin.com\nmoatads.com\nadsrvr.org\n";
-    private static final String DEFAULT_ALLOW = "";
+            "applovin.com\nmoatads.com\nadsrvr.org\n" +
+            "googleads.g.doubleclick.net\nsecurepubads.g.doubleclick.net\npubads.g.doubleclick.net\n" +
+            "av1.xdrig.com\nme.xdrig.com\nwww.xdrig.com\n*.xdrig.com\n*.googlevideo.com\n" +
+            "footprints-pa.googleapis.com\nwww.googleapis.com\nwww.googleadservices.com\n" +
+            "youtubei.googleapis.com\nrr2---sn-un57sne7.googlevideo.com\n" +
+            "eligibility-panelresearch.googlevideo.com\nwww.googlevideo.com\n" +
+            "p-app.dhub.hinet.net\nads.aralego.com\nadsv.svc.litv.tv\nacs2.svc.litv.tv\n" +
+            "*.googleapis.com\n*.svc.litv.tv\n";
+    private static final String DEFAULT_ALLOW =
+            "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\n";
+    private static final String DEFAULT_RULES_VERSION = "2";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        if (!prefs.contains(BLOCK)) prefs.edit().putString(BLOCK, DEFAULT_BLOCK).putString(ALLOW, DEFAULT_ALLOW).apply();
+        installBundledRules();
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setStatusBarColor(Color.rgb(20, 21, 27));
         getWindow().setNavigationBarColor(Color.rgb(20, 21, 27));
         buildUi();
+    }
+
+    private void installBundledRules() {
+        if (DEFAULT_RULES_VERSION.equals(prefs.getString("bundled_rules_version", ""))) return;
+        LinkedHashSet<String> block = new LinkedHashSet<>(rules(BLOCK));
+        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
+        for (String item : DEFAULT_BLOCK.split("\\s+")) {
+            String domain = normalize(item);
+            if (!domain.isEmpty()) block.add(domain);
+        }
+        for (String item : DEFAULT_ALLOW.split("\\s+")) {
+            String domain = normalize(item);
+            if (!domain.isEmpty()) allow.add(domain);
+        }
+        saveRules(BLOCK, block);
+        saveRules(ALLOW, allow);
+        prefs.edit().putString("bundled_rules_version", DEFAULT_RULES_VERSION).apply();
     }
 
     @Override protected void onResume() { super.onResume(); if (content != null) refresh(); }
