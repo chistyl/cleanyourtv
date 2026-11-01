@@ -4061,6 +4061,38 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (weatherDialog.getWindow() != null) weatherDialog.getWindow().setBackgroundDrawable(rounded);
         });
         weatherDialog.show();
+        Button cancelWeather = weatherDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button saveWeather = weatherDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (cancelWeather != null && saveWeather != null) {
+            cancelWeather.setAllCaps(false); saveWeather.setAllCaps(false);
+            cancelWeather.setFocusable(true); saveWeather.setFocusable(true);
+            cancelWeather.setFocusableInTouchMode(true); saveWeather.setFocusableInTouchMode(true);
+            cancelWeather.setDefaultFocusHighlightEnabled(false); saveWeather.setDefaultFocusHighlightEnabled(false);
+            cancelWeather.setMinWidth((int)(104*density)); saveWeather.setMinWidth((int)(112*density));
+            cancelWeather.setMinHeight((int)(52*density)); saveWeather.setMinHeight((int)(52*density));
+            LinearLayout.LayoutParams cancelLp = (LinearLayout.LayoutParams) cancelWeather.getLayoutParams();
+            cancelLp.rightMargin = (int)(22*density); cancelWeather.setLayoutParams(cancelLp);
+            LinearLayout.LayoutParams saveLp = (LinearLayout.LayoutParams) saveWeather.getLayoutParams();
+            saveLp.leftMargin = (int)(6*density); saveWeather.setLayoutParams(saveLp);
+            GradientDrawable normal = new GradientDrawable(); normal.setColor(0xFF343B47); normal.setCornerRadius(12*density);
+            GradientDrawable focused = new GradientDrawable(); focused.setColor(0xFF46566B);
+            focused.setCornerRadius(12*density); focused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
+            View.OnFocusChangeListener focus = (v, hasFocus) -> v.setBackground(hasFocus ? focused : normal);
+            cancelWeather.setBackground(normal); saveWeather.setBackground(normal);
+            cancelWeather.setOnFocusChangeListener(focus); saveWeather.setOnFocusChangeListener(focus);
+            cancelWeather.setId(View.generateViewId()); saveWeather.setId(View.generateViewId());
+            cancelWeather.setNextFocusRightId(saveWeather.getId()); saveWeather.setNextFocusLeftId(cancelWeather.getId());
+            city.setNextFocusDownId(cancelWeather.getId());
+            cityMode.setNextFocusDownId(city.getId());
+            device.setNextFocusDownId(cityMode.getId());
+            toggle.setNextFocusDownId(device.getId());
+            cancelWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
+            saveWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
+            toggle.setNextFocusUpId(saveWeather.getId());
+            toggle.setOnFocusChangeListener((v, hasFocus) -> v.setAlpha(hasFocus ? 1f : 0.92f));
+            device.setNextFocusRightId(cityMode.getId()); cityMode.setNextFocusLeftId(device.getId());
+            toggle.post(toggle::requestFocus);
+        }
     }
 
     /** 桌面顯示：APP／資料夾分頁，勾選代表隱藏。APP 使用 TV 16:9 橫幅預覽。 */
@@ -4537,6 +4569,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         Button cancelButton = createDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
         Button createButton = createDialog.getButton(AlertDialog.BUTTON_POSITIVE);
         if (cancelButton != null && createButton != null) {
+            cancelButton.setAllCaps(false); createButton.setAllCaps(false);
+            cancelButton.setMinWidth((int)(104*density)); createButton.setMinWidth((int)(104*density));
+            cancelButton.setMinHeight((int)(50*density)); createButton.setMinHeight((int)(50*density));
+            LinearLayout.LayoutParams cancelLp = (LinearLayout.LayoutParams) cancelButton.getLayoutParams();
+            cancelLp.rightMargin = (int)(20*density); cancelButton.setLayoutParams(cancelLp);
+            LinearLayout.LayoutParams createLp = (LinearLayout.LayoutParams) createButton.getLayoutParams();
+            createLp.leftMargin = (int)(6*density); createButton.setLayoutParams(createLp);
             cancelButton.setId(View.generateViewId());
             createButton.setId(View.generateViewId());
             name.setNextFocusDownId(cancelButton.getId());
@@ -4555,8 +4594,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focused.setStroke(Math.max(2, (int)(2*density)), Color.WHITE);
                 button.setBackground(normal);
                 button.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : normal));
-                button.setMinHeight((int)(46*density));
+                button.setMinHeight((int)(50*density));
+                button.setMinWidth((int)(104*density));
             }
+            name.setNextFocusDownId(cancelButton.getId());
+            cancelButton.setNextFocusRightId(createButton.getId());
+            createButton.setNextFocusLeftId(cancelButton.getId());
+            cancelButton.setNextFocusUpId(name.getId());
+            createButton.setNextFocusUpId(name.getId());
         }
         name.post(name::requestFocus);
     }
