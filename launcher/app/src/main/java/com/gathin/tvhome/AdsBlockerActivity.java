@@ -213,8 +213,12 @@ public class AdsBlockerActivity extends Activity {
     }
     private void toggleFilter() {
         if (enabled()) {
-            stopService(new Intent(this, AdsFilterVpnService.class));
-            prefs.edit().putBoolean("enabled", false).apply(); refresh(); return;
+            Intent stop = new Intent(this, AdsFilterVpnService.class);
+            stop.setAction(AdsFilterVpnService.ACTION_STOP);
+            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(stop); else startService(stop);
+            prefs.edit().putBoolean("enabled", false).apply();
+            refresh();
+            return;
         }
         Intent prepare = VpnService.prepare(this);
         if (prepare != null) startActivityForResult(prepare, VPN_REQUEST);
