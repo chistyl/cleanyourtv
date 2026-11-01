@@ -6162,6 +6162,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.setFocusable(true);
         row.setFocusableInTouchMode(true);
         row.setClickable(true);
+        row.setDefaultFocusHighlightEnabled(false);
+        row.setId(View.generateViewId());
+        GradientDrawable normal = new GradientDrawable();
+        normal.setColor(0x00343B47);
+        normal.setCornerRadius(10 * density);
+        GradientDrawable focused = new GradientDrawable();
+        focused.setColor(0xFF00AFA5);
+        focused.setCornerRadius(10 * density);
+        focused.setStroke(Math.max(3, (int)(3 * density)), Color.WHITE);
+        row.setBackground(normal);
+        TextView rowTitle = row.findViewById(R.id.title);
+        if (rowTitle != null) rowTitle.setTextColor(Color.WHITE);
+        row.setOnFocusChangeListener((v, hasFocus) -> {
+            v.setBackground(hasFocus ? focused : normal);
+            v.setElevation(hasFocus ? 6 * density : 0f);
+            v.setScaleX(hasFocus ? 1.015f : 1f);
+            v.setScaleY(hasFocus ? 1.015f : 1f);
+        });
+        if (rows.getChildCount() > 0) {
+            View previous = rows.getChildAt(rows.getChildCount() - 1);
+            previous.setNextFocusDownId(row.getId());
+            row.setNextFocusUpId(previous.getId());
+        }
         row.setOnClickListener(v -> {
             popup.dismiss();
             action.run();
