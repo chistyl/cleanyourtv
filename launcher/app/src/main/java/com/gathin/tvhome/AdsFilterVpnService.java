@@ -342,7 +342,7 @@ public class AdsFilterVpnService extends VpnService {
             int kept = 1;
             for (String entry : entries) {
                 if (entry == null || entry.trim().isEmpty() || kept >= 60) continue;
-                next.append('\\n').append(entry);
+                next.append('\n').append(entry);
                 kept++;
             }
             p.edit().putString("dns_diagnostics", next.toString()).apply();
