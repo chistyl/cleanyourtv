@@ -6442,7 +6442,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             row.setNextFocusUpId(previous.getId());
         }
         LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
-        rowLp.height = (int)(52*density);
+        rowLp.height = (int)(46*density);
         rowLp.bottomMargin = (int)(2*density);
         row.setLayoutParams(rowLp);
         rows.addView(row);
