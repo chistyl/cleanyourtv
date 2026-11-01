@@ -4140,6 +4140,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final boolean[] showingApps = {true};
         Runnable render = () -> {
             list.removeAllViews();
+            View[] previousFocusableRow = {null};
             GradientDrawable active = new GradientDrawable(); active.setColor(0xFF465365); active.setCornerRadius(12*density);
             GradientDrawable idle = new GradientDrawable(); idle.setColor(0xFF303743); idle.setCornerRadius(12*density);
             appTab.setBackground(showingApps[0] ? active : idle);
@@ -4187,7 +4188,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     check.setFocusable(false);
                     check.setOnCheckedChangeListener((button, value) -> selected.put("app:" + pkg, value));
                     row.addView(check, new LinearLayout.LayoutParams((int)(56*density), (int)(64*density)));
-                    row.setFocusable(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    row.setFocusable(true); row.setFocusableInTouchMode(true); row.setClickable(true); row.setMinimumHeight((int)(76*density));
+                    row.setId(View.generateViewId());
+                    if (previousFocusableRow[0] != null) {
+                        previousFocusableRow[0].setNextFocusDownId(row.getId());
+                        row.setNextFocusUpId(previousFocusableRow[0].getId());
+                    } else {
+                        row.setNextFocusUpId(showingApps[0] ? appTab.getId() : folderTab.getId());
+                    }
+                    previousFocusableRow[0] = row;
+                    row.setOnFocusChangeListener((v, focused) -> {
+                        if (focused) scroll.post(() -> scroll.requestChildRectangleOnScreen(v,
+                                new android.graphics.Rect(0, 0, v.getWidth(), v.getHeight()), false));
+                    });
                     GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x00222832); rowBg.setCornerRadius(10*density);
                     row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
                     row.setOnFocusChangeListener((v, focused) -> {
@@ -4279,11 +4292,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         TextView cancel = new TextView(this), save = new TextView(this);
         cancel.setText("取消"); save.setText("儲存");
         cancel.setFocusable(true); save.setFocusable(true);
+        cancel.setFocusableInTouchMode(true); save.setFocusableInTouchMode(true);
+        cancel.setDefaultFocusHighlightEnabled(false); save.setDefaultFocusHighlightEnabled(false);
         cancel.setTextColor(0xFFE0E5EC); save.setTextColor(Color.WHITE);
         cancel.setGravity(Gravity.CENTER); save.setGravity(Gravity.CENTER);
         cancel.setPadding((int)(18*density), (int)(10*density), (int)(18*density), (int)(10*density));
         save.setPadding((int)(22*density), (int)(10*density), (int)(22*density), (int)(10*density));
         GradientDrawable saveBg = new GradientDrawable(); saveBg.setColor(0xFF52647B); saveBg.setCornerRadius(10*density); save.setBackground(saveBg);
+        GradientDrawable actionNormal = new GradientDrawable(); actionNormal.setColor(0xFF343B47); actionNormal.setCornerRadius(10*density);
+        GradientDrawable actionFocused = new GradientDrawable(); actionFocused.setColor(0xFF46566B); actionFocused.setCornerRadius(10*density);
+        actionFocused.setStroke(Math.max(2, (int)(2*density)), Color.WHITE);
+        cancel.setBackground(actionNormal); save.setBackground(saveBg);
+        View.OnFocusChangeListener actionFocus = (v, focused) -> v.setBackground(focused ? actionFocused :
+                (v == save ? saveBg : actionNormal));
+        cancel.setOnFocusChangeListener(actionFocus); save.setOnFocusChangeListener(actionFocus);
+        cancel.setId(View.generateViewId()); save.setId(View.generateViewId());
+        cancel.setNextFocusRightId(save.getId()); save.setNextFocusLeftId(cancel.getId());
         actions.addView(cancel); actions.addView(save);
         outer.addView(actions, new LinearLayout.LayoutParams(-1, -2));
         cancel.setOnClickListener(v -> dialog.dismiss());
@@ -4303,6 +4327,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             dialog.getWindow().setLayout(Math.min((int)(780*density), getResources().getDisplayMetrics().widthPixels-(int)(48*density)),
                     Math.min((int)(680*density), getResources().getDisplayMetrics().heightPixels-(int)(48*density)));
         }
+        // Explicit remote-control path: tabs -> list rows -> Cancel -> Save.
+        appTab.setNextFocusDownId(list.getChildCount() > 0 ? list.getChildAt(0).getId() : cancel.getId());
+        folderTab.setNextFocusDownId(list.getChildCount() > 0 ? list.getChildAt(0).getId() : cancel.getId());
+        cancel.setNextFocusUpId(list.getChildCount() > 0 ? list.getChildAt(list.getChildCount() - 2).getId() : appTab.getId());
+        save.setNextFocusUpId(cancel.getId());
+        cancel.setNextFocusRightId(save.getId()); save.setNextFocusLeftId(cancel.getId());
         outer.post(() -> appTab.requestFocus());
     }
 
