@@ -350,7 +350,7 @@ public class AdsFilterVpnService extends VpnService {
             seen.add(domain);
             StringBuilder saved = new StringBuilder();
             for (String item : seen) {
-                if (saved.length() > 0) saved.append('\\n');
+                if (saved.length() > 0) saved.append('\n');
                 saved.append(item);
             }
             p.edit().putString("dns_diagnostics_seen", saved.toString()).apply();
