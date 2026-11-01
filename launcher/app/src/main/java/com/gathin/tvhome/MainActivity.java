@@ -788,6 +788,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Keep the glass glued to its tile while the grid scrolls.
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            // Hide the dock row as a whole after it crosses the viewport's upper edge.
+            // INVISIBLE preserves layout and focus geometry; it reappears when scrolling back up.
+            private void updateDockRowVisibility(RecyclerView rv) {
+                if (!dockRow || singleRow) return;
+                for (int i = 0; i < rv.getChildCount(); i++) {
+                    View child = rv.getChildAt(i);
+                    int position = rv.getChildAdapterPosition(child);
+                    if (position >= 0 && position < COLUMNS) {
+                        child.setVisibility(child.getTop() < 0 ? View.INVISIBLE : View.VISIBLE);
+                    }
+                }
+            }
+
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 updateDockRowVisibility(rv);
@@ -803,19 +816,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         });
-
-        // Hide the first (dock) row completely once it scrolls above the grid viewport.
-        // INVISIBLE preserves each cell's measured size and focus geometry; scrolling back up restores it.
-        private void updateDockRowVisibility(RecyclerView rv) {
-            if (!dockRow || singleRow) return;
-            for (int i = 0; i < rv.getChildCount(); i++) {
-                View child = rv.getChildAt(i);
-                int position = rv.getChildAdapterPosition(child);
-                if (position >= 0 && position < COLUMNS) {
-                    child.setVisibility(child.getTop() < 0 ? View.INVISIBLE : View.VISIBLE);
-                }
-            }
-        }
 
         // Hide the weather panel visually while preserving its measured height.
         // Changing a header child to GONE resizes the weighted RecyclerView during DPAD navigation;
