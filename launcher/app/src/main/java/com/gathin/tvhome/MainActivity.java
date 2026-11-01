@@ -4045,7 +4045,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         toggle.setPadding((int)(10*density), (int)(8*density), (int)(10*density), (int)(8*density));
         toggle.setBackground(remoteWeatherFocusBackground(false));
         toggle.setOnFocusChangeListener((v, focused) -> v.setBackground(remoteWeatherFocusBackground(focused)));
-        toggle.setChecked(prefs.getBoolean("enabled", false)); content.addView(toggle);
+        toggle.setChecked(prefs.getBoolean("enabled", false));
+        toggle.setClickable(true);
+        toggle.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER
+                    || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+                if (event.getAction() == KeyEvent.ACTION_UP) {
+                    toggle.setChecked(!toggle.isChecked());
+                    v.playSoundEffect(android.view.SoundEffectConstants.CLICK);
+                }
+                return true;
+            }
+            return false;
+        });
+        content.addView(toggle);
         android.widget.RadioGroup modes = new android.widget.RadioGroup(this);
         modes.setOrientation(LinearLayout.VERTICAL);
         android.widget.RadioButton device = new android.widget.RadioButton(this);
@@ -4144,7 +4157,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
             saveWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
             toggle.setNextFocusUpId(saveWeather.getId());
-            toggle.setOnFocusChangeListener((v, hasFocus) -> v.setAlpha(hasFocus ? 1f : 0.92f));
+            toggle.setOnFocusChangeListener((v, hasFocus) -> {
+                v.setBackground(remoteWeatherFocusBackground(hasFocus));
+                v.setAlpha(hasFocus ? 1f : 0.92f);
+                v.setElevation(hasFocus ? 4f * density : 0f);
+            });
             device.setNextFocusRightId(cityMode.getId()); cityMode.setNextFocusLeftId(device.getId());
             toggle.post(toggle::requestFocus);
         }
