@@ -4764,14 +4764,52 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             createButton.setNextFocusLeftId(cancelButton.getId());
             name.setNextFocusDownId(cancelButton.getId());
             cancelButton.setNextFocusRightId(createButton.getId());
+            cancelButton.setNextFocusDownId(createButton.getId());
             createButton.setNextFocusLeftId(cancelButton.getId());
+            createButton.setNextFocusDownId(cancelButton.getId());
             cancelButton.setNextFocusUpId(name.getId());
             createButton.setNextFocusUpId(name.getId());
+
+            // Explicit TV remote routing: UP from either action returns to the name field;
+            // DOWN from the field enters Cancel; horizontal navigation switches the actions.
+            name.setOnKeyListener((v, keyCode, event) -> {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    cancelButton.requestFocus();
+                    return true;
+                }
+                return false;
+            });
+            View.OnKeyListener actionNavigation = (v, keyCode, event) -> {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    name.requestFocus();
+                    name.setSelection(name.getText().length());
+                    return true;
+                }
+                if (v == cancelButton && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    createButton.requestFocus();
+                    return true;
+                }
+                if (v == createButton && keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    cancelButton.requestFocus();
+                    return true;
+                }
+                return false;
+            };
+            cancelButton.setOnKeyListener(actionNavigation);
+            createButton.setOnKeyListener(actionNavigation);
         }
         name.setId(View.generateViewId());
         name.setNextFocusDownId(cancelButton != null ? cancelButton.getId() : View.NO_ID);
-        if (cancelButton != null) cancelButton.setNextFocusUpId(name.getId());
-        if (createButton != null) createButton.setNextFocusUpId(name.getId());
+        if (cancelButton != null) {
+            cancelButton.setNextFocusUpId(name.getId());
+            cancelButton.setNextFocusDownId(createButton != null ? createButton.getId() : View.NO_ID);
+        }
+        if (createButton != null) {
+            createButton.setNextFocusUpId(name.getId());
+            createButton.setNextFocusDownId(cancelButton != null ? cancelButton.getId() : View.NO_ID);
+        }
         name.post(() -> { name.requestFocus(); name.setSelection(name.getText().length()); });
     }
 
