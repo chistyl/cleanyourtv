@@ -219,8 +219,18 @@ public class AdsBlockerActivity extends Activity {
         AdsFilterListManager.update(this, (blocked, allowed, error) -> {
             updateLists.setEnabled(true);
             updateLists.setText("更新過濾清單（EasyList + EasyPrivacy）");
-            if (error != null) Toast.makeText(this, "更新失敗：" + error, Toast.LENGTH_LONG).show();
-            else Toast.makeText(this, "更新完成：封鎖 " + blocked + "、允許 " + allowed + " 個網域。重新啟動阻擋服務後生效。", Toast.LENGTH_LONG).show();
+            if (error != null && error.startsWith("PARTIAL:")) {
+                Toast.makeText(this, "部分更新完成：封鎖 " + blocked + "、允許 " + allowed + " 個網域。\n" + error.substring(8), Toast.LENGTH_LONG).show();
+            } else if (error != null) {
+                Toast.makeText(this, "更新失敗：" + error, Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "更新完成：封鎖 " + blocked + "、允許 " + allowed + " 個網域。", Toast.LENGTH_LONG).show();
+            }
+            if (enabled()) {
+                Intent reload = new Intent(this, AdsFilterVpnService.class);
+                reload.setAction(AdsFilterVpnService.ACTION_RELOAD_LISTS);
+                if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(reload); else startService(reload);
+            }
             refresh();
         });
     }
