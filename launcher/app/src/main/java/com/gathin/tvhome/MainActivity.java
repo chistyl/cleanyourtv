@@ -5708,7 +5708,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.setClipChildren(false);
         panel.addView(value, new LinearLayout.LayoutParams(-1, -2));
         panel.addView(previewStage);
-        panel.addView(size, new LinearLayout.LayoutParams(-1, -2));
+        FrameLayout seekWrap = new FrameLayout(this);
+        seekWrap.setFocusable(true);
+        seekWrap.setFocusableInTouchMode(true);
+        seekWrap.setPadding((int)(12*density), (int)(6*density), (int)(12*density), (int)(6*density));
+        GradientDrawable seekNormal = new GradientDrawable();
+        seekNormal.setColor(0x18333333); seekNormal.setCornerRadius(12*density);
+        GradientDrawable seekFocused = new GradientDrawable();
+        seekFocused.setColor(0xFF263B43); seekFocused.setCornerRadius(12*density);
+        seekFocused.setStroke(Math.max(3,(int)(3*density)), 0xFF00D5C8);
+        seekWrap.setBackground(seekNormal);
+        seekWrap.setDefaultFocusHighlightEnabled(false);
+        seekWrap.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? seekFocused : seekNormal));
+        size.setFocusable(false);
+        seekWrap.addView(size, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
+        panel.addView(seekWrap, new LinearLayout.LayoutParams(-1, -2));
 
         Runnable updatePreview = () -> {
             int adjustment = size.getProgress() - 50;
@@ -5746,6 +5760,50 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).create();
         sizeDialog.setOnCancelListener(dialog -> reopenPendingFolderAfterAppEdit());
         sizeDialog.show();
+        Button cancel = sizeDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button reset = sizeDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        Button apply = sizeDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        Button[] actions = {cancel, reset, apply};
+        GradientDrawable actionNormal = new GradientDrawable();
+        actionNormal.setColor(0xFF343B47); actionNormal.setCornerRadius(14*density);
+        GradientDrawable actionFocused = new GradientDrawable();
+        actionFocused.setColor(0xFF00AFA5); actionFocused.setCornerRadius(14*density);
+        actionFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        for (int i = 0; i < actions.length; i++) {
+            Button button = actions[i];
+            if (button == null) continue;
+            button.setFocusable(true); button.setFocusableInTouchMode(true);
+            button.setDefaultFocusHighlightEnabled(false); button.setAllCaps(false);
+            button.setMinWidth((int)(104*density)); button.setMinHeight((int)(52*density));
+            button.setBackground(actionNormal);
+            button.setOnFocusChangeListener((v, focused) -> {
+                v.setBackground(focused ? actionFocused : actionNormal);
+                ((Button)v).setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
+                v.setScaleX(focused ? 1.025f : 1f); v.setScaleY(focused ? 1.025f : 1f);
+            });
+            button.setId(View.generateViewId());
+            if (i > 0 && actions[i-1] != null) {
+                button.setNextFocusLeftId(actions[i-1].getId());
+                actions[i-1].setNextFocusRightId(button.getId());
+            }
+        }
+        if (cancel != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) cancel.getLayoutParams();
+            lp.rightMargin = (int)(10*density); cancel.setLayoutParams(lp);
+        }
+        if (reset != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) reset.getLayoutParams();
+            lp.leftMargin = (int)(6*density); lp.rightMargin = (int)(6*density);
+            reset.setLayoutParams(lp);
+        }
+        if (apply != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) apply.getLayoutParams();
+            lp.leftMargin = (int)(10*density); apply.setLayoutParams(lp);
+        }
+        seekWrap.setId(View.generateViewId());
+        if (cancel != null) seekWrap.setNextFocusDownId(cancel.getId());
+        if (cancel != null) cancel.setNextFocusUpId(seekWrap.getId());
+        seekWrap.post(seekWrap::requestFocus);
     }
 
     @Override
