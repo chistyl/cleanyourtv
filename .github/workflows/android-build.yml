@@ -11,6 +11,7 @@ on:
       - cytv-gold05-weather-initial-visible
       - v210-duboku-playback-fix
       - v210-network-update-stability
+      - v210-ethernet-vpn-fix
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
