@@ -27,11 +27,18 @@ public class AdsFilterVpnService extends VpnService {
     private static final String DNS_CLIENT = "10.13.0.1";
     private static final String DNS_LOCAL = "10.13.0.2";
     private static final String UPSTREAM = "1.1.1.1";
+    static final String ACTION_STOP = "com.gathin.tvhome.action.STOP_AD_FILTER";
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ParcelFileDescriptor tunnel;
     private Thread worker;
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
+            stopFilter();
+            stopSelf(startId);
+            return START_NOT_STICKY;
+        }
         if (running.get()) return START_STICKY;
         try {
             startNotice();
@@ -215,5 +222,6 @@ public class AdsFilterVpnService extends VpnService {
         if (tunnel != null) { try { tunnel.close(); } catch (Exception ignored) {} tunnel = null; }
         if (worker != null) { worker.interrupt(); worker = null; }
         stopForeground(true);
+        stopSelf();
     }
 }
