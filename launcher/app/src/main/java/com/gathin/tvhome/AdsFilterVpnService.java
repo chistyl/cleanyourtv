@@ -20,6 +20,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.Collections;
@@ -38,7 +40,9 @@ public class AdsFilterVpnService extends VpnService {
     private ParcelFileDescriptor tunnel;
     private Thread worker;
     private volatile Network underlyingNetwork;
+    private final Set<Network> physicalNetworks = Collections.synchronizedSet(new LinkedHashSet<>());
     private ConnectivityManager.NetworkCallback networkCallback;
+    private ConnectivityManager.NetworkCallback defaultNetworkCallback;
     private volatile Set<String> subscribedBlock = Collections.emptySet();
     private volatile Set<String> subscribedAllow = Collections.emptySet();
 
@@ -65,27 +69,33 @@ public class AdsFilterVpnService extends VpnService {
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override public void onAvailable(Network network) {
                     NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                    if (isPhysicalInternet(caps)) physicalNetworks.add(network);
+                    refreshUnderlyingNetworks(cm);
                 }
                 @Override public void onLost(Network network) {
-                    if (network.equals(underlyingNetwork)) {
-                        underlyingNetwork = null;
-                        Network replacement = findPhysicalNetwork(cm);
-                        if (replacement != null) updateUnderlyingNetwork(replacement);
-                        else {
-                            try { setUnderlyingNetworks(new Network[0]); }
-                            catch (Exception e) { Log.w(TAG, "Unable to clear lost underlying network", e); }
-                        }
-                    }
+                    physicalNetworks.remove(network);
+                    refreshUnderlyingNetworks(cm);
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
-                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                    if (isPhysicalInternet(caps)) physicalNetworks.add(network);
+                    else physicalNetworks.remove(network);
+                    refreshUnderlyingNetworks(cm);
+                }
+            };
+            defaultNetworkCallback = new ConnectivityManager.NetworkCallback() {
+                @Override public void onAvailable(Network network) { refreshUnderlyingNetworks(cm); }
+                @Override public void onLost(Network network) { refreshUnderlyingNetworks(cm); }
+                @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
+                    refreshUnderlyingNetworks(cm);
                 }
             };
             cm.registerNetworkCallback(request, networkCallback);
-            Network initial = findPhysicalNetwork(cm);
-            if (initial == null) throw new IllegalStateException("No active Wi-Fi or Ethernet network");
-            updateUnderlyingNetwork(initial);
+            cm.registerDefaultNetworkCallback(defaultNetworkCallback);
+            for (Network candidate : cm.getAllNetworks()) {
+                if (isPhysicalInternet(cm.getNetworkCapabilities(candidate))) physicalNetworks.add(candidate);
+            }
+            refreshUnderlyingNetworks(cm);
+            if (underlyingNetwork == null) throw new IllegalStateException("No active Wi-Fi or Ethernet network");
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
                     .setMtu(1500)
@@ -122,14 +132,46 @@ public class AdsFilterVpnService extends VpnService {
         return null;
     }
 
-    private void updateUnderlyingNetwork(Network network) {
-        underlyingNetwork = network;
+    /**
+     * Keep every usable physical Wi-Fi/Ethernet network attached to the VPN.
+     * Put Android's current default network first, then retain the other link as
+     * a fallback so plugging/unplugging Ethernet or toggling Wi-Fi does not tear
+     * down the DNS tunnel.
+     */
+    private synchronized void refreshUnderlyingNetworks(ConnectivityManager cm) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                setUnderlyingNetworks(new Network[]{network});
+            Network active = cm.getActiveNetwork();
+            List<Network> ordered = new ArrayList<>();
+            if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) {
+                physicalNetworks.add(active);
+                ordered.add(active);
             }
+            synchronized (physicalNetworks) {
+                for (Network candidate : physicalNetworks) {
+                    if (candidate != null && !candidate.equals(active)
+                            && isPhysicalInternet(cm.getNetworkCapabilities(candidate))) {
+                        ordered.add(candidate);
+                    }
+                }
+            }
+            // Also reconcile against the system's current network list. Callback
+            // delivery can lag briefly during Wi-Fi/Ethernet handover.
+            for (Network candidate : cm.getAllNetworks()) {
+                if (!candidate.equals(active)
+                        && isPhysicalInternet(cm.getNetworkCapabilities(candidate))
+                        && !ordered.contains(candidate)) {
+                    physicalNetworks.add(candidate);
+                    ordered.add(candidate);
+                }
+            }
+            physicalNetworks.retainAll(ordered);
+            underlyingNetwork = ordered.isEmpty() ? null : ordered.get(0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setUnderlyingNetworks(ordered.toArray(new Network[0]));
+            }
+            if (ordered.isEmpty()) Log.w(TAG, "No physical Wi-Fi/Ethernet network currently available");
         } catch (Exception e) {
-            Log.w(TAG, "Unable to update VPN underlying network", e);
+            Log.w(TAG, "Unable to refresh VPN underlying networks", e);
         }
     }
 
@@ -299,10 +341,17 @@ public class AdsFilterVpnService extends VpnService {
     private void stopFilter() {
         running.set(false);
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        if (cm != null && networkCallback != null) {
-            try { cm.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
-            networkCallback = null;
+        if (cm != null) {
+            if (networkCallback != null) {
+                try { cm.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
+                networkCallback = null;
+            }
+            if (defaultNetworkCallback != null) {
+                try { cm.unregisterNetworkCallback(defaultNetworkCallback); } catch (Exception ignored) {}
+                defaultNetworkCallback = null;
+            }
         }
+        physicalNetworks.clear();
         underlyingNetwork = null;
         if (tunnel != null) { try { tunnel.close(); } catch (Exception ignored) {} tunnel = null; }
         if (worker != null) { worker.interrupt(); worker = null; }
