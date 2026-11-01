@@ -286,53 +286,72 @@ public class AdsFilterVpnService extends VpnService {
         return makeReply(p, ihl, srcPort, answer);
     }
 
+    // Refresh stale network handles before forwarding. Keep a healthy Ethernet
+    // selection stable; only discover a replacement when the selected network is gone.
+    private Network refreshNetworkForDns() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (cm == null) return underlyingNetwork;
+        Network current = underlyingNetwork;
+        if (current != null && isPhysicalInternet(cm.getNetworkCapabilities(current))) {
+            return current;
+        }
+        Network replacement = findPhysicalNetwork(cm);
+        if (replacement != null) updateUnderlyingNetwork(replacement);
+        return replacement;
+    }
+
+    private byte[] queryDnsOnNetwork(Network network, InetAddress dns, byte[] query) {
+        DatagramSocket socket = null;
+        try {
+            socket = new DatagramSocket();
+            if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
+            network.bindSocket(socket);
+            socket.setSoTimeout(2200);
+            socket.send(new DatagramPacket(query, query.length, dns, 53));
+            byte[] buf = new byte[4096];
+            DatagramPacket reply = new DatagramPacket(buf, buf.length);
+            socket.receive(reply);
+            byte[] out = new byte[reply.getLength()];
+            System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
+            return out;
+        } catch (Exception e) {
+            Log.w(TAG, "DNS upstream failed on selected network (" + dns.getHostAddress() + ")", e);
+            return null;
+        } finally {
+            if (socket != null) socket.close();
+        }
+    }
+
     private byte[] forward(byte[] query) {
-        Network underlying = underlyingNetwork;
-        if (underlying == null) {
+        Network network = refreshNetworkForDns();
+        if (network == null) {
             Log.w(TAG, "No physical network available for DNS forwarding");
             return null;
         }
-        List<InetAddress> candidates = upstreamServers;
+
+        // Try DHCP-provided DNS first, then a public fallback even when the DHCP
+        // list contains a non-responsive server. A failed query gets one retry
+        // after refreshing the physical network and its DNS configuration.
+        LinkedHashSet<InetAddress> candidates = new LinkedHashSet<>(upstreamServers);
+        InetAddress fallback = parseAddress(UPSTREAM);
+        candidates.add(fallback);
         for (InetAddress dns : candidates) {
-            DatagramSocket socket = null;
-            try {
-                socket = new DatagramSocket();
-                if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
-                underlying.bindSocket(socket);
-                socket.setSoTimeout(1800);
-                socket.send(new DatagramPacket(query, query.length, dns, 53));
-                byte[] buf = new byte[4096];
-                DatagramPacket reply = new DatagramPacket(buf, buf.length);
-                socket.receive(reply);
-                byte[] out = new byte[reply.getLength()];
-                System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
-                return out;
-            } catch (Exception e) {
-                Log.w(TAG, "DNS upstream failed: " + dns.getHostAddress(), e);
-            } finally {
-                if (socket != null) socket.close();
+            byte[] answer = queryDnsOnNetwork(network, dns, query);
+            if (answer != null) return answer;
+        }
+
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        Network refreshed = refreshNetworkForDns();
+        if (refreshed != null) {
+            if (cm != null) updateUpstreamServers(refreshed, cm);
+            LinkedHashSet<InetAddress> retryCandidates = new LinkedHashSet<>(upstreamServers);
+            retryCandidates.add(fallback);
+            for (InetAddress dns : retryCandidates) {
+                byte[] answer = queryDnsOnNetwork(refreshed, dns, query);
+                if (answer != null) return answer;
             }
         }
-        try {
-            InetAddress fallback = parseAddress(UPSTREAM);
-            if (!candidates.contains(fallback)) {
-                DatagramSocket socket = new DatagramSocket();
-                try {
-                    if (!protect(socket)) throw new IllegalStateException("Could not protect fallback DNS socket");
-                    underlying.bindSocket(socket);
-                    socket.setSoTimeout(1800);
-                    socket.send(new DatagramPacket(query, query.length, fallback, 53));
-                    byte[] buf = new byte[4096];
-                    DatagramPacket reply = new DatagramPacket(buf, buf.length);
-                    socket.receive(reply);
-                    byte[] out = new byte[reply.getLength()];
-                    System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
-                    return out;
-                } finally { socket.close(); }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Fallback DNS failed", e);
-        }
+        Log.w(TAG, "DNS forwarding failed after network refresh and fallback retry");
         return null;
     }
 
