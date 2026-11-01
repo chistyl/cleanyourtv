@@ -56,8 +56,11 @@ public class AdsBlockerActivity extends Activity {
             "p-app.dhub.hinet.net\nads.aralego.com\nadsv.svc.litv.tv\nacs2.svc.litv.tv\n" +
             "*.svc.litv.tv\n";
     private static final String DEFAULT_ALLOW =
-            "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\np-cdnstatic.svc.litv.tv\n";
-    private static final String DEFAULT_RULES_VERSION = "5";
+            "vid.dbokutv.com\nfirebaselogging-pa.googleapis.com\npic.dbokutv.com\nevents.ads.vungle.com\np-cdnstatic.svc.litv.tv\n" +
+            // Android connectivity validation / captive-portal probes must never be blocked.
+            "connectivitycheck.gstatic.com\nconnectivitycheck.android.com\nwww.google.com\n" +
+            "clients3.google.com\nwww.google.cn\nconnectivitycheck.platform.hicloud.com\n";
+    private static final String DEFAULT_RULES_VERSION = "6";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
