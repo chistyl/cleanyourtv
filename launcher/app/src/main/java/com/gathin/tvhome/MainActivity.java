@@ -4459,6 +4459,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showCreateFolderDialog() {
         EditText name = new EditText(this);
         name.setSingleLine(true);
+        name.setFocusable(true);
+        name.setFocusableInTouchMode(true);
         name.setHint("輸入資料夾名稱");
         LinearLayout nameWrap = new LinearLayout(this);
         nameWrap.setOrientation(LinearLayout.VERTICAL);
@@ -4490,6 +4492,33 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             rounded.setCornerRadius(22*density); rounded.setStroke(Math.max(1,(int)density),0x28FFFFFF);
             createDialog.getWindow().setBackgroundDrawable(rounded);
         }
+        // TV remote focus order: name field -> Cancel -> Create. Avoid relying on
+        // theme-dependent AlertDialog focus defaults, which vary across TV devices.
+        Button cancelButton = createDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button createButton = createDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (cancelButton != null && createButton != null) {
+            cancelButton.setId(View.generateViewId());
+            createButton.setId(View.generateViewId());
+            name.setNextFocusDownId(cancelButton.getId());
+            cancelButton.setNextFocusRightId(createButton.getId());
+            createButton.setNextFocusLeftId(cancelButton.getId());
+            for (Button button : new Button[]{cancelButton, createButton}) {
+                button.setFocusable(true);
+                button.setFocusableInTouchMode(true);
+                button.setDefaultFocusHighlightEnabled(false);
+                GradientDrawable normal = new GradientDrawable();
+                normal.setColor(0xFF343B47);
+                normal.setCornerRadius(12*density);
+                GradientDrawable focused = new GradientDrawable();
+                focused.setColor(0xFF46566B);
+                focused.setCornerRadius(12*density);
+                focused.setStroke(Math.max(2, (int)(2*density)), Color.WHITE);
+                button.setBackground(normal);
+                button.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : normal));
+                button.setMinHeight((int)(46*density));
+            }
+        }
+        name.post(name::requestFocus);
     }
 
     private interface AppSelectionListener { void onSave(boolean[] checked); }
