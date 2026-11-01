@@ -1,5 +1,5 @@
 name: TV App Customizations
-# Rebuild the customized TV launcher whenever its UI or interaction code changes.
+# Rebuild the customized TV launcher and publish both the APK and full source archive.
 on:
   workflow_dispatch:
   push:
@@ -26,10 +26,22 @@ jobs:
       - name: Build release APK
         working-directory: launcher
         run: bash gradlew :app:assembleRelease --no-daemon
+      - name: Package complete source ZIP
+        run: |
+          zip -r CleanYourTV-source.zip . \
+            -x '.git/*' '*/.git/*' '.gradle/*' '*/.gradle/*' \
+               '*/build/*' '*/.idea/*' '*.iml'
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
           name: CleanYourTV-customized-release
           path: launcher/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload complete source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanYourTV-complete-source
+          path: CleanYourTV-source.zip
           if-no-files-found: error
           retention-days: 14
