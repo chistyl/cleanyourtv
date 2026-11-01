@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class AdsFilterVpnService extends VpnService {
     private static final String TAG = "AdsFilterVpn";
@@ -230,7 +232,11 @@ public class AdsFilterVpnService extends VpnService {
 
         if (isAllowed(domain)) {
             byte[] answer = forward(query);
-            if (answer == null) return null;
+            if (answer == null) {
+                appendDnsLog(domain, "查詢失敗", "上游 DNS 無回應");
+                return null;
+            }
+            appendDnsLog(domain, "允許", dnsResponseSummary(answer));
             return makeReply(p, ihl, srcPort, answer);
         }
         if (isBlocked(domain)) {
@@ -238,10 +244,16 @@ public class AdsFilterVpnService extends VpnService {
             int flags = u16(blocked, 2);
             put16(blocked, 2, (flags & 0x0100) | 0x8083); // NXDOMAIN; retain RD
             put16(blocked, 6, 0); put16(blocked, 8, 0); put16(blocked, 10, 0);
+            appendDnsLog(domain, "已阻擋", "NXDOMAIN（網域不存在回應）");
             return makeReply(p, ihl, srcPort, blocked);
         }
         byte[] answer = forward(query);
-        return answer == null ? null : makeReply(p, ihl, srcPort, answer);
+        if (answer == null) {
+            appendDnsLog(domain, "查詢失敗", "上游 DNS 無回應");
+            return null;
+        }
+        appendDnsLog(domain, "一般通過", dnsResponseSummary(answer));
+        return makeReply(p, ihl, srcPort, answer);
     }
 
     private byte[] forward(byte[] query) {
@@ -305,6 +317,36 @@ public class AdsFilterVpnService extends VpnService {
         put16(out, 20, 53); put16(out, 22, clientPort); put16(out, 24, 8 + dns.length);
         System.arraycopy(dns, 0, out, 28, dns.length);
         return out;
+    }
+
+    // Keep a bounded local DNS history so the TV UI can explain each filtering decision.
+    private void appendDnsLog(String domain, String result, String response) {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+            synchronized (AdsFilterVpnService.class) {
+                JSONArray old = new JSONArray(prefs.getString("dns_logs", "[]"));
+                JSONArray next = new JSONArray();
+                int start = Math.max(0, old.length() - 299);
+                for (int i = start; i < old.length(); i++) next.put(old.getJSONObject(i));
+                JSONObject item = new JSONObject();
+                item.put("time", System.currentTimeMillis());
+                item.put("domain", domain);
+                item.put("result", result);
+                item.put("response", response);
+                next.put(item);
+                prefs.edit().putString("dns_logs", next.toString()).apply();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to save DNS history", e);
+        }
+    }
+
+    private String dnsResponseSummary(byte[] dns) {
+        if (dns == null || dns.length < 4) return "回應資料不完整";
+        int rcode = dns[3] & 15;
+        if (rcode == 3) return "NXDOMAIN（網域不存在）";
+        if (rcode == 0) return "NOERROR（DNS 回應正常）";
+        return "DNS 錯誤碼：" + rcode;
     }
 
     private boolean isAllowed(String domain) { return matches(domain, "allow_domains"); }
