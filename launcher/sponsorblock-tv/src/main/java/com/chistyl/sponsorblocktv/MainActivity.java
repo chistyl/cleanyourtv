@@ -13,6 +13,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.MulticastSocket;
+import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.Inet4Address;
@@ -97,22 +99,37 @@ public class MainActivity extends Activity {
                         + "MX: 3\r\n"
                         + "ST: urn:dial-multiscreen-org:service:dial:1\r\n\r\n")
                         .getBytes(StandardCharsets.US_ASCII);
-                try (DatagramSocket socket = new DatagramSocket()) {
-                    socket.setSoTimeout(1200);
-                    socket.setBroadcast(true);
-                    InetAddress group = InetAddress.getByName("239.255.255.250");
-                    socket.send(new DatagramPacket(request, request.length, group, 1900));
-                    long until = System.currentTimeMillis() + 5500;
-                    while (System.currentTimeMillis() < until) {
-                        byte[] buf = new byte[8192];
-                        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                        try { socket.receive(packet); }
-                        catch (SocketTimeoutException e) { continue; }
-                        String response = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-                        String location = header(response, "LOCATION");
-                        if (location == null || found.containsKey(location)) continue;
-                        Device device = readDevice(location, packet.getAddress().getHostAddress());
-                        if (device != null && device.youtube) found.put(location, device);
+                InetAddress group = InetAddress.getByName("239.255.255.250");
+                Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+                while (nets.hasMoreElements()) {
+                    NetworkInterface ni = nets.nextElement();
+                    if (!ni.isUp() || ni.isLoopback() || !ni.supportsMulticast()) continue;
+                    boolean hasIpv4 = false;
+                    Enumeration<InetAddress> addrs = ni.getInetAddresses();
+                    while (addrs.hasMoreElements()) {
+                        InetAddress a = addrs.nextElement();
+                        if (a instanceof Inet4Address && !a.isLinkLocalAddress()) { hasIpv4 = true; break; }
+                    }
+                    if (!hasIpv4) continue;
+                    try (MulticastSocket socket = new MulticastSocket()) {
+                        socket.setSoTimeout(900);
+                        socket.setNetworkInterface(ni);
+                        socket.setTimeToLive(2);
+                        socket.send(new DatagramPacket(request, request.length, group, 1900));
+                        long until = System.currentTimeMillis() + 3200;
+                        while (System.currentTimeMillis() < until) {
+                            byte[] buf = new byte[8192];
+                            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                            try { socket.receive(packet); }
+                            catch (SocketTimeoutException e) { continue; }
+                            String response = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
+                            String location = header(response, "LOCATION");
+                            if (location == null || found.containsKey(location)) continue;
+                            Device device = readDevice(location, packet.getAddress().getHostAddress());
+                            if (device != null && device.youtube) found.put(location, device);
+                        }
+                    } catch (Exception interfaceError) {
+                        // Continue scanning other interfaces; Ethernet and Wi-Fi can behave differently.
                     }
                 }
             } catch (Exception e) {
