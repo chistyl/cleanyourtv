@@ -4585,24 +4585,41 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 button.setFocusable(true);
                 button.setFocusableInTouchMode(true);
                 button.setDefaultFocusHighlightEnabled(false);
+                button.setTextColor(0xFF80CBC4);
+                button.setElevation(0f);
                 GradientDrawable normal = new GradientDrawable();
                 normal.setColor(0xFF343B47);
-                normal.setCornerRadius(12*density);
+                normal.setCornerRadius(14*density);
+                normal.setStroke(Math.max(1, (int)(1*density)), 0x3348DAD0);
                 GradientDrawable focused = new GradientDrawable();
-                focused.setColor(0xFF46566B);
-                focused.setCornerRadius(12*density);
-                focused.setStroke(Math.max(2, (int)(2*density)), Color.WHITE);
+                focused.setColor(0xFF00AFA5);
+                focused.setCornerRadius(14*density);
+                focused.setStroke(Math.max(3, (int)(3*density)), Color.WHITE);
                 button.setBackground(normal);
-                button.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : normal));
-                button.setMinHeight((int)(50*density));
-                button.setMinWidth((int)(104*density));
+                button.setOnFocusChangeListener((v, hasFocus) -> {
+                    v.setBackground(hasFocus ? focused : normal);
+                    ((Button) v).setTextColor(hasFocus ? Color.WHITE : 0xFF80CBC4);
+                    v.setElevation(hasFocus ? 8f*density : 0f);
+                    v.setScaleX(hasFocus ? 1.04f : 1f);
+                    v.setScaleY(hasFocus ? 1.04f : 1f);
+                });
+                button.setMinHeight((int)(54*density));
+                button.setMinWidth((int)(112*density));
             }
+            // Make the focused action unmistakable on TV: bright teal fill + thick white ring.
+            cancelButton.setNextFocusRightId(createButton.getId());
+            createButton.setNextFocusLeftId(cancelButton.getId());
             name.setNextFocusDownId(cancelButton.getId());
             cancelButton.setNextFocusRightId(createButton.getId());
             createButton.setNextFocusLeftId(cancelButton.getId());
             cancelButton.setNextFocusUpId(name.getId());
             createButton.setNextFocusUpId(name.getId());
         }
+        name.setOnFocusChangeListener((v, hasFocus) -> {
+            name.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    hasFocus ? 0xFF00D5C8 : 0xFF80CBC4));
+            name.setElevation(hasFocus ? 3f*density : 0f);
+        });
         name.post(name::requestFocus);
     }
 
