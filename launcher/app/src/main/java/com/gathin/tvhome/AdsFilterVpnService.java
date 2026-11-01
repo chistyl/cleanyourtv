@@ -102,44 +102,9 @@ public class AdsFilterVpnService extends VpnService {
             startNotice();
             subscribedBlock = AdsFilterListManager.load(this, 'B');
             subscribedAllow = AdsFilterListManager.load(this, 'A');
-            // Track real Wi-Fi/Ethernet networks, excluding the VPN itself. The default
-            // network can change while the filter is running, so do not capture it only once.
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            if (cm == null) throw new IllegalStateException("Connectivity service unavailable");
-            NetworkRequest request = new NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                    .build();
-            networkCallback = new ConnectivityManager.NetworkCallback() {
-                @Override public void onAvailable(Network network) {
-                    NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-                    if (isPhysicalInternet(caps)) physicalNetworks.add(network);
-                    refreshUnderlyingNetworks(cm);
-                }
-                @Override public void onLost(Network network) {
-                    physicalNetworks.remove(network);
-                    refreshUnderlyingNetworks(cm);
-                }
-                @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
-                    if (isPhysicalInternet(caps)) physicalNetworks.add(network);
-                    else physicalNetworks.remove(network);
-                    refreshUnderlyingNetworks(cm);
-                }
-            };
-            defaultNetworkCallback = new ConnectivityManager.NetworkCallback() {
-                @Override public void onAvailable(Network network) { refreshUnderlyingNetworks(cm); }
-                @Override public void onLost(Network network) { refreshUnderlyingNetworks(cm); }
-                @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
-                    refreshUnderlyingNetworks(cm);
-                }
-            };
-            cm.registerNetworkCallback(request, networkCallback);
-            cm.registerDefaultNetworkCallback(defaultNetworkCallback);
-            for (Network candidate : cm.getAllNetworks()) {
-                if (isPhysicalInternet(cm.getNetworkCapabilities(candidate))) physicalNetworks.add(candidate);
-            }
-            refreshUnderlyingNetworks(cm);
-            if (underlyingNetwork == null) throw new IllegalStateException("No active Wi-Fi or Ethernet network");
+            // Do not enumerate or pin a physical network. The protected DNS socket below
+            // uses Android's current default route, allowing Ethernet/Wi-Fi failover
+            // to remain under Android's network manager control.
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
                     .setMtu(1500)
@@ -157,65 +122,6 @@ public class AdsFilterVpnService extends VpnService {
             stopSelf();
         }
         return START_STICKY;
-    }
-
-    private boolean isPhysicalInternet(NetworkCapabilities caps) {
-        return caps != null
-                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                    || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
-    }
-
-    private Network findPhysicalNetwork(ConnectivityManager cm) {
-        Network active = cm.getActiveNetwork();
-        if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
-        for (Network candidate : cm.getAllNetworks()) {
-            if (isPhysicalInternet(cm.getNetworkCapabilities(candidate))) return candidate;
-        }
-        return null;
-    }
-
-    /**
-     * Track the physical network used only by protected upstream DNS sockets.
-     *
-     * Do not publish a manually selected underlay with setUnderlyingNetworks().
-     * Some Android TV Ethernet implementations renegotiate or drop the wired
-     * default route when a VPN advertises a single underlay while Wi-Fi is also
-     * present. Leaving VPN underlay selection to Android keeps the system's
-     * Ethernet/Wi-Fi routing intact; DNS sockets are still explicitly bound to
-     * the selected physical network below.
-     */
-    private synchronized void refreshUnderlyingNetworks(ConnectivityManager cm) {
-        try {
-            Network active = cm.getActiveNetwork();
-            Network selected = active != null
-                    && isPhysicalInternet(cm.getNetworkCapabilities(active)) ? active : null;
-
-            // After VPN establishment Android may report the VPN as active.
-            // Retain the physical network selected immediately before that.
-            if (selected == null && underlyingNetwork != null
-                    && isPhysicalInternet(cm.getNetworkCapabilities(underlyingNetwork))) {
-                selected = underlyingNetwork;
-            }
-
-            if (selected == null) {
-                synchronized (physicalNetworks) {
-                    for (Network candidate : physicalNetworks) {
-                        if (candidate != null && isPhysicalInternet(cm.getNetworkCapabilities(candidate))) {
-                            selected = candidate;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            underlyingNetwork = selected;
-            if (selected == null) Log.w(TAG, "No physical Wi-Fi/Ethernet network currently available");
-            else Log.i(TAG, "DNS socket network selected: " + selected);
-        } catch (Exception e) {
-            Log.w(TAG, "Unable to refresh physical DNS network", e);
-        }
     }
 
     private void startNotice() {
@@ -297,10 +203,8 @@ public class AdsFilterVpnService extends VpnService {
         try {
             socket = new DatagramSocket();
             if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
-            // Send upstream DNS through the currently selected physical Wi-Fi/Ethernet network.
-            Network underlying = underlyingNetwork;
-            if (underlying == null) throw new IllegalStateException("No physical network for DNS forwarding");
-            underlying.bindSocket(socket);
+            // protect() bypasses this VPN. Let Android route the socket through
+            // its current default physical network; do not bind it to Ethernet or Wi-Fi.
             socket.setSoTimeout(3500);
             byte[] ip = new byte[4]; byte[] raw = InetAddress.getByName(UPSTREAM).getAddress();
             System.arraycopy(raw, 0, ip, 0, 4);
@@ -463,19 +367,8 @@ public class AdsFilterVpnService extends VpnService {
     @Override public void onDestroy() { stopFilter(); super.onDestroy(); }
     private void stopFilter() {
         running.set(false);
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        if (cm != null) {
-            if (networkCallback != null) {
-                try { cm.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
-                networkCallback = null;
-            }
-            if (defaultNetworkCallback != null) {
-                try { cm.unregisterNetworkCallback(defaultNetworkCallback); } catch (Exception ignored) {}
-                defaultNetworkCallback = null;
-            }
-        }
-        physicalNetworks.clear();
         underlyingNetwork = null;
+        physicalNetworks.clear();
         if (tunnel != null) { try { tunnel.close(); } catch (Exception ignored) {} tunnel = null; }
         if (worker != null) { worker.interrupt(); worker = null; }
         stopForeground(true);
