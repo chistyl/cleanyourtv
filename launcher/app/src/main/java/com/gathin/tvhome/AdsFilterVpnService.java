@@ -349,7 +349,10 @@ public class AdsFilterVpnService extends VpnService {
         return "DNS 錯誤碼：" + rcode;
     }
 
-    private boolean isAllowed(String domain) { return matches(domain, "allow_domains"); }
+    private boolean isAllowed(String domain) {
+        // User-controlled temporary exceptions take precedence over both bundled and custom block rules.
+        return matches(domain, "temporary_allow_domains") || matches(domain, "allow_domains");
+    }
     private boolean isBlocked(String domain) {
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
         String raw = p.getString("block_domains", "");
