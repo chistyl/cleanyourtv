@@ -10,6 +10,7 @@ on:
       - cytv-gold05-hide-dock-row
       - cytv-gold05-weather-initial-visible
       - v210-duboku-playback-fix
+      - v210-network-update-stability
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
