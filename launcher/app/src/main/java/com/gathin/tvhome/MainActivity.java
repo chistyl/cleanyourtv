@@ -4581,17 +4581,36 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addRoundedAction(LinearLayout panel, String text, Runnable action) {
-        TextView row = new TextView(this); row.setText(text); row.setTextColor(Color.WHITE); row.setTextSize(15);
-        row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding((int)(14*density), 0, (int)(14*density), 0);
-        GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0xFF343B47); rowBg.setCornerRadius(12*density);
-        row.setBackground(rowBg); row.setClipToOutline(true); row.setFocusable(true); row.setClickable(true);
+        TextView row = new TextView(this);
+        row.setText(text);
+        row.setTextColor(Color.WHITE);
+        row.setTextSize(15);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding((int)(14*density), 0, (int)(14*density), 0);
+        GradientDrawable rowNormal = new GradientDrawable();
+        rowNormal.setColor(0xFF343B47);
+        rowNormal.setCornerRadius(12*density);
+        GradientDrawable rowFocused = new GradientDrawable();
+        rowFocused.setColor(0xFF00AFA5);
+        rowFocused.setCornerRadius(12*density);
+        rowFocused.setStroke(Math.max(3, (int)(3*density)), Color.WHITE);
+        row.setBackground(rowNormal);
+        row.setClipToOutline(true);
+        row.setFocusable(true);
+        row.setFocusableInTouchMode(true);
+        row.setClickable(true);
         row.setDefaultFocusHighlightEnabled(false);
+        row.setId(View.generateViewId());
         row.setOnFocusChangeListener((v, focused) -> {
-            rowBg.setStroke(Math.max(1, (int)(density * (focused ? 2 : 0))), focused ? Color.WHITE : Color.TRANSPARENT);
-            row.setElevation(focused ? 5 * density : 0f);
+            v.setBackground(focused ? rowFocused : rowNormal);
+            v.setElevation(focused ? 7*density : 0f);
+            v.setScaleX(focused ? 1.015f : 1f);
+            v.setScaleY(focused ? 1.015f : 1f);
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, (int)(48*density));
-        lp.bottomMargin = (int)(8*density); panel.addView(row, lp); row.setOnClickListener(v -> action.run());
+        lp.bottomMargin = (int)(8*density);
+        panel.addView(row, lp);
+        row.setOnClickListener(v -> action.run());
     }
 
     /** 從設定選單直接新增一般資料夾。 */
