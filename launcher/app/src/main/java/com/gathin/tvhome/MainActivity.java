@@ -3779,6 +3779,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, "桌布設定", this::showWallpaperPicker);
         addSettingsMenuRow(rows, popup, "新增資料夾", this::showCreateFolderDialog);
         addSettingsMenuRow(rows, popup, "一週天氣", this::showWeeklyWeatherSettings);
+        boolean traditionalDisplay = TraditionalText.isEnabled(this);
+        addSettingsMenuRow(rows, popup,
+                traditionalDisplay ? "簡體一律繁體顯示　✓" : "簡體一律繁體顯示",
+                () -> {
+                    TraditionalText.setEnabled(this, !traditionalDisplay);
+                    popup.dismiss();
+                    recreate();
+                });
+        addSettingsMenuRow(rows, popup, "重新開機", this::requestDeviceReboot);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (170 * density), Math.min(panel.getMeasuredWidth(), (int) (220 * density))));
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
@@ -3895,7 +3904,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weeklyWeatherDays == null) return;
         weeklyWeatherDays.removeAllViews();
         TextView status = new TextView(this);
-        status.setText(message);
+        status.setText(TraditionalText.display(this, message));
         status.setTextColor(Color.WHITE);
         status.setTextSize(15);
         status.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
@@ -4057,6 +4066,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shape.setColor(focused ? 0xFFF4F4F4 : Color.TRANSPARENT);
         shape.setCornerRadius(16 * density);
         return shape;
+    }
+
+    private void requestDeviceReboot() {
+        new AlertDialog.Builder(this)
+                .setTitle("重新開機")
+                .setMessage("確定要重新啟動電視嗎？")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("重新開機", (dialog, which) -> {
+                    try {
+                        android.os.PowerManager power =
+                                (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                        if (power == null) throw new SecurityException("Power service unavailable");
+                        power.reboot(null);
+                    } catch (SecurityException | RuntimeException error) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("無法由啟動器重新開機")
+                                .setMessage("目前電視系統未授予重新開機權限，請使用電視的系統電源選單重新啟動。")
+                                .setPositiveButton("確定", null)
+                                .show();
+                    }
+                })
+                .show();
     }
 
     private void showWeeklyWeatherSettings() {
