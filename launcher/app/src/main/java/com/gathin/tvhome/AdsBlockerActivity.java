@@ -42,9 +42,9 @@ public class AdsBlockerActivity extends Activity {
 
     // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK =
-            "doubleclick.net\\ngooglesyndication.com\\ngoogleadservices.com\\nadservice.google.com\\n" +
-            "app-measurement.com\\nadcolony.com\\nunityads.unity3d.com\\n" +
-            "applovin.com\\nmoatads.com\\nadsrvr.org\\n" +
+            "doubleclick.net\ngooglesyndication.com\ngoogleadservices.com\nadservice.google.com\n" +
+            "app-measurement.com\nadcolony.com\nunityads.unity3d.com\n" +
+            "applovin.com\nmoatads.com\nadsrvr.org\n" +
             "";
     private static final String DEFAULT_ALLOW = "";
     private static final String DEFAULT_RULES_VERSION = "7";
