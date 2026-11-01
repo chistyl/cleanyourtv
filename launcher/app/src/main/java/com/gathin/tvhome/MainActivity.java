@@ -4042,20 +4042,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         toggle.setFocusable(true); toggle.setFocusableInTouchMode(true);
         toggle.setDefaultFocusHighlightEnabled(false);
         toggle.setPadding((int)(10*density), (int)(8*density), (int)(10*density), (int)(8*density));
+        toggle.setMinHeight((int)(58*density));
+        toggle.setMinWidth((int)(150*density));
+        toggle.setSwitchMinWidth((int)(76*density));
+        toggle.setShowText(true);
+        toggle.setTextOn("開啟"); toggle.setTextOff("關閉");
         toggle.setBackground(remoteWeatherFocusBackground(false));
         toggle.setOnFocusChangeListener((v, focused) -> {
             v.setBackground(remoteWeatherFocusBackground(focused));
             toggle.setTextColor(focused ? 0xFF202124 : Color.WHITE);
             v.setScaleX(1f); v.setScaleY(1f);
         });
-        // Neutral grayscale switch palette; checked state remains clear without teal accents.
+        // 高對比灰階開關：開啟時亮色軌道＋深色滑鈕，關閉時深色軌道＋亮色滑鈕。
         int[][] switchStates = new int[][] {
                 new int[] { android.R.attr.state_checked }, new int[] {}
         };
         toggle.setThumbTintList(new android.content.res.ColorStateList(switchStates,
-                new int[] { 0xFFF4F4F4, 0xFFB8BEC8 }));
+                new int[] { 0xFF252B34, 0xFFF4F4F4 }));
         toggle.setTrackTintList(new android.content.res.ColorStateList(switchStates,
-                new int[] { 0xFF858D98, 0xFF626A75 }));
+                new int[] { 0xFFE8EBEF, 0xFF4A5360 }));
         toggle.setChecked(prefs.getBoolean("enabled", false));
         toggle.setClickable(true);
         toggle.setOnKeyListener((v, keyCode, event) -> {
@@ -4104,17 +4109,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         city.setSingleLine(true); city.setFocusable(true); city.setFocusableInTouchMode(true);
         city.setDefaultFocusHighlightEnabled(false);
         city.setHint("輸入城市，例如：桃園市"); city.setText(prefs.getString("city", "桃園市"));
-        city.setTextColor(Color.WHITE); city.setHintTextColor(0xFFB8BEC8); city.setTextSize(20);
-        city.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
+        // 輸入欄平時就維持淺色底與深色文字，不必等到取得焦點才看得清楚。
+        city.setTextColor(0xFF202124); city.setHintTextColor(0xFF68717D); city.setTextSize(20);
+        city.setPadding((int)(14*density), (int)(8*density), (int)(14*density), (int)(8*density));
         city.setBackgroundColor(Color.TRANSPARENT);
+        FrameLayout cityField = new FrameLayout(this);
+        GradientDrawable cityNormal = new GradientDrawable();
+        cityNormal.setColor(0xFFE5E8EC); cityNormal.setCornerRadius(14*density);
+        cityNormal.setStroke(Math.max(1,(int)(1*density)), 0xFF9AA3AD);
         GradientDrawable cityFocused = new GradientDrawable();
-        cityFocused.setColor(0xFFF4F4F4); cityFocused.setCornerRadius(14*density);
+        cityFocused.setColor(0xFFF8F9FA); cityFocused.setCornerRadius(14*density);
+        cityFocused.setStroke(Math.max(2,(int)(2*density)), 0xFF252B34);
+        cityField.setBackground(cityNormal);
+        cityField.setPadding((int)(3*density), (int)(3*density), (int)(3*density), (int)(3*density));
+        cityField.addView(city, new FrameLayout.LayoutParams(-1, -1));
         city.setOnFocusChangeListener((v, hasFocus) -> {
-            v.setBackground(hasFocus ? cityFocused : new ColorDrawable(Color.TRANSPARENT));
-            city.setTextColor(hasFocus ? 0xFF202124 : Color.WHITE);
+            cityField.setBackground(hasFocus ? cityFocused : cityNormal);
+            city.setTextColor(0xFF202124);
             v.setScaleX(1f); v.setScaleY(1f);
         });
-        content.addView(city, new LinearLayout.LayoutParams(-1, (int)(54*density)));
+        content.addView(cityField, new LinearLayout.LayoutParams(-1, (int)(58*density)));
         city.setVisibility(fixed ? View.VISIBLE : View.GONE);
         modes.setOnCheckedChangeListener((g, checked) ->
                 city.setVisibility(checked == cityMode.getId() ? View.VISIBLE : View.GONE));
