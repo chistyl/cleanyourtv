@@ -110,6 +110,9 @@ public class AdsFilterVpnService extends VpnService {
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
                     .setMtu(1500)
+                    // runDnsLoop uses blocking FileInputStream.read(). Android VPN
+                    // descriptors are non-blocking by default; make the contract explicit.
+                    .setBlocking(true)
                     .addAddress(DNS_CLIENT, 32)
                     .addDnsServer(DNS_LOCAL)
                     .addRoute(DNS_LOCAL, 32);
@@ -253,7 +256,10 @@ public class AdsFilterVpnService extends VpnService {
              FileOutputStream out = new FileOutputStream(tunnel.getFileDescriptor())) {
             while (running.get()) {
                 int n = in.read(packet);
-                if (n <= 0) continue;
+                // With a blocking TUN descriptor, zero bytes are not a packet and
+                // EOF means the interface has been closed. Do not spin on EOF.
+                if (n < 0) break;
+                if (n == 0) continue;
                 try {
                     byte[] response = processPacket(packet, n);
                     if (response != null) out.write(response);
