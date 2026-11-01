@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - v17.1-update
+      - cytv-gold04-scroll-stability
     paths:
       - '.github/workflows/android-build.yml'
       - 'launcher/**'
