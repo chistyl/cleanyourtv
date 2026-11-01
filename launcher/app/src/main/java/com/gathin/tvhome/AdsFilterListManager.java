@@ -134,22 +134,27 @@ final class AdsFilterListManager {
         for (int attempt = 1; attempt <= 3; attempt++) {
             if (networks != null && !networks.isEmpty()) {
                 for (Network network : networks) {
-                    try { return download(address, network); }
-                    catch (Exception e) {
+                    try {
+                        return download(address, network);
+                    } catch (Exception e) {
                         last = e;
                         Log.w(TAG, "Download failed on physical network " + network + " (attempt " + attempt + ")", e);
                     }
                 }
             } else {
-                try { return download(address, null); }
-                catch (Exception e) { last = e; }
+                try {
+                    return download(address, null);
+                } catch (Exception e) {
+                    last = e;
+                    Log.w(TAG, "Download failed on default network (attempt " + attempt + ")", e);
+                }
             }
             if (attempt < 3) {
-                    try { Thread.sleep(700L * attempt); }
-                    catch (InterruptedException interrupted) {
-                        Thread.currentThread().interrupt();
-                        throw interrupted;
-                    }
+                try {
+                    Thread.sleep(700L * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw interrupted;
                 }
             }
         }
