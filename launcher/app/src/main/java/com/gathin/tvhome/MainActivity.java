@@ -6197,14 +6197,41 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);
         row.findViewById(R.id.status).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
+        TextView rowTitle = (TextView) row.findViewById(R.id.title);
+        rowTitle.setText(title);
+        rowTitle.setTextColor(Color.WHITE);
         row.setFocusable(true);
         row.setFocusableInTouchMode(true);
         row.setClickable(true);
+        row.setDefaultFocusHighlightEnabled(false);
+        GradientDrawable normal = new GradientDrawable();
+        normal.setColor(Color.TRANSPARENT);
+        normal.setCornerRadius(18 * density);
+        GradientDrawable selected = new GradientDrawable();
+        selected.setColor(0xFFF4F4F4);
+        selected.setCornerRadius(18 * density);
+        row.setBackground(normal);
+        row.setPadding((int)(12*density), 0, (int)(12*density), 0);
+        row.setOnFocusChangeListener((v, focused) -> {
+            v.setBackground(focused ? selected : normal);
+            rowTitle.setTextColor(focused ? 0xFF202124 : Color.WHITE);
+            v.setElevation(focused ? 2*density : 0f);
+        });
         row.setOnClickListener(v -> {
             popup.dismiss();
             action.run();
         });
+        int rowId = View.generateViewId();
+        row.setId(rowId);
+        if (rows.getChildCount() > 0) {
+            View previous = rows.getChildAt(rows.getChildCount() - 1);
+            previous.setNextFocusDownId(rowId);
+            row.setNextFocusUpId(previous.getId());
+        }
+        LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
+        rowLp.height = (int)(52*density);
+        rowLp.bottomMargin = (int)(2*density);
+        row.setLayoutParams(rowLp);
         rows.addView(row);
     }
 
