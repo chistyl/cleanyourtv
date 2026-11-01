@@ -49,6 +49,8 @@ public class AdsFilterVpnService extends VpnService {
     // Built-in rules are intentionally kept out of the editable rules UI.
     // Allow rules are evaluated before block rules.
     private static final String[] HIDDEN_ALLOW_RULES = {
+            // Allow the Duboku app domain and all its subdomains for playback.
+            "dbokutv.com",
             "vid.dbokutv.com",
             "firebaselogging-pa.googleapis.com",
             "pic.dbokutv.com",
