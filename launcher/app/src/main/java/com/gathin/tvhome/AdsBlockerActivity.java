@@ -43,7 +43,7 @@ public class AdsBlockerActivity extends Activity {
     // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK = "";
     private static final String DEFAULT_ALLOW = "";
-    private static final String DEFAULT_RULES_VERSION = "6";
+    private static final String DEFAULT_RULES_VERSION = "7";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
