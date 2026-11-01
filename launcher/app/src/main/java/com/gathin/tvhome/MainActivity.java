@@ -4083,7 +4083,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelWeather.setId(View.generateViewId()); saveWeather.setId(View.generateViewId());
             cancelWeather.setNextFocusRightId(saveWeather.getId()); saveWeather.setNextFocusLeftId(cancelWeather.getId());
             city.setNextFocusDownId(cancelWeather.getId());
-            cityMode.setNextFocusDownId(city.getId());
+            cityMode.setNextFocusDownId(city.getVisibility() == View.VISIBLE ? city.getId() : cancelWeather.getId());
             device.setNextFocusDownId(cityMode.getId());
             toggle.setNextFocusDownId(device.getId());
             cancelWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
