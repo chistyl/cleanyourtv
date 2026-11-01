@@ -2004,7 +2004,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void showHero(int position, float dockTopInRoot) {
         boolean hideAllNames = getSharedPreferences("tv_app_customizations", MODE_PRIVATE)
-                .getBoolean("hide_all_names", false);
+                .getBoolean("hide_all_names", true);
         heroName.setVisibility(hideAllNames ? View.INVISIBLE : View.VISIBLE);
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
@@ -4064,7 +4064,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         surface.setStroke(Math.max(1, (int)density), 0x28FFFFFF);
         outer.setBackground(surface);
         TextView title = new TextView(this);
-        title.setText("桌面顯示"); title.setTextColor(Color.WHITE); title.setTextSize(20);
+        title.setText("勾選要隱藏APP或資料夾"); title.setTextColor(Color.WHITE); title.setTextSize(20);
         title.setPadding((int)(4*density), 0, 0, (int)(12*density));
         outer.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
@@ -4734,7 +4734,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 name.setText(customName != null ? customName : String.valueOf(ri.loadLabel(getPackageManager())));
                 name.setTextColor(Color.WHITE); name.setTextSize(11); name.setGravity(Gravity.CENTER);
                 name.setMaxLines(2); name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-                name.setVisibility(prefs.getBoolean("hide_all_names", false) ? View.GONE : View.VISIBLE);
+                name.setVisibility(prefs.getBoolean("hide_all_names", true) ? View.GONE : View.VISIBLE);
                 LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(-1, (int)(30*density));
                 nameLp.topMargin = (int)(3*density); tile.addView(name, nameLp);
                 tile.setOnClickListener(v -> {
@@ -4897,7 +4897,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     }).show();
         });
 
-        boolean allNamesHidden = prefs.getBoolean("hide_all_names", false);
+        boolean allNamesHidden = prefs.getBoolean("hide_all_names", true);
         addSettingsMenuRow(rows, popup, allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
             prefs.edit().putBoolean("hide_all_names", !allNamesHidden).apply();
             reloadApps(false);
@@ -5296,7 +5296,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         String pkg = adapter.packageAt(position);
         if (key != null && (key.contains("/system-folder") || key.contains("/folder:"))) {
             SharedPreferences folderPrefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
-            boolean hidden = folderPrefs.getBoolean("hide_all_names", false);
+            boolean hidden = folderPrefs.getBoolean("hide_all_names", true);
             View folderPanel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
             LinearLayout folderRows = folderPanel.findViewById(R.id.rows);
             PopupWindow folderPopup = glassPopup(folderPanel, (int) (220 * density));
@@ -5389,7 +5389,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         reloadApps(false);
                     }).show();
         });
-        boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", false);
+        boolean allNamesHidden = appPrefs.getBoolean("hide_all_names", true);
         addSettingsMenuRow(rows, popup, allNamesHidden ? "顯示全部 APP 名稱" : "隱藏全部 APP 名稱", () -> {
             appPrefs.edit().putBoolean("hide_all_names", !allNamesHidden).apply();
             reloadApps(false);
