@@ -4048,9 +4048,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             toggle.setTextColor(focused ? 0xFF202124 : Color.WHITE);
             v.setScaleX(1f); v.setScaleY(1f);
         });
-        // Neutral switch colors; the white rounded focus pill carries the selection state.
-        toggle.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFB8BEC8));
-        toggle.setTrackTintList(android.content.res.ColorStateList.valueOf(0xFF626A75));
+        // Neutral grayscale switch palette; checked state remains clear without teal accents.
+        int[][] switchStates = new int[][] {
+                new int[] { android.R.attr.state_checked }, new int[] {}
+        };
+        toggle.setThumbTintList(new android.content.res.ColorStateList(switchStates,
+                new int[] { 0xFFF4F4F4, 0xFFB8BEC8 }));
+        toggle.setTrackTintList(new android.content.res.ColorStateList(switchStates,
+                new int[] { 0xFF858D98, 0xFF626A75 }));
         toggle.setChecked(prefs.getBoolean("enabled", false));
         toggle.setClickable(true);
         toggle.setOnKeyListener((v, keyCode, event) -> {
@@ -4081,13 +4086,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 android.widget.RadioButton radio = (android.widget.RadioButton) v;
                 v.setBackground(remoteWeatherFocusBackground(focused));
                 radio.setTextColor(focused ? 0xFF202124 : Color.WHITE);
-                // Keep the radio indicator visible on the white selected pill.
-                int indicator = focused ? 0xFF343B47 : 0xFF80CBC4;
-                radio.setButtonTintList(android.content.res.ColorStateList.valueOf(indicator));
+                // Radio checked state uses grayscale, matching the neutral dialog palette.
                 v.setScaleX(1f); v.setScaleY(1f);
             });
         }
         modes.addView(device); modes.addView(cityMode);
+        int[][] radioStates = new int[][] {
+                new int[] { android.R.attr.state_checked }, new int[] {}
+        };
+        android.content.res.ColorStateList radioTint = new android.content.res.ColorStateList(
+                radioStates, new int[] { 0xFFDCE1E7, 0xFF9AA3AD });
+        device.setButtonTintList(radioTint);
+        cityMode.setButtonTintList(radioTint);
         boolean fixed = "city".equals(prefs.getString("location_mode", "device"));
         modes.check(fixed ? cityMode.getId() : device.getId()); content.addView(modes);
         EditText city = new EditText(this);
