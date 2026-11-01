@@ -1948,8 +1948,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             showHero(position, scroll ? r.top - dy : r.top);
         } else {
-            // Below the dock (or in a plain grid) the glow follows the tile without the big name; letting it
-            // fade out left the grid on plain black.
+            // Once focus moves below the dock, move the complete dock row above the viewport.
+            // Keeping dock_row enabled preserves its original card sizing, spacing and decoration;
+            // this is only a scroll adjustment, not a second grid or a layout change.
+            if (dockRow && !singleRow) {
+                RecyclerView.ViewHolder dockHolder = grid.findViewHolderForAdapterPosition(0);
+                if (dockHolder != null) {
+                    View dockItem = dockHolder.itemView;
+                    int dockBottom = grid.getLayoutManager() instanceof GridLayoutManager
+                            ? ((GridLayoutManager) grid.getLayoutManager()).getDecoratedBottom(dockItem)
+                            : dockItem.getBottom();
+                    if (dockBottom > 0) grid.scrollBy(0, dockBottom);
+                }
+            }
+            // Below the dock the glow follows the tile without the big name.
             showGlowOnly(position);
             // Scroll just enough so the whole glass (not only the tile) is visible.
             revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
