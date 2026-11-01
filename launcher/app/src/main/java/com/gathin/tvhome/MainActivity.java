@@ -4042,7 +4042,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean fixed = "city".equals(prefs.getString("location_mode", "device"));
         modes.check(fixed ? cityMode.getId() : device.getId()); content.addView(modes);
         EditText city = new EditText(this);
-        city.setSingleLine(true); city.setHint("輸入城市，例如：桃園市"); city.setText(prefs.getString("city", "桃園市")); content.addView(city);
+        city.setSingleLine(true); city.setFocusable(true); city.setFocusableInTouchMode(true);
+        city.setDefaultFocusHighlightEnabled(false);
+        city.setHint("輸入城市，例如：桃園市"); city.setText(prefs.getString("city", "桃園市"));
+        city.setTextColor(Color.WHITE); city.setHintTextColor(0xFFB8BEC8); city.setTextSize(20);
+        city.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
+        GradientDrawable cityNormal = new GradientDrawable();
+        cityNormal.setColor(0x22343B47); cityNormal.setCornerRadius(12*density);
+        cityNormal.setStroke(Math.max(1,(int)density), 0x668A929F);
+        GradientDrawable cityFocused = new GradientDrawable();
+        cityFocused.setColor(0x3348DAD0); cityFocused.setCornerRadius(12*density);
+        cityFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+        city.setBackground(cityNormal);
+        city.setOnFocusChangeListener((v, hasFocus) -> {
+            v.setBackground(hasFocus ? cityFocused : cityNormal);
+            v.setElevation(hasFocus ? 6*density : 0f);
+            v.setScaleX(hasFocus ? 1.015f : 1f); v.setScaleY(hasFocus ? 1.04f : 1f);
+        });
+        content.addView(city, new LinearLayout.LayoutParams(-1, (int)(54*density)));
         city.setVisibility(fixed ? View.VISIBLE : View.GONE);
         modes.setOnCheckedChangeListener((g, checked) -> city.setVisibility(checked == cityMode.getId() ? View.VISIBLE : View.GONE));
         AlertDialog weatherDialog = new AlertDialog.Builder(this).setTitle("一週天氣").setView(content).setNegativeButton("取消", null)
@@ -4082,8 +4099,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cancelWeather.setOnFocusChangeListener(focus); saveWeather.setOnFocusChangeListener(focus);
             cancelWeather.setId(View.generateViewId()); saveWeather.setId(View.generateViewId());
             cancelWeather.setNextFocusRightId(saveWeather.getId()); saveWeather.setNextFocusLeftId(cancelWeather.getId());
+            city.setId(View.generateViewId());
+            city.setNextFocusUpId(cityMode.getId());
             city.setNextFocusDownId(cancelWeather.getId());
             cityMode.setNextFocusDownId(city.getVisibility() == View.VISIBLE ? city.getId() : cancelWeather.getId());
+            cityMode.setNextFocusRightId(city.getVisibility() == View.VISIBLE ? city.getId() : saveWeather.getId());
+            city.setNextFocusLeftId(cityMode.getId());
             device.setNextFocusDownId(cityMode.getId());
             toggle.setNextFocusDownId(device.getId());
             cancelWeather.setNextFocusUpId(city.getVisibility() == View.VISIBLE ? city.getId() : cityMode.getId());
