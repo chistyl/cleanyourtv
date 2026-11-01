@@ -270,7 +270,9 @@ public class AdsFilterVpnService extends VpnService {
             if (answer == null) return null;
             return makeReply(p, ihl, srcPort, answer);
         }
-        if (isBlocked(domain)) {
+        String blockSource = blockSource(domain);
+        if (blockSource != null) {
+            recordDnsDiagnostic("BLOCK", domain + " [" + blockSource + "]");
             byte[] blocked = query.clone();
             int flags = u16(blocked, 2);
             put16(blocked, 2, (flags & 0x0100) | 0x8083); // NXDOMAIN; retain RD
@@ -301,6 +303,7 @@ public class AdsFilterVpnService extends VpnService {
             System.arraycopy(reply.getData(), reply.getOffset(), out, 0, out.length);
             return out;
         } catch (Exception e) {
+            recordDnsDiagnostic("DNS_ERROR", e.getClass().getSimpleName() + ": " + e.getMessage());
             Log.w(TAG, "Upstream DNS failed", e); return null;
         } finally { if (socket != null) socket.close(); }
     }
@@ -316,6 +319,37 @@ public class AdsFilterVpnService extends VpnService {
         put16(out, 20, 53); put16(out, 22, clientPort); put16(out, 24, 8 + dns.length);
         System.arraycopy(dns, 0, out, 28, dns.length);
         return out;
+    }
+
+    private String blockSource(String domain) {
+        if (matchesRules(domain, HIDDEN_BLOCK_RULES)) return "內建隱藏規則";
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String raw = p.getString("block_domains", "");
+        if (raw != null) for (String item : raw.split("\\s+")) {
+            String rule = item.trim().toLowerCase(Locale.ROOT);
+            if (!rule.isEmpty() && matchesRule(domain, rule)) return "自訂封鎖規則";
+        }
+        return matchesSet(domain, subscribedBlock) ? "uBlock 訂閱清單" : null;
+    }
+
+    private void recordDnsDiagnostic(String type, String detail) {
+        try {
+            SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+            String old = p.getString("dns_diagnostics", "");
+            String line = System.currentTimeMillis() + " | " + type + " | " + detail;
+            String[] entries = (old == null ? new String[0] : old.split("\\n"));
+            StringBuilder next = new StringBuilder(line);
+            int kept = 1;
+            for (String entry : entries) {
+                if (entry == null || entry.trim().isEmpty() || kept >= 60) continue;
+                next.append('\\n').append(entry);
+                kept++;
+            }
+            p.edit().putString("dns_diagnostics", next.toString()).apply();
+            Log.w(TAG, line);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to save DNS diagnostic", e);
+        }
     }
 
     private boolean isAllowed(String domain) {
