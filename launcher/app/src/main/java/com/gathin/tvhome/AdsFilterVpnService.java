@@ -48,6 +48,7 @@ public class AdsFilterVpnService extends VpnService {
             worker.start();
         } catch (Exception e) {
             Log.e(TAG, "Unable to start DNS filter", e);
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
             stopSelf();
         }
         return START_STICKY;
@@ -204,7 +205,10 @@ public class AdsFilterVpnService extends VpnService {
         return (int)(~sum) & 0xffff;
     }
 
-    @Override public void onRevoke() { stopFilter(); super.onRevoke(); }
+    @Override public void onRevoke() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
+        stopFilter(); super.onRevoke();
+    }
     @Override public void onDestroy() { stopFilter(); super.onDestroy(); }
     private void stopFilter() {
         running.set(false);
