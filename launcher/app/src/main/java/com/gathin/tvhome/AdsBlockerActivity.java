@@ -37,6 +37,8 @@ public class AdsBlockerActivity extends Activity {
     private LinearLayout content;
     private TextView status;
     private Button toggle;
+    private Button updateLists;
+    private TextView listStatus;
 
     // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK =
@@ -143,6 +145,11 @@ public class AdsBlockerActivity extends Activity {
         toggle = button("", this::toggleFilter);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(58)); tp.topMargin = dp(12);
         content.addView(toggle, tp);
+        updateLists = button("更新過濾清單（EasyList + EasyPrivacy）", this::updateFilterLists);
+        LinearLayout.LayoutParams up = new LinearLayout.LayoutParams(-1, dp(58)); up.topMargin = dp(10);
+        content.addView(updateLists, up);
+        listStatus = label("過濾清單：尚未下載", 15); listStatus.setTextColor(Color.LTGRAY);
+        content.addView(listStatus, new LinearLayout.LayoutParams(-1, dp(42)));
         TextView note = label("注意：YouTube 影片廣告、加密 DNS／DoH，以及與影片共用網域的廣告，可能無法由 DNS 規則攔截。", 15);
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
@@ -171,8 +178,26 @@ public class AdsBlockerActivity extends Activity {
         if (status == null) return;
         status.setText(enabled() ? "狀態：廣告過濾已啟用" : "狀態：廣告過濾已關閉");
         toggle.setText(enabled() ? "停用廣告阻擋" : "啟用廣告阻擋");
+        int cachedBlock = AdsFilterListManager.load(this, 'B').size();
+        int cachedAllow = AdsFilterListManager.load(this, 'A').size();
+        long updated = prefs.getLong("filter_lists_updated_at", 0L);
+        if (updated == 0L) listStatus.setText("過濾清單：尚未下載");
+        else listStatus.setText("已載入網域規則：封鎖 " + cachedBlock + "／允許 " + cachedAllow + "；更新時間 " +
+                android.text.format.DateFormat.format("yyyy/MM/dd HH:mm", updated));
         renderRules(BLOCK); renderRules(ALLOW);
     }
+    private void updateFilterLists() {
+        updateLists.setEnabled(false);
+        updateLists.setText("正在下載與整理過濾規則…");
+        AdsFilterListManager.update(this, (blocked, allowed, error) -> {
+            updateLists.setEnabled(true);
+            updateLists.setText("更新過濾清單（EasyList + EasyPrivacy）");
+            if (error != null) Toast.makeText(this, "更新失敗：" + error, Toast.LENGTH_LONG).show();
+            else Toast.makeText(this, "更新完成：封鎖 " + blocked + "、允許 " + allowed + " 個網域。重新啟動阻擋服務後生效。", Toast.LENGTH_LONG).show();
+            refresh();
+        });
+    }
+
     private void renderRules(String key) {
         LinearLayout list = content.findViewWithTag("list_" + key);
         if (list == null) return;
