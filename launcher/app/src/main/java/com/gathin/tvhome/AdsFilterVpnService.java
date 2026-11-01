@@ -280,9 +280,10 @@ public class AdsFilterVpnService extends VpnService {
             put16(blocked, 6, 0); put16(blocked, 8, 0); put16(blocked, 10, 0);
             return makeReply(p, ihl, srcPort, blocked);
         }
-        recordDnsDiagnosticOnce("PASS", domain + " [未命中封鎖規則，正常轉送]");
         byte[] answer = forward(query);
-        return answer == null ? null : makeReply(p, ihl, srcPort, answer);
+        if (answer == null) return null;
+        recordDnsDiagnosticOnce("PASS", domain + " [DNS 上游已回覆]");
+        return makeReply(p, ihl, srcPort, answer);
     }
 
     private byte[] forward(byte[] query) {
