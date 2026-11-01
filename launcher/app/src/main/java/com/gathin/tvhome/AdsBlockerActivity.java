@@ -405,15 +405,40 @@ public class AdsBlockerActivity extends Activity {
             TextView domain = label(domainValue.isEmpty() ? "未知網域" : domainValue, 17);
             domain.setTypeface(null, Typeface.BOLD);
             domainRow.addView(domain, new LinearLayout.LayoutParams(0, dp(42), 1f));
-            if (!domainValue.isEmpty() && "已阻擋".equals(result)) {
-                boolean tempAllowed = temporaryAllowedDomains().contains(domainValue);
-                Button allowButton = button(tempAllowed ? "取消暫時允許" : "暫時允許",
-                        () -> toggleTemporaryAllow(domainValue, summary, rows, filter));
-                allowButton.setTextSize(14);
-                allowButton.setPadding(dp(10), dp(4), dp(10), dp(4));
-                allowButton.setBackground(focusBg(tempAllowed ? Color.rgb(38, 105, 78) : Color.rgb(48, 83, 112),
-                        tempAllowed ? Color.rgb(55, 145, 105) : Color.rgb(70, 120, 165)));
-                domainRow.addView(allowButton, new LinearLayout.LayoutParams(-2, dp(40)));
+            if (!domainValue.isEmpty()) {
+                boolean blockedRule = rules(BLOCK).contains(domainValue);
+                boolean allowedRule = rules(ALLOW).contains(domainValue);
+
+                Button blockButton = button(blockedRule ? "已封鎖" : "加入封鎖",
+                        () -> addDnsRuleFromLog(domainValue, BLOCK, summary, rows, filter));
+                blockButton.setTextSize(13);
+                blockButton.setPadding(dp(7), dp(3), dp(7), dp(3));
+                blockButton.setBackground(focusBg(blockedRule ? Color.rgb(75, 65, 65) : Color.rgb(105, 48, 52),
+                        Color.rgb(145, 65, 70)));
+                domainRow.addView(blockButton, new LinearLayout.LayoutParams(-2, dp(40)));
+
+                Button allowRuleButton = button(allowedRule ? "已允許" : "加入允許",
+                        () -> addDnsRuleFromLog(domainValue, ALLOW, summary, rows, filter));
+                allowRuleButton.setTextSize(13);
+                allowRuleButton.setPadding(dp(7), dp(3), dp(7), dp(3));
+                allowRuleButton.setBackground(focusBg(allowedRule ? Color.rgb(55, 75, 65) : Color.rgb(38, 105, 78),
+                        Color.rgb(55, 145, 105)));
+                LinearLayout.LayoutParams allowRuleParams = new LinearLayout.LayoutParams(-2, dp(40));
+                allowRuleParams.leftMargin = dp(5);
+                domainRow.addView(allowRuleButton, allowRuleParams);
+
+                if ("已阻擋".equals(result)) {
+                    boolean tempAllowed = temporaryAllowedDomains().contains(domainValue);
+                    Button tempButton = button(tempAllowed ? "取消暫時允許" : "暫時允許",
+                            () -> toggleTemporaryAllow(domainValue, summary, rows, filter));
+                    tempButton.setTextSize(13);
+                    tempButton.setPadding(dp(7), dp(3), dp(7), dp(3));
+                    tempButton.setBackground(focusBg(tempAllowed ? Color.rgb(38, 105, 78) : Color.rgb(48, 83, 112),
+                            tempAllowed ? Color.rgb(55, 145, 105) : Color.rgb(70, 120, 165)));
+                    LinearLayout.LayoutParams tempParams = new LinearLayout.LayoutParams(-2, dp(40));
+                    tempParams.leftMargin = dp(5);
+                    domainRow.addView(tempButton, tempParams);
+                }
             }
             card.addView(domainRow, new LinearLayout.LayoutParams(-1, dp(42)));
             TextView response = label("DNS 回應：" + item.optString("response", "無資料"), 14);
@@ -422,6 +447,30 @@ public class AdsBlockerActivity extends Activity {
             LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(112));
             rp.topMargin = dp(7);
             rows.addView(card, rp);
+        }
+    }
+
+    private void addDnsRuleFromLog(String domain, String targetKey, TextView summary, LinearLayout rows, int filter) {
+        String oppositeKey = BLOCK.equals(targetKey) ? ALLOW : BLOCK;
+        if (isLockedRule(targetKey, domain) || isLockedRule(oppositeKey, domain)) {
+            Toast.makeText(this, "這是內建固定網域規則，無法從紀錄變更", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        LinkedHashSet<String> target = new LinkedHashSet<>(rules(targetKey));
+        LinkedHashSet<String> opposite = new LinkedHashSet<>(rules(oppositeKey));
+        boolean alreadyExists = target.contains(domain);
+        target.add(domain);
+        opposite.remove(domain);
+        saveRules(targetKey, target);
+        saveRules(oppositeKey, opposite);
+        String action = BLOCK.equals(targetKey) ? "已加入封鎖" : "已加入允許";
+        Toast.makeText(this, alreadyExists ? "此網域已在" + (BLOCK.equals(targetKey) ? "封鎖" : "允許") + "清單" : action + "：" + domain,
+                Toast.LENGTH_SHORT).show();
+        updateDnsLogRows(summary, rows, filter);
+        if (enabled()) {
+            Intent refreshIntent = new Intent(this, AdsFilterVpnService.class);
+            refreshIntent.setAction(AdsFilterVpnService.ACTION_REFRESH_NETWORK);
+            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(refreshIntent); else startService(refreshIntent);
         }
     }
 
