@@ -78,7 +78,9 @@ public class AdsFilterVpnService extends VpnService {
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override public void onAvailable(Network network) {
                     NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                    if (isPhysicalInternet(caps) && shouldSelectNetwork(network, cm)) {
+                        updateUnderlyingNetwork(network);
+                    }
                 }
                 @Override public void onLost(Network network) {
                     if (network.equals(underlyingNetwork)) {
@@ -90,7 +92,9 @@ public class AdsFilterVpnService extends VpnService {
                     }
                 }
                 @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
-                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                    if (isPhysicalInternet(caps) && shouldSelectNetwork(network, cm)) {
+                        updateUnderlyingNetwork(network);
+                    }
                 }
                 @Override public void onLinkPropertiesChanged(Network network, LinkProperties properties) {
                     if (network.equals(underlyingNetwork)) updateUpstreamServers(network, cm);
@@ -127,13 +131,39 @@ public class AdsFilterVpnService extends VpnService {
                     || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
     }
 
+    private boolean isEthernet(Network network, ConnectivityManager cm) {
+        NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+        return isPhysicalInternet(caps)
+                && caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+    }
+
+    // Keep the selected physical network stable. Some Android TV firmware reports
+    // Wi-Fi callbacks after Ethernet is already active; allowing every callback to
+    // replace the DNS upstream can bind DNS sockets to the wrong interface.
+    private boolean shouldSelectNetwork(Network candidate, ConnectivityManager cm) {
+        Network current = underlyingNetwork;
+        if (current == null || current.equals(candidate)) return true;
+        boolean candidateEthernet = isEthernet(candidate, cm);
+        boolean currentEthernet = isEthernet(current, cm);
+        return candidateEthernet && !currentEthernet;
+    }
+
     private Network findPhysicalNetwork(ConnectivityManager cm) {
         Network active = cm.getActiveNetwork();
         if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
+
+        Network ethernet = null;
+        Network wifi = null;
         for (Network candidate : cm.getAllNetworks()) {
-            if (isPhysicalInternet(cm.getNetworkCapabilities(candidate))) return candidate;
+            NetworkCapabilities caps = cm.getNetworkCapabilities(candidate);
+            if (!isPhysicalInternet(caps)) continue;
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                if (ethernet == null) ethernet = candidate;
+            } else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && wifi == null) {
+                wifi = candidate;
+            }
         }
-        return null;
+        return ethernet != null ? ethernet : wifi;
     }
 
     private void updateUnderlyingNetwork(Network network) {
