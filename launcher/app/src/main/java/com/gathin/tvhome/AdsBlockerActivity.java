@@ -206,7 +206,7 @@ public class AdsBlockerActivity extends Activity {
                 .setMessage("僅記錄 DNS 網域、封鎖來源與連線錯誤，不記錄影片網址。請重現播放問題後再查看。")
                 .setView(scroll)
                 .setPositiveButton("清除紀錄", (dialog, which) -> {
-                    prefs.edit().remove("dns_diagnostics").apply();
+                    prefs.edit().remove("dns_diagnostics").remove("dns_diagnostics_seen").apply();
                     Toast.makeText(this, "診斷紀錄已清除", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("關閉", null)
