@@ -67,15 +67,15 @@ public class AdsFilterVpnService extends VpnService {
         if (running.get()) return START_STICKY;
         try {
             startNotice();
-            // Track real Wi-Fi/Ethernet networks, excluding the VPN itself. The default
-            // network can change while the filter is running, so do not capture it only once.
+            // Observe non-VPN network changes. Do not request both Ethernet and Wi-Fi transports
+            // in one NetworkRequest: Android treats multiple requested transports as a
+            // combined requirement, which can match neither interface. Filter callbacks
+            // below to physical Ethernet/Wi-Fi networks only.
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             if (cm == null) throw new IllegalStateException("Connectivity service unavailable");
             // Track physical interfaces even when Android temporarily removes INTERNET
             // during network validation. INTERNET is a validation state, not cable state.
             NetworkRequest request = new NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
                     .build();
             networkCallback = new ConnectivityManager.NetworkCallback() {
