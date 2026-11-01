@@ -1,0 +1,60 @@
+name: Build CleanYourTV GOLD05
+
+on:
+  push:
+    branches:
+      - cytv-gold05-weather-initial-visible
+    paths:
+      - 'launcher/**'
+      - '.github/workflows/build-launcher.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GOLD05 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: cytv-gold05-weather-initial-visible
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses
+
+      - name: Build release APK
+        working-directory: launcher
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Prepare complete source archive
+        run: |
+          mkdir -p dist
+          git archive --format=zip --output=dist/CleanYourTV-GOLD05-source.zip HEAD
+
+      - name: Copy APK to dist
+        run: |
+          mkdir -p dist
+          cp launcher/app/build/outputs/apk/release/*.apk dist/CleanYourTV-GOLD05.apk
+
+      - name: Upload APK and source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanYourTV-GOLD05-APK-and-Source
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
