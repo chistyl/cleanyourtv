@@ -10,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.LinkProperties;
+import android.net.LinkAddress;
 import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
@@ -20,6 +21,8 @@ import java.io.FileOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
 import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,6 +53,7 @@ public class AdsFilterVpnService extends VpnService {
     private Thread worker;
     private volatile Network underlyingNetwork;
     private volatile List<InetAddress> upstreamServers = Collections.singletonList(parseAddress(UPSTREAM));
+    private volatile List<InetAddress> physicalLocalAddresses = Collections.emptyList();
     private ConnectivityManager.NetworkCallback networkCallback;
 
     private void diag(String message) {
@@ -247,7 +251,19 @@ public class AdsFilterVpnService extends VpnService {
         try {
             LinkProperties properties = cm.getLinkProperties(network);
             List<InetAddress> discovered = new ArrayList<>();
+            List<InetAddress> localAddresses = new ArrayList<>();
             if (properties != null) {
+                for (LinkAddress linkAddress : properties.getLinkAddresses()) {
+                    InetAddress local = linkAddress == null ? null : linkAddress.getAddress();
+                    if (local instanceof Inet4Address && !local.isAnyLocalAddress()
+                            && !local.isLoopbackAddress() && !local.isLinkLocalAddress()) {
+                        localAddresses.add(local);
+                    }
+                }
+                if (!localAddresses.isEmpty()) {
+                    physicalLocalAddresses = Collections.unmodifiableList(localAddresses);
+                    diag("saved physical local bind address(es)=" + localAddresses);
+                }
                 for (InetAddress address : properties.getDnsServers()) {
                     if (address != null && !address.isAnyLocalAddress() && !address.isLoopbackAddress()
                             && !address.isLinkLocalAddress() && !address.isMulticastAddress()) {
@@ -389,9 +405,30 @@ public class AdsFilterVpnService extends VpnService {
                     // network handoff. A protected, unbound socket bypasses tun0 and
                     // follows Android's current physical default route instead.
                     socket.close();
-                    socket = new DatagramSocket();
-                    if (!protect(socket)) throw new IllegalStateException("Could not protect fallback DNS socket");
-                    diag("DNS socket using protected default-route fallback; bind failed=" + bindError);
+                    socket = null;
+                    Exception localBindFailure = null;
+                    // Android 9 TV firmware may invalidate the Network handle after tun0 starts.
+                    // Bind a protected socket to the IPv4 address saved from eth0 before handoff.
+                    for (InetAddress localAddress : physicalLocalAddresses) {
+                        DatagramSocket candidate = null;
+                        try {
+                            candidate = new DatagramSocket();
+                            if (!protect(candidate)) throw new IllegalStateException("Could not protect local-bind DNS socket");
+                            candidate.bind(new InetSocketAddress(localAddress, 0));
+                            socket = candidate;
+                            diag("DNS socket bound to saved physical local address=" + localAddress.getHostAddress());
+                            break;
+                        } catch (Exception localError) {
+                            localBindFailure = localError;
+                            if (candidate != null) candidate.close();
+                        }
+                    }
+                    if (socket == null) {
+                        socket = new DatagramSocket();
+                        if (!protect(socket)) throw new IllegalStateException("Could not protect fallback DNS socket");
+                        diag("DNS socket using protected default-route fallback; network bind failed="
+                                + bindError + "; local bind failed=" + localBindFailure);
+                    }
                 }
             } else {
                 diag("DNS socket using protected default-route fallback; no physical handle");
