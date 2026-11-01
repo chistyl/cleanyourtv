@@ -151,6 +151,9 @@ public class AdsBlockerActivity extends Activity {
         content.addView(updateLists, up);
         listStatus = label("過濾清單：尚未下載", 15); listStatus.setTextColor(Color.LTGRAY);
         content.addView(listStatus, new LinearLayout.LayoutParams(-1, dp(42)));
+        Button diagnostics = button("查看 DNS 診斷紀錄", this::showDnsDiagnostics);
+        LinearLayout.LayoutParams diagParams = new LinearLayout.LayoutParams(-1, dp(54)); diagParams.topMargin = dp(8);
+        content.addView(diagnostics, diagParams);
         TextView note = label("注意：此版本採用 uBlock Origin 清單，但本機 DNS 僅能攔截網域層級規則；網頁元素隱藏、腳本及網址路徑規則不支援。YouTube 影片廣告、加密 DNS／DoH 及與影片共用網域的廣告，可能無法攔截。", 15);
         note.setTextColor(Color.rgb(255, 205, 120)); note.setGravity(Gravity.TOP);
         LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(-1, dp(58)); np.topMargin = dp(10);
@@ -187,6 +190,29 @@ public class AdsBlockerActivity extends Activity {
                 android.text.format.DateFormat.format("yyyy/MM/dd HH:mm", updated));
         renderRules(BLOCK); renderRules(ALLOW);
     }
+    private void showDnsDiagnostics() {
+        String raw = prefs.getString("dns_diagnostics", "");
+        if (raw == null || raw.trim().isEmpty()) raw = "目前沒有 DNS 封鎖或連線錯誤紀錄。";
+        TextView message = new TextView(this);
+        message.setText(raw);
+        message.setTextColor(Color.WHITE);
+        message.setTextSize(14);
+        message.setTextIsSelectable(true);
+        message.setPadding(dp(16), dp(12), dp(16), dp(12));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(message);
+        new AlertDialog.Builder(this)
+                .setTitle("DNS 診斷紀錄（最近 60 筆）")
+                .setMessage("僅記錄 DNS 網域、封鎖來源與連線錯誤，不記錄影片網址。請重現播放問題後再查看。")
+                .setView(scroll)
+                .setPositiveButton("清除紀錄", (dialog, which) -> {
+                    prefs.edit().remove("dns_diagnostics").apply();
+                    Toast.makeText(this, "診斷紀錄已清除", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("關閉", null)
+                .show();
+    }
+
     private void updateFilterLists() {
         updateLists.setEnabled(false);
         updateLists.setText("正在下載與整理過濾規則…");
