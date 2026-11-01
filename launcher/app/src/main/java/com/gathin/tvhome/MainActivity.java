@@ -4119,7 +4119,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             focused.setCornerRadius(12*density); focused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
             View.OnFocusChangeListener focus = (v, hasFocus) -> {
                 v.setBackground(hasFocus ? focused : normal);
-                v.setTextColor(Color.WHITE);
+                ((Button) v).setTextColor(Color.WHITE);
                 v.setScaleX(hasFocus ? 1.02f : 1f);
                 v.setScaleY(hasFocus ? 1.02f : 1f);
             };
