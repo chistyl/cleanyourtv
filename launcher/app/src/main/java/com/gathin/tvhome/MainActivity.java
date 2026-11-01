@@ -4883,12 +4883,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                         AppSelectionListener listener) {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        // Keep rounded focus surfaces fully visible at the viewport edges.
+        scroll.setClipChildren(false);
+        scroll.setClipToPadding(false);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setHorizontalScrollBarEnabled(false);
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding((int)(12*density), (int)(8*density), (int)(12*density), (int)(8*density));
+        list.setClipChildren(false);
+        list.setClipToPadding(false);
+        list.setPadding((int)(14*density), (int)(10*density), (int)(14*density), (int)(10*density));
         scroll.addView(list, new ScrollView.LayoutParams(-1, -2));
         SharedPreferences prefs = getSharedPreferences("tv_app_customizations", MODE_PRIVATE);
         java.util.ArrayList<View> selectionRows = new java.util.ArrayList<>();
@@ -4927,7 +4932,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             android.widget.CheckBox check = new android.widget.CheckBox(this);
             check.setText(ri == null ? pkg : String.valueOf(ri.loadLabel(getPackageManager())));
             check.setTextColor(Color.WHITE); check.setTextSize(14); check.setChecked(checked[i]);
-            check.setFocusable(false); check.setButtonTintList(new ColorStateList(
+            check.setFocusable(false);
+            check.setButtonTintList(new ColorStateList(
                     new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                     new int[]{Color.WHITE, 0xFF9AA4B2}));
             LinearLayout.LayoutParams checkLp = new LinearLayout.LayoutParams(0, (int)(64*density), 1f);
@@ -4943,8 +4949,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             GradientDrawable rowBg = new GradientDrawable(); rowBg.setColor(0x18333333);
             rowBg.setCornerRadius(10*density); row.setBackground(rowBg); row.setDefaultFocusHighlightEnabled(false);
             row.setOnFocusChangeListener((v, focused) -> {
-                rowBg.setColor(focused ? 0xFF394454 : 0x18333333);
-                rowBg.setStroke(focused ? Math.max(2,(int)(2*density)) : 0, focused ? Color.WHITE : Color.TRANSPARENT);
+                // Use the same white rounded focus pill as the other launcher dialogs.
+                // A stroke was clipped by the ScrollView at the top/bottom of the visible list.
+                rowBg.setColor(focused ? 0xFFF4F4F4 : 0x18333333);
+                rowBg.setStroke(0, Color.TRANSPARENT);
+                check.setTextColor(focused ? 0xFF202124 : Color.WHITE);
+                check.setButtonTintList(new ColorStateList(
+                        new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+                        new int[]{focused ? 0xFF202124 : Color.WHITE, focused ? 0xFF7B8490 : 0xFF9AA4B2}));
+                v.setElevation(focused ? 2f * density : 0f);
             });
             row.setOnKeyListener((v,key,event) -> {
                 if(event.getAction()==KeyEvent.ACTION_UP && (key==KeyEvent.KEYCODE_DPAD_CENTER || key==KeyEvent.KEYCODE_ENTER)) {
@@ -4953,7 +4966,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return false;
             });
             LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
-            rowLp.bottomMargin = (int)(5*density); list.addView(row, rowLp);
+            rowLp.leftMargin = (int)(2*density);
+            rowLp.rightMargin = (int)(2*density);
+            rowLp.bottomMargin = (int)(7*density);
+            list.addView(row, rowLp);
         }
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle(title).setView(scroll)
                 .setNegativeButton("取消", null)
@@ -4986,15 +5002,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             GradientDrawable buttonNormal = new GradientDrawable();
             buttonNormal.setColor(0xFF343B47); buttonNormal.setCornerRadius(14*density);
             GradientDrawable buttonFocused = new GradientDrawable();
-            buttonFocused.setColor(0xFF00AFA5); buttonFocused.setCornerRadius(14*density);
-            buttonFocused.setStroke(Math.max(3,(int)(3*density)), Color.WHITE);
+            buttonFocused.setColor(0xFFF4F4F4); buttonFocused.setCornerRadius(14*density);
             cancelButton.setBackground(buttonNormal); saveButton.setBackground(buttonNormal);
-            cancelButton.setTextColor(0xFF80CBC4); saveButton.setTextColor(0xFF80CBC4);
+            cancelButton.setTextColor(0xFFF1F2F4); saveButton.setTextColor(0xFFF1F2F4);
             View.OnFocusChangeListener buttonFocus = (v, focused) -> {
                 v.setBackground(focused ? buttonFocused : buttonNormal);
-                ((Button)v).setTextColor(focused ? Color.WHITE : 0xFF80CBC4);
-                v.setScaleX(focused ? 1.025f : 1f);
-                v.setScaleY(focused ? 1.025f : 1f);
+                ((Button)v).setTextColor(focused ? 0xFF202124 : 0xFFF1F2F4);
+                v.setScaleX(1f);
+                v.setScaleY(1f);
             };
             cancelButton.setOnFocusChangeListener(buttonFocus); saveButton.setOnFocusChangeListener(buttonFocus);
             cancelButton.setNextFocusRightId(saveButton.getId());
