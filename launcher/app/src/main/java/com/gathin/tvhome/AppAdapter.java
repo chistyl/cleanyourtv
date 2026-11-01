@@ -622,7 +622,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // caption underneath. Keep their caption space reserved so the next row cannot move upward.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
         boolean hideAllNames = ctx.getSharedPreferences("tv_app_customizations", Context.MODE_PRIVATE)
-                .getBoolean("hide_all_names", false);
+                .getBoolean("hide_all_names", true);
         // INVISIBLE (not GONE) deliberately preserves the row height when names are hidden.
         h.name.setVisibility(e.name.isEmpty() || hideAllNames || dockKind ? View.INVISIBLE : View.VISIBLE);
         h.inDock = dockKind;
