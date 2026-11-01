@@ -82,7 +82,10 @@ public class AdsBlockerActivity extends Activity {
         block.remove("googleapis.com");
         block.remove("www.googleapis.com");
         block.remove("youtubei.googleapis.com");
-        // This playback CDN host must be explicitly allowed even though *.svc.litv.tv is blocked.\n        block.remove("p-cdnstatic.svc.litv.tv");\n        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));\n        allow.add("p-cdnstatic.svc.litv.tv");
+        // This playback CDN host must be explicitly allowed even though *.svc.litv.tv is blocked.
+        block.remove("p-cdnstatic.svc.litv.tv");
+        LinkedHashSet<String> allow = new LinkedHashSet<>(rules(ALLOW));
+        allow.add("p-cdnstatic.svc.litv.tv");
         for (String item : DEFAULT_BLOCK.split("\\s+")) {
             String domain = normalize(item);
             if (!domain.isEmpty()) block.add(domain);
@@ -253,7 +256,8 @@ public class AdsBlockerActivity extends Activity {
             return "vid.dbokutv.com".equals(domain)
                     || "firebaselogging-pa.googleapis.com".equals(domain)
                     || "pic.dbokutv.com".equals(domain)
-                     || "events.ads.vungle.com".equals(domain)\n                    || "p-cdnstatic.svc.litv.tv".equals(domain);
+                     || "events.ads.vungle.com".equals(domain)
+                    || "p-cdnstatic.svc.litv.tv".equals(domain);
         }
         return false;
     }
