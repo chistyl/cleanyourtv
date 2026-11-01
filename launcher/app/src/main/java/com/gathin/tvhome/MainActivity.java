@@ -4023,6 +4023,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         return "天氣不明";
     }
 
+    private android.graphics.drawable.Drawable remoteWeatherFocusBackground(boolean focused) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(focused ? 0xFF344B52 : 0x22343B47);
+        shape.setCornerRadius(12 * density);
+        if (focused) shape.setStroke(Math.max(3, (int)(3 * density)), Color.WHITE);
+        else shape.setStroke(Math.max(1, (int)density), 0x558A929F);
+        return shape;
+    }
+
     private void showWeeklyWeatherSettings() {
         SharedPreferences prefs = getSharedPreferences("weekly_weather", MODE_PRIVATE);
         LinearLayout content = new LinearLayout(this);
@@ -4031,6 +4040,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         content.setPadding(pad, pad, pad, pad);
         android.widget.Switch toggle = new android.widget.Switch(this);
         toggle.setText("顯示一週天氣"); toggle.setTextColor(Color.WHITE);
+        toggle.setFocusable(true); toggle.setFocusableInTouchMode(true);
+        toggle.setDefaultFocusHighlightEnabled(false);
+        toggle.setPadding((int)(10*density), (int)(8*density), (int)(10*density), (int)(8*density));
+        toggle.setBackground(remoteWeatherFocusBackground(false));
+        toggle.setOnFocusChangeListener((v, focused) -> v.setBackground(remoteWeatherFocusBackground(focused)));
         toggle.setChecked(prefs.getBoolean("enabled", false)); content.addView(toggle);
         android.widget.RadioGroup modes = new android.widget.RadioGroup(this);
         modes.setOrientation(LinearLayout.VERTICAL);
@@ -4038,6 +4052,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         device.setText("使用電視裝置目前位置（預設）"); device.setTextColor(Color.WHITE); device.setId(View.generateViewId());
         android.widget.RadioButton cityMode = new android.widget.RadioButton(this);
         cityMode.setText("固定指定城市"); cityMode.setTextColor(Color.WHITE); cityMode.setId(View.generateViewId());
+        for (android.widget.RadioButton option : new android.widget.RadioButton[]{device, cityMode}) {
+            option.setFocusable(true); option.setFocusableInTouchMode(true);
+            option.setDefaultFocusHighlightEnabled(false);
+            option.setMinHeight((int)(48*density));
+            option.setPadding((int)(10*density), (int)(5*density), (int)(10*density), (int)(5*density));
+            option.setBackground(remoteWeatherFocusBackground(false));
+            option.setOnFocusChangeListener((v, focused) -> v.setBackground(remoteWeatherFocusBackground(focused)));
+        }
         modes.addView(device); modes.addView(cityMode);
         boolean fixed = "city".equals(prefs.getString("location_mode", "device"));
         modes.check(fixed ? cityMode.getId() : device.getId()); content.addView(modes);
@@ -4061,7 +4083,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         content.addView(city, new LinearLayout.LayoutParams(-1, (int)(54*density)));
         city.setVisibility(fixed ? View.VISIBLE : View.GONE);
-        modes.setOnCheckedChangeListener((g, checked) -> city.setVisibility(checked == cityMode.getId() ? View.VISIBLE : View.GONE));
+        modes.setOnCheckedChangeListener((g, checked) ->
+                city.setVisibility(checked == cityMode.getId() ? View.VISIBLE : View.GONE));
         AlertDialog weatherDialog = new AlertDialog.Builder(this).setTitle("一週天氣").setView(content).setNegativeButton("取消", null)
                 .setPositiveButton("儲存", (dialog, which) -> {
                     boolean useCity = modes.getCheckedRadioButtonId() == cityMode.getId();
@@ -4094,7 +4117,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             GradientDrawable normal = new GradientDrawable(); normal.setColor(0xFF343B47); normal.setCornerRadius(12*density);
             GradientDrawable focused = new GradientDrawable(); focused.setColor(0xFF46566B);
             focused.setCornerRadius(12*density); focused.setStroke(Math.max(2,(int)(2*density)), Color.WHITE);
-            View.OnFocusChangeListener focus = (v, hasFocus) -> v.setBackground(hasFocus ? focused : normal);
+            View.OnFocusChangeListener focus = (v, hasFocus) -> {
+                v.setBackground(hasFocus ? focused : normal);
+                v.setTextColor(Color.WHITE);
+                v.setScaleX(hasFocus ? 1.02f : 1f);
+                v.setScaleY(hasFocus ? 1.02f : 1f);
+            };
             cancelWeather.setBackground(normal); saveWeather.setBackground(normal);
             cancelWeather.setOnFocusChangeListener(focus); saveWeather.setOnFocusChangeListener(focus);
             cancelWeather.setId(View.generateViewId()); saveWeather.setId(View.generateViewId());
@@ -4104,6 +4132,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             city.setNextFocusDownId(cancelWeather.getId());
             cityMode.setNextFocusDownId(city.getVisibility() == View.VISIBLE ? city.getId() : cancelWeather.getId());
             cityMode.setNextFocusRightId(city.getVisibility() == View.VISIBLE ? city.getId() : saveWeather.getId());
+            modes.setOnCheckedChangeListener((g, checked) -> {
+                boolean showCity = checked == cityMode.getId();
+                city.setVisibility(showCity ? View.VISIBLE : View.GONE);
+                cityMode.setNextFocusDownId(showCity ? city.getId() : cancelWeather.getId());
+                cityMode.setNextFocusRightId(showCity ? city.getId() : saveWeather.getId());
+            });
             city.setNextFocusLeftId(cityMode.getId());
             device.setNextFocusDownId(cityMode.getId());
             toggle.setNextFocusDownId(device.getId());
