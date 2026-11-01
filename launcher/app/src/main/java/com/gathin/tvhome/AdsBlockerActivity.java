@@ -43,7 +43,7 @@ public class AdsBlockerActivity extends Activity {
     // Bundled starter rules. Allow rules take precedence over block rules.
     private static final String DEFAULT_BLOCK = "";
     private static final String DEFAULT_ALLOW = "";
-    private static final String DEFAULT_RULES_VERSION = "5";
+    private static final String DEFAULT_RULES_VERSION = "6";
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -57,9 +57,27 @@ public class AdsBlockerActivity extends Activity {
 
     private void installBundledRules() {
         if (DEFAULT_RULES_VERSION.equals(prefs.getString("bundled_rules_version", ""))) return;
-        // Clear all saved and downloaded block rules; preserve allow rules.
-        saveRules(BLOCK, new LinkedHashSet<>());
-        AdsFilterListManager.clearBlocked(this);
+        // Remove the user's specified domains from both manual lists and downloaded subscriptions.
+        String[] excluded = {
+                "vid.dbokutv.com", "firebaselogging-pa.googleapis.com",
+                "pic.dbokutv.com", "events.ads.vungle.com",
+                "googleads.g.doubleclick.net", "securepubads.g.doubleclick.net",
+                "pubads.g.doubleclick.net", "pagead2.googlesyndication.com",
+                "av1.xdrig.com", "me.xdrig.com", "www.xdrig.com", "xdrig.com",
+                "googlevideo.com", "rr2---sn-un57sne7.googlevideo.com",
+                "eligibility-panelresearch.googlevideo.com", "www.googlevideo.com",
+                "footprints-pa.googleapis.com", "www.googleapis.com",
+                "www.googleadservices.com", "youtubei.googleapis.com",
+                "p-app.dhub.hinet.net", "ads.aralego.com",
+                "adsv.svc.litv.tv", "acs2.svc.litv.tv",
+                "googleapis.com", "svc.litv.tv"
+        };
+        for (String key : new String[]{BLOCK, ALLOW}) {
+            LinkedHashSet<String> set = new LinkedHashSet<>(rules(key));
+            for (String domain : excluded) set.remove(domain);
+            saveRules(key, set);
+        }
+        AdsFilterListManager.removeExcluded(this);
         prefs.edit().putString("bundled_rules_version", DEFAULT_RULES_VERSION).apply();
     }
 
