@@ -39,19 +39,50 @@ final class AdsFilterListManager {
             LinkedHashSet<String> block = new LinkedHashSet<>(), allow = new LinkedHashSet<>();
             String error = null;
             try {
-                for (String source : SOURCES) parse(download(source), block, allow);
-                if (block.isEmpty()) throw new IllegalStateException("下載完成，但沒有可用的網域規則");
+                List<String> failedSources = new ArrayList<>();
+                int successfulSources = 0;
+                for (String source : SOURCES) {
+                    try {
+                        String body = downloadWithRetry(source);
+                        int before = block.size() + allow.size();
+                        parse(body, block, allow);
+                        if (block.size() + allow.size() > before || !body.trim().isEmpty()) successfulSources++;
+                        else failedSources.add(source + "（沒有可解析規則）");
+                    } catch (Exception sourceError) {
+                        failedSources.add(source + "（" + safeMessage(sourceError) + "）");
+                        Log.w(TAG, "Skipping unavailable filter source: " + source, sourceError);
+                    }
+                }
+                if (successfulSources == 0 || block.isEmpty()) {
+                    throw new IllegalStateException("所有過濾清單來源都無法取得有效資料；已保留上一版清單。");
+                }
                 File target = new File(context.getFilesDir(), FILE_NAME);
                 File temp = new File(context.getFilesDir(), FILE_NAME + ".tmp");
+                File backup = new File(context.getFilesDir(), FILE_NAME + ".bak");
                 try (FileOutputStream out = new FileOutputStream(temp)) {
                     for (String d : block) out.write(("B " + d + "\n").getBytes(StandardCharsets.UTF_8));
                     for (String d : allow) out.write(("A " + d + "\n").getBytes(StandardCharsets.UTF_8));
                     out.getFD().sync();
                 }
-                if (target.exists() && !target.delete()) throw new IllegalStateException("無法替換舊規則檔");
-                if (!temp.renameTo(target)) throw new IllegalStateException("無法儲存規則檔");
+                if (backup.exists() && !backup.delete()) throw new IllegalStateException("無法清除舊備份規則檔");
+                if (target.exists() && !target.renameTo(backup)) throw new IllegalStateException("無法備份舊規則檔");
+                if (!temp.renameTo(target)) {
+                    if (backup.exists()) backup.renameTo(target);
+                    throw new IllegalStateException("無法儲存新規則檔；已嘗試還原舊清單");
+                }
+                if (backup.exists()) backup.delete();
                 context.getSharedPreferences("ad_filter", Context.MODE_PRIVATE).edit()
                     .putLong("filter_lists_updated_at", System.currentTimeMillis()).apply();
+                if (!failedSources.isEmpty()) {
+                    StringBuilder warning = new StringBuilder("PARTIAL: 成功取得 ")
+                            .append(successfulSources).append("/").append(SOURCES.length)
+                            .append(" 個來源；失敗來源：");
+                    for (int i = 0; i < failedSources.size(); i++) {
+                        if (i > 0) warning.append("；");
+                        warning.append(failedSources.get(i));
+                    }
+                    error = warning.toString();
+                }
             } catch (Exception e) {
                 error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
                 Log.w(TAG, "Filter list update failed", e);
@@ -63,23 +94,48 @@ final class AdsFilterListManager {
         }, "CleanYourTV-FilterListUpdate").start();
     }
 
+    private static String downloadWithRetry(String address) throws Exception {
+        Exception last = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try { return download(address); }
+            catch (Exception e) {
+                last = e;
+                if (attempt < 3) {
+                    try { Thread.sleep(700L * attempt); }
+                    catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw interrupted;
+                    }
+                }
+            }
+        }
+        throw last == null ? new IOException("下載失敗") : last;
+    }
+
+    private static String safeMessage(Exception e) {
+        return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+    }
+
     private static String download(String address) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
-        c.setConnectTimeout(12000); c.setReadTimeout(20000);
-        c.setRequestProperty("User-Agent", "CleanYourTV/1.0 (DNS filter list importer)");
+        c.setConnectTimeout(18000); c.setReadTimeout(30000);
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10) CleanYourTV/1.0");
+        c.setRequestProperty("Accept", "text/plain,*/*");
+        c.setRequestProperty("Accept-Encoding", "identity");
         c.setInstanceFollowRedirects(true);
         try {
             int status = c.getResponseCode();
-            if (status != 200) throw new IllegalStateException("清單下載失敗 HTTP " + status);
+            if (status != HttpURLConnection.HTTP_OK) throw new IOException("HTTP " + status);
             StringBuilder body = new StringBuilder();
             try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
                 String line; int total = 0;
                 while ((line = r.readLine()) != null) {
                     total += line.length();
-                    if (total > 12 * 1024 * 1024) throw new IllegalStateException("過濾清單超過 12 MB 安全上限");
+                    if (total > 12 * 1024 * 1024) throw new IOException("清單超過 12 MB 安全上限");
                     body.append(line).append('\n');
                 }
             }
+            if (body.length() == 0) throw new IOException("來源回傳空白內容");
             return body.toString();
         } finally { c.disconnect(); }
     }
