@@ -5621,8 +5621,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int[] rgb = {Color.red(initial), Color.green(initial), Color.blue(initial)};
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(24, 12, 24, 4);
+        panel.setPadding((int)(18 * density), (int)(12 * density), (int)(18 * density), (int)(8 * density));
         View preview = new View(this);
+        preview.setBackgroundColor(initial);
         LinearLayout.LayoutParams previewLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * density));
         previewLp.bottomMargin = (int) (12 * density);
@@ -5633,11 +5634,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (int i = 0; i < 3; i++) {
             TextView label = new TextView(this);
             label.setText(channels[i] + "：" + rgb[i]);
+            label.setTextColor(Color.WHITE);
+            label.setTextSize(15f);
             panel.addView(label);
             final int channel = i;
             SeekBar bar = new SeekBar(this);
             bar.setMax(255);
             bar.setProgress(rgb[i]);
+            bar.setFocusable(true);
+            bar.setFocusableInTouchMode(true);
+            bar.setDefaultFocusHighlightEnabled(false);
+            GradientDrawable barNormal = new GradientDrawable();
+            barNormal.setColor(0x18333333);
+            barNormal.setCornerRadius(12 * density);
+            GradientDrawable barFocused = new GradientDrawable();
+            barFocused.setColor(0xFF263B43);
+            barFocused.setCornerRadius(12 * density);
+            barFocused.setStroke(Math.max(3, (int)(3 * density)), 0xFF00D5C8);
+            bar.setBackground(barNormal);
+            bar.setPadding((int)(10 * density), (int)(5 * density), (int)(10 * density), (int)(5 * density));
+            bar.setOnFocusChangeListener((v, focused) -> v.setBackground(focused ? barFocused : barNormal));
             bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
                     rgb[channel] = value;
@@ -5648,7 +5664,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 @Override public void onStopTrackingTouch(SeekBar seekBar) { }
             });
             bars[i] = bar;
-            panel.addView(bar);
+            LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(-1, (int)(48 * density));
+            barLp.bottomMargin = (int)(5 * density);
+            panel.addView(bar, barLp);
         }
         update.run();
         AlertDialog colorDialog = new AlertDialog.Builder(this).setTitle("自訂 APP 背景色")
@@ -5666,9 +5684,70 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }).create();
         colorDialog.setOnCancelListener(dialog -> reopenPendingFolderAfterAppEdit());
         colorDialog.show();
+
+        Button cancel = colorDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        Button reset = colorDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        Button apply = colorDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        Button[] actions = {cancel, reset, apply};
+        GradientDrawable actionNormal = new GradientDrawable();
+        actionNormal.setColor(0xFF343B47);
+        actionNormal.setCornerRadius(14 * density);
+        GradientDrawable actionFocused = new GradientDrawable();
+        actionFocused.setColor(0xFF00AFA5);
+        actionFocused.setCornerRadius(14 * density);
+        actionFocused.setStroke(Math.max(3, (int)(3 * density)), Color.WHITE);
+        for (int i = 0; i < actions.length; i++) {
+            Button button = actions[i];
+            if (button == null) continue;
+            button.setFocusable(true);
+            button.setFocusableInTouchMode(true);
+            button.setDefaultFocusHighlightEnabled(false);
+            button.setAllCaps(false);
+            button.setMinWidth((int)(104 * density));
+            button.setMinHeight((int)(52 * density));
+            button.setBackground(actionNormal);
+            button.setTextColor(0xFF80CBC4);
+            button.setOnFocusChangeListener((v, focused) -> {
+                v.setBackground(focused ? actionFocused : actionNormal);
+                ((Button)v).setTextColor(Color.WHITE);
+                v.setScaleX(focused ? 1.025f : 1f);
+                v.setScaleY(focused ? 1.025f : 1f);
+            });
+            button.setId(View.generateViewId());
+            if (i > 0 && actions[i - 1] != null) {
+                button.setNextFocusLeftId(actions[i - 1].getId());
+                actions[i - 1].setNextFocusRightId(button.getId());
+            }
+        }
+        if (cancel != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) cancel.getLayoutParams();
+            lp.rightMargin = (int)(10 * density);
+            cancel.setLayoutParams(lp);
+        }
+        if (reset != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) reset.getLayoutParams();
+            lp.leftMargin = (int)(6 * density);
+            lp.rightMargin = (int)(6 * density);
+            reset.setLayoutParams(lp);
+        }
+        if (apply != null) {
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) apply.getLayoutParams();
+            lp.leftMargin = (int)(10 * density);
+            apply.setLayoutParams(lp);
+        }
+        for (int i = 0; i < bars.length; i++) {
+            bars[i].setId(View.generateViewId());
+            if (i > 0) bars[i].setNextFocusUpId(bars[i - 1].getId());
+            if (i < bars.length - 1) bars[i].setNextFocusDownId(bars[i + 1].getId());
+            else if (cancel != null) bars[i].setNextFocusDownId(cancel.getId());
+        }
+        if (cancel != null) {
+            cancel.setNextFocusUpId(bars[2].getId());
+            cancel.setNextFocusDownId(bars[2].getId());
+        }
+        bars[0].post(bars[0]::requestFocus);
     }
 
-    /** Icon size adjustment: -50% to +200% around a 125% default scale, with a visible live preview. */
     private void showAppIconSizeDialog(String pkg, SharedPreferences prefs) {
         int current = prefs.getInt("icon_scale_adjust_" + pkg, 0);
         SeekBar size = new SeekBar(this);
