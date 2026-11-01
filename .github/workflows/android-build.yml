@@ -1,5 +1,5 @@
 name: Android APK Build
-# Rebuild trigger for latest V17.1 folder and weather layout
+# Build GOLD-05 dock-row visibility and decoration fixes
 
 on:
   workflow_dispatch:
