@@ -9,6 +9,7 @@ import android.net.VpnService;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
@@ -34,6 +35,8 @@ public class AdsFilterVpnService extends VpnService {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ParcelFileDescriptor tunnel;
     private Thread worker;
+    private volatile Network underlyingNetwork;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
@@ -45,14 +48,38 @@ public class AdsFilterVpnService extends VpnService {
         if (running.get()) return START_STICKY;
         try {
             startNotice();
-            // Bind the DNS-only VPN to the physical network so Ethernet remains the upstream.
+            // Track real Wi-Fi/Ethernet networks, excluding the VPN itself. The default
+            // network can change while the filter is running, so do not capture it only once.
             ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            Network active = cm == null ? null : cm.getActiveNetwork();
-            NetworkCapabilities caps = active == null || cm == null ? null : cm.getNetworkCapabilities(active);
-            if (active == null || caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                throw new IllegalStateException("No active physical network for DNS forwarding");
-            }
-            setUnderlyingNetworks(new Network[]{active});
+            if (cm == null) throw new IllegalStateException("Connectivity service unavailable");
+            NetworkRequest request = new NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                    .build();
+            networkCallback = new ConnectivityManager.NetworkCallback() {
+                @Override public void onAvailable(Network network) {
+                    NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                }
+                @Override public void onLost(Network network) {
+                    if (network.equals(underlyingNetwork)) {
+                        underlyingNetwork = null;
+                        Network replacement = findPhysicalNetwork(cm);
+                        if (replacement != null) updateUnderlyingNetwork(replacement);
+                        else {
+                            try { setUnderlyingNetworks(new Network[0]); }
+                            catch (Exception e) { Log.w(TAG, "Unable to clear lost underlying network", e); }
+                        }
+                    }
+                }
+                @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities caps) {
+                    if (isPhysicalInternet(caps)) updateUnderlyingNetwork(network);
+                }
+            };
+            cm.registerNetworkCallback(request, networkCallback);
+            Network initial = findPhysicalNetwork(cm);
+            if (initial == null) throw new IllegalStateException("No active Wi-Fi or Ethernet network");
+            updateUnderlyingNetwork(initial);
             Builder builder = new Builder()
                     .setSession("CleanYourTV 廣告過濾")
                     .setMtu(1500)
@@ -70,6 +97,34 @@ public class AdsFilterVpnService extends VpnService {
             stopSelf();
         }
         return START_STICKY;
+    }
+
+    private boolean isPhysicalInternet(NetworkCapabilities caps) {
+        return caps != null
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                    || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+    }
+
+    private Network findPhysicalNetwork(ConnectivityManager cm) {
+        Network active = cm.getActiveNetwork();
+        if (active != null && isPhysicalInternet(cm.getNetworkCapabilities(active))) return active;
+        for (Network candidate : cm.getAllNetworks()) {
+            if (isPhysicalInternet(cm.getNetworkCapabilities(candidate))) return candidate;
+        }
+        return null;
+    }
+
+    private void updateUnderlyingNetwork(Network network) {
+        underlyingNetwork = network;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setUnderlyingNetworks(new Network[]{network});
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to update VPN underlying network", e);
+        }
     }
 
     private void startNotice() {
@@ -146,10 +201,10 @@ public class AdsFilterVpnService extends VpnService {
         try {
             socket = new DatagramSocket();
             if (!protect(socket)) throw new IllegalStateException("Could not protect upstream DNS socket");
-            // Keep upstream DNS traffic on the active physical Ethernet/Wi-Fi network.
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-            Network underlying = cm == null ? null : cm.getActiveNetwork();
-            if (underlying != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) underlying.bindSocket(socket);
+            // Send upstream DNS through the currently selected physical Wi-Fi/Ethernet network.
+            Network underlying = underlyingNetwork;
+            if (underlying == null) throw new IllegalStateException("No physical network for DNS forwarding");
+            underlying.bindSocket(socket);
             socket.setSoTimeout(3500);
             byte[] ip = new byte[4]; byte[] raw = InetAddress.getByName(UPSTREAM).getAddress();
             System.arraycopy(raw, 0, ip, 0, 4);
@@ -234,6 +289,12 @@ public class AdsFilterVpnService extends VpnService {
     @Override public void onDestroy() { stopFilter(); super.onDestroy(); }
     private void stopFilter() {
         running.set(false);
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (cm != null && networkCallback != null) {
+            try { cm.unregisterNetworkCallback(networkCallback); } catch (Exception ignored) {}
+            networkCallback = null;
+        }
+        underlyingNetwork = null;
         if (tunnel != null) { try { tunnel.close(); } catch (Exception ignored) {} tunnel = null; }
         if (worker != null) { worker.interrupt(); worker = null; }
         stopForeground(true);
