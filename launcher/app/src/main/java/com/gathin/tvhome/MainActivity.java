@@ -3846,8 +3846,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             String normalizedCity = city.replace("臺", "台").trim();
             double[] coordinates = taiwanCityCoordinates(normalizedCity);
             if (coordinates != null) {
-                fetchForecast(coordinates[0], coordinates[1], normalizedCity);
-                return;
+                try {
+                    fetchForecastData(coordinates[0], coordinates[1], normalizedCity);
+                    return;
+                } catch (Exception directError) {
+                    // A known centre coordinate can still fail at the provider. Retry by city name.
+                    android.util.Log.w("WeeklyWeather", "Coordinate forecast failed for " + normalizedCity
+                            + "; retrying geocoding: " + directError.getMessage());
+                }
             }
 
             // Try both localized and English Open-Meteo geocoding. Do not silently keep a wrong first match.
@@ -3885,17 +3891,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void fetchForecast(double lat, double lon, String place) {
         try {
-            String url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
-                    + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
-                    + "&forecast_days=7&timezone=auto";
-            JSONObject root = getJson(url);
-            JSONObject daily = root.getJSONObject("daily");
-            JSONArray dates = daily.getJSONArray("time"), codes = daily.getJSONArray("weather_code");
-            JSONArray highs = daily.getJSONArray("temperature_2m_max"), lows = daily.getJSONArray("temperature_2m_min");
-            JSONArray rain = daily.optJSONArray("precipitation_probability_max");
-            weatherHandler.post(() -> renderWeeklyWeather(dates, codes, highs, lows, rain, place));
+            fetchForecastData(lat, lon, place);
+        } catch (Exception e) {
+            android.util.Log.e("WeeklyWeather", "Forecast failed for " + place, e);
+            showWeatherError("天氣資料讀取失敗：" + e.getMessage());
+        }
+    }
 
-        } catch (Exception e) { showWeatherError("天氣資料讀取失敗：" + e.getMessage()); }
+    /** Fetch and validate the forecast. Throws so fixed-city lookup can retry via geocoding. */
+    private void fetchForecastData(double lat, double lon, String place) throws Exception {
+        String url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
+                + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                + "&forecast_days=7&timezone=auto";
+        JSONObject root = getJson(url);
+        JSONObject daily = root.getJSONObject("daily");
+        JSONArray dates = daily.getJSONArray("time"), codes = daily.getJSONArray("weather_code");
+        JSONArray highs = daily.getJSONArray("temperature_2m_max"), lows = daily.getJSONArray("temperature_2m_min");
+        JSONArray rain = daily.optJSONArray("precipitation_probability_max");
+        if (dates.length() == 0 || codes.length() == 0 || highs.length() == 0 || lows.length() == 0)
+            throw new IOException("天氣服務回傳空資料");
+        weatherHandler.post(() -> renderWeeklyWeather(dates, codes, highs, lows, rain, place));
     }
 
     private void showWeeklyWeatherStatus(String message) {
@@ -4015,9 +4030,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
         c.setRequestMethod("GET"); c.setConnectTimeout(12000); c.setReadTimeout(12000);
         c.setRequestProperty("Accept", "application/json");
-        try (InputStream in = c.getInputStream(); java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-            byte[] buf = new byte[4096]; int n; while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-            return new JSONObject(out.toString("UTF-8"));
+        c.setRequestProperty("User-Agent", "CleanYourTV-WeeklyWeather/1.0");
+        try {
+            int status = c.getResponseCode();
+            InputStream stream = status >= 200 && status < 300 ? c.getInputStream() : c.getErrorStream();
+            if (stream == null) throw new IOException("HTTP " + status + "（無回應內容）");
+            try (InputStream in = stream; java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                byte[] buf = new byte[4096]; int n; while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                String body = out.toString("UTF-8");
+                if (status < 200 || status >= 300)
+                    throw new IOException("HTTP " + status + "：" + body.substring(0, Math.min(body.length(), 240)));
+                return new JSONObject(body);
+            }
         } finally { c.disconnect(); }
     }
 
