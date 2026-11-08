@@ -250,7 +250,13 @@ TV_HOST=192.168.1.50 tools/wallpaper-library.sh aerial
 The sync tool copies the repository's official `themes/*/wallpapers/` images into the launcher's
 `wallpaper-library/<theme>/` directory through ThemeProvider. It does not change the active theme,
 clear the active collection, or add wallpaper bytes to the launcher APK. Re-run it after updating the
-checkout to refresh the TV-side catalogue. The library browser UI is being developed separately.
+checkout to refresh the TV-side catalogue.
+
+Open Launcher settings > Wallpaper to browse the library on the TV. The browser groups images by
+theme, shows a three-column thumbnail grid, and opens a large preview before applying a picture.
+The selected library image is saved as a persistent relative path and survives theme pushes and resets;
+choose **Theme default** to return to the active theme's own wallpaper, or **None** to turn the wallpaper
+off. The browser is remote-control navigable and keeps the launcher's dark navy / teal focus styling.
 
 ## Reduced motion
 
