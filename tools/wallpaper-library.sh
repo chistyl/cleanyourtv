@@ -44,7 +44,7 @@ push_image() {
   name="$(basename "$image")"
   case "$name" in
     *.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[pP][nN][gG]|*.[wW][eE][bB][pP]) ;;
-    *) return 0 ;;
+    *) return 1 ;;
   esac
   if [[ ! "$name" =~ ^[A-Za-z0-9_.-]+$ || "$name" == *..* ]]; then
     echo "refusing unsafe wallpaper filename '$name'. Nothing further was sent." >&2
@@ -61,14 +61,22 @@ push_theme() {
   local theme="$1" source="$ROOT/themes/$theme/wallpapers" count=0 image
   if [ -d "$source" ]; then
     while IFS= read -r -d '' image; do
-      push_image "$theme" "$image"
-      count=$((count + 1))
+      if push_image "$theme" "$image"; then
+        count=$((count + 1))
+      else
+        rc=$?
+        [ "$rc" -eq 1 ] || return "$rc"
+      fi
     done < <(find "$source" -maxdepth 1 -type f -print0 | sort -z)
   fi
   # Themes may ship one static wallpaper.jpg instead of a wallpapers/ rotation folder.
   if [ -f "$ROOT/themes/$theme/wallpaper.jpg" ]; then
-    push_image "$theme" "$ROOT/themes/$theme/wallpaper.jpg"
-    count=$((count + 1))
+    if push_image "$theme" "$ROOT/themes/$theme/wallpaper.jpg"; then
+      count=$((count + 1))
+    else
+      rc=$?
+      [ "$rc" -eq 1 ] || return "$rc"
+    fi
   fi
   if [ "$count" -eq 0 ]; then
     echo "no wallpaper images for theme '$theme'; skipped"
