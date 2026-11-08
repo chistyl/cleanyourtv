@@ -32,7 +32,6 @@ def source_images(theme_dir: Path) -> list[Path]:
 
 def package(output: Path = DEFAULT_OUTPUT) -> dict[str, int]:
     if output.exists():
-        import shutil
         shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)
     result: dict[str, int] = {}
