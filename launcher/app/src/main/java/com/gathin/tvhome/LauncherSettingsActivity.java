@@ -28,6 +28,7 @@ public final class LauncherSettingsActivity extends Activity {
     }
 
     static final String EXTRA_REORDER = "com.gathin.tvhome.extra.REORDER_FROM_SETTINGS";
+    private static final int REQUEST_WALLPAPER_LIBRARY = 731;
     private SharedPreferences choices;
     private final TextView[] columnChoices = new TextView[4];
     private final TextView[] rowChoices = new TextView[4];
@@ -128,7 +129,8 @@ public final class LauncherSettingsActivity extends Activity {
         languageChoice = findViewById(R.id.languageChoice);
         languageChoice.setOnClickListener(v -> showLanguagePicker());
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
-        wallpaperChoice.setOnClickListener(v -> startActivity(new Intent(this, WallpaperLibraryActivity.class)));
+        wallpaperChoice.setOnClickListener(v -> startActivityForResult(
+                new Intent(this, WallpaperLibraryActivity.class), REQUEST_WALLPAPER_LIBRARY));
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
             animations = !animations;
@@ -227,6 +229,15 @@ public final class LauncherSettingsActivity extends Activity {
             return getString(R.string.language_auto);
         Locale locale = Locale.forLanguageTag(choice);
         return locale.getDisplayName(locale);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_WALLPAPER_LIBRARY && resultCode == RESULT_OK) {
+            setResult(RESULT_OK);
+            refresh();
+        }
     }
 
     @Override
