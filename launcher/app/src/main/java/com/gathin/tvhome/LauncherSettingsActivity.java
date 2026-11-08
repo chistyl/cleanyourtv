@@ -128,7 +128,7 @@ public final class LauncherSettingsActivity extends Activity {
         languageChoice = findViewById(R.id.languageChoice);
         languageChoice.setOnClickListener(v -> showLanguagePicker());
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
-        wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
+        wallpaperChoice.setOnClickListener(v -> startActivity(new Intent(this, WallpaperLibraryActivity.class)));
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
             animations = !animations;
@@ -359,10 +359,11 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
         String wallpaperCurrent = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
         languageChoice.setText(getString(R.string.language_state, languageLabel()));
-        wallpaperChoice.setText(getString(R.string.wallpaper_state,
-                "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
-                        : wallpaperCurrent != null ? wallpaperCurrent
-                        : getString(R.string.wallpaper_theme_default)));
+        String wallpaperLabel = "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
+                : wallpaperCurrent == null ? getString(R.string.wallpaper_theme_default)
+                : wallpaperCurrent.startsWith(ThemeFiles.WALLPAPER_LIBRARY + "/")
+                        ? wallpaperCurrent.substring(wallpaperCurrent.lastIndexOf('/') + 1) : wallpaperCurrent;
+        wallpaperChoice.setText(getString(R.string.wallpaper_state, wallpaperLabel));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
