@@ -22,6 +22,15 @@ public class ThemeFilesTest {
         assertEquals("wallpapers/Night_2.WEBP", ThemeFiles.path(Arrays.asList("wallpapers", "Night_2.WEBP")));
     }
 
+    @Test public void officialLibraryImagesAreStoredOutsideTheActiveThemeCollection() {
+        assertEquals("wallpaper-library/aerial/01-sunrise.jpg",
+                ThemeFiles.path(Arrays.asList("wallpaper-library", "aerial", "01-sunrise.jpg")));
+        assertEquals("wallpaper-library/nature-calm/012.WEBP",
+                ThemeFiles.path(Arrays.asList("wallpaper-library", "nature-calm", "012.WEBP")));
+        assertFalse(ThemeFiles.isCollection(Collections.singletonList("wallpaper-library")));
+        assertFalse(ThemeFiles.isCollection(Arrays.asList("wallpaper-library", "aerial")));
+    }
+
     @Test public void theCollectionsCaptionsAreAllowed() {
         assertEquals("wallpapers/captions.txt", ThemeFiles.path(Arrays.asList("wallpapers", "captions.txt")));
         assertNull(ThemeFiles.path(Collections.singletonList("captions.txt")));
@@ -42,6 +51,11 @@ public class ThemeFilesTest {
         assertNull(ThemeFiles.path(Arrays.asList("wallpapers", ".jpg")));
         assertNull(ThemeFiles.path(Arrays.asList("other", "dusk.jpg")));
         assertNull(ThemeFiles.path(Arrays.asList("wallpapers", "sub", "dusk.jpg")));
+        assertNull(ThemeFiles.path(Arrays.asList("wallpaper-library", "../escape", "a.jpg")));
+        assertNull(ThemeFiles.path(Arrays.asList("wallpaper-library", "aerial/..", "a.jpg")));
+        assertNull(ThemeFiles.path(Arrays.asList("wallpaper-library", "aerial", "notes.txt")));
+        assertNull(ThemeFiles.path(Arrays.asList("wallpaper-library", "aerial", "../config.json")));
+        assertNull(ThemeFiles.path(Arrays.asList("wallpaper-library", "aerial", "sub", "a.jpg")));
     }
 
     @Test public void onlyTheBareFolderIsTheCollection() {
