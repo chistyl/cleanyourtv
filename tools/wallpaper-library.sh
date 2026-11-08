@@ -3,15 +3,15 @@
 # Unlike tools/theme.sh, this never clears wallpapers/ or wallpaper-library/.
 #
 # Usage:
-#   TV_HOST=192.168.1.50 tools/wallpaper-library.sh --all
-#   TV_HOST=192.168.1.50 tools/wallpaper-library.sh aerial
+#   TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh --all
+#   TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh aerial
 #
 # Images are written through ThemeProvider so files are owned/readable by the launcher on Android 11+.
 set -euo pipefail
 
 ARG="${1:-}"
 if [ -z "$ARG" ] || [ "$#" -ne 1 ]; then
-  echo "usage: TV_HOST=<TV IP> $0 <theme-name|--all>" >&2
+  echo "usage: TV_HOST=<TV IP> bash $0 <theme-name|--all>" >&2
   exit 2
 fi
 case "$ARG" in
