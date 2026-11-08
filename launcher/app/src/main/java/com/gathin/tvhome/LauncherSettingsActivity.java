@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /** Remote-friendly settings owned by the launcher; system settings stay one row away. */
 public final class LauncherSettingsActivity extends Activity {
