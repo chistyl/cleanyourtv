@@ -34,8 +34,8 @@ class WallpaperLibraryToolTest(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn('case "$ARG" in', source)
         self.assertIn('[[ ! "$name" =~ ^[A-Za-z0-9_.-]+$ || "$name" == *..* ]]', source)
-        self.assertIn("*.jpg", source)
-        self.assertIn("*.webp", source)
+        self.assertIn("*.[jJ][pP][gG]", source)
+        self.assertIn("*.[wW][eE][bB][pP]", source)
 
 
 if __name__ == "__main__":
