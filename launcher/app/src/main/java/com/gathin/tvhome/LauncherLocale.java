@@ -5,11 +5,13 @@ import android.content.res.Configuration;
 import android.content.SharedPreferences;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /** Resolves the launcher's saved language or follows the TV language on first launch. */
 final class LauncherLocale {
     static final String LANGUAGE_KEY = "launcher_language_tag";
     static final String AUTO = "auto";
+    private static final Pattern TAG = Pattern.compile("[a-z]{2,3}(-[A-Za-z0-9]{1,8})*");
     // Keep this list aligned with the official v3.4 locale-config and translated values-* resources.
     static final String[] SUPPORTED = {
             "en", "nb", "de", "ca", "es", "es-419", "fr", "ru", "zh-CN", "zh-TW",
@@ -20,7 +22,8 @@ final class LauncherLocale {
     private LauncherLocale() {}
 
     static Locale parse(String tag) {
-        return tag == null ? null : Locale.forLanguageTag(tag);
+        if (tag == null || !TAG.matcher(tag.trim()).matches()) return null;
+        return Locale.forLanguageTag(tag.trim());
     }
 
     static String saved(Context context) {
