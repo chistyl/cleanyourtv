@@ -243,8 +243,8 @@ The optional on-TV wallpaper library is stored separately from the active theme'
 collection. Sync the official collections from this checkout with:
 
 ```bash
-TV_HOST=192.168.1.50 tools/wallpaper-library.sh --all
-TV_HOST=192.168.1.50 tools/wallpaper-library.sh aerial
+TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh --all
+TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh aerial
 ```
 
 The sync tool copies each theme's `wallpapers/` collection and any single `wallpaper.jpg` into the launcher's
