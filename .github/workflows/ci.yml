@@ -79,9 +79,9 @@ jobs:
           du -sh launcher/app/src/main/assets/wallpaper-library
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
           echo "release APK: $size bytes ($((size / 1024)) KB)"
-          # Wallpaper packaging is intentional; retain the current 600 KiB gate until
-          # measured optimized output is reviewed and the documented ceiling is adjusted.
-          test "$size" -lt 614400 || { echo "APK exceeds current 600 KiB gate; review measured optimized payload before raising it"; exit 1; }
+          # Optimized wallpaper catalogue measured 6.6 MiB; APK measured 7,319,845 bytes.
+          # Raise the ceiling to 8 MiB only after image optimization (1920x1080, JPEG q88).
+          test "$size" -lt 8388608 || { echo "APK exceeds the reviewed 8 MiB ceiling"; exit 1; }
 
       - name: Upload release APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
