@@ -73,3 +73,11 @@ jobs:
           # 600 KiB is the hard ceiling, not a target. Any future ceiling increase
           # requires a separate optimization review and documented justification.
           test "$size" -lt 614400 || { echo "APK is over 600 KiB; optimize before requesting a higher limit"; exit 1; }
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cleanyourtv-v3.4-release-apk
+          path: launcher/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
