@@ -21,7 +21,9 @@ class WallpaperLibraryToolTest(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("wallpaper-library/$theme/$name", source)
         self.assertIn("content://$PKG.theme/wallpaper-library/$theme/$name", source)
-        self.assertIn('find "$ROOT/themes" -mindepth 2 -maxdepth 2 -type d -name wallpapers', source)
+        self.assertIn('find "$ROOT/themes" -mindepth 2 -maxdepth 2 -type f -name config.json', source)
+        self.assertIn('"$ROOT/themes/$theme/wallpaper.jpg"', source)
+        self.assertIn('local theme="$1" image="$2" name stage target', source)
 
     def test_sync_does_not_clear_or_replace_the_active_theme(self):
         source = SCRIPT.read_text(encoding="utf-8")
