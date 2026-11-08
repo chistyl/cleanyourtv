@@ -53,7 +53,7 @@ final class LauncherLocale {
         if ("he".equals(language)) language = "iw";
         if ("id".equals(language)) language = "in";
         if ("es".equals(language) && ("419".equals(system.getVariant())
-                || "MX".equalsIgnoreCase(system.getCountry())
+                || "419".equals(system.getCountry()) || "MX".equalsIgnoreCase(system.getCountry())
                 || "AR".equalsIgnoreCase(system.getCountry())
                 || "CO".equalsIgnoreCase(system.getCountry()))) return "es-419";
         if ("pt".equals(language) && "PT".equalsIgnoreCase(system.getCountry())) return "pt-PT";
