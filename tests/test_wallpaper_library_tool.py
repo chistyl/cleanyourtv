@@ -29,7 +29,9 @@ class WallpaperLibraryToolTest(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertNotIn("CLEAR_WALLPAPERS", source)
         self.assertNotIn("theme_revision", source)
-        self.assertNotIn("config.json", source)
+        self.assertNotIn("content delete", source)
+        self.assertNotIn("rm -rf", source)
+        self.assertNotIn("tools/theme.sh", source)
         self.assertIn("active theme and its wallpaper rotation were not changed", source)
 
     def test_theme_and_image_names_are_constrained_before_remote_path_use(self):
