@@ -5,13 +5,11 @@ import android.content.res.Configuration;
 import android.content.SharedPreferences;
 
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 /** Resolves the launcher's saved language or follows the TV language on first launch. */
 final class LauncherLocale {
     static final String LANGUAGE_KEY = "launcher_language_tag";
     static final String AUTO = "auto";
-    private static final Pattern TAG = Pattern.compile("[a-z]{2,3}(-[A-Za-z0-9]{1,8})*");
     // Keep this list aligned with the official v3.4 locale-config and translated values-* resources.
     static final String[] SUPPORTED = {
             "en", "nb", "de", "ca", "es", "es-419", "fr", "ru", "zh-CN", "zh-TW",
@@ -22,8 +20,26 @@ final class LauncherLocale {
     private LauncherLocale() {}
 
     static Locale parse(String tag) {
-        if (tag == null || !TAG.matcher(tag.trim()).matches()) return null;
-        return Locale.forLanguageTag(tag.trim());
+        if (tag == null) return null;
+        String value = tag.trim();
+        int start = 0;
+        int firstLength = 0;
+        for (int i = 0; i <= value.length(); i++) {
+            if (i == value.length() || value.charAt(i) == '-') {
+                int length = i - start;
+                if (length == 0 || length > 8 || (start == 0 && length < 2)) return null;
+                if (start == 0) firstLength = length;
+                start = i + 1;
+            } else {
+                char ch = value.charAt(i);
+                boolean letter = ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z';
+                boolean digit = ch >= '0' && ch <= '9';
+                if (!letter && !digit) return null;
+                if (start == 0 && !letter) return null;
+            }
+        }
+        if (firstLength > 3) return null;
+        return Locale.forLanguageTag(value);
     }
 
     static String saved(Context context) {
