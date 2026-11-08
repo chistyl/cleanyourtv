@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
 
 from PIL import Image, ImageOps
 
@@ -49,6 +50,9 @@ def package(output: Path = DEFAULT_OUTPUT) -> dict[str, int]:
                 image = ImageOps.exif_transpose(original).convert("RGB")
                 image.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
                 image.save(target, "JPEG", quality=JPEG_QUALITY, optimize=True, progressive=True)
+        credits = theme_dir / "CREDITS.md"
+        if credits.is_file():
+            shutil.copy2(credits, target_dir / "CREDITS.md")
         result[theme_dir.name] = len(selected)
     return result
 
