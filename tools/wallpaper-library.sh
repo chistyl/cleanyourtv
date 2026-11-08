@@ -58,7 +58,8 @@ push_image() {
 }
 
 push_theme() {
-  local theme="$1" source="$ROOT/themes/$theme/wallpapers" count=0 image
+  local theme="$1"
+  local source="$ROOT/themes/$theme/wallpapers" count=0 image rc
   if [ -d "$source" ]; then
     while IFS= read -r -d '' image; do
       if push_image "$theme" "$image"; then
