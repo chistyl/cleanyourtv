@@ -7,6 +7,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.content.res.AssetManager;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.IOException;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -57,8 +63,45 @@ public final class WallpaperLibraryActivity extends Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         choices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        installBundledWallpapers();
         loadItems();
         buildScreen();
+    }
+
+    /**
+     * The curated catalogue is bundled in the APK and copied automatically on first entry.
+     * It lives beside theme files so the existing wallpaper resolver can use it without
+     * changing the active theme or requiring a network connection.
+     */
+    private void installBundledWallpapers() {
+        File appDir = Config.dir(this);
+        if (appDir == null) return;
+        File library = new File(appDir, ThemeFiles.WALLPAPER_LIBRARY);
+        try {
+            copyAssetDirectory(getAssets(), "wallpaper-library", library);
+        } catch (IOException ignored) {
+            // Keep any previously installed catalogue usable if storage is temporarily unavailable.
+        }
+    }
+
+    private void copyAssetDirectory(AssetManager assets, String assetPath, File destination)
+            throws IOException {
+        String[] children = assets.list(assetPath);
+        if (children != null && children.length > 0) {
+            if (!destination.exists() && !destination.mkdirs()) throw new IOException("Cannot create " + destination);
+            for (String child : children) {
+                copyAssetDirectory(assets, assetPath + "/" + child, new File(destination, child));
+            }
+            return;
+        }
+        File parent = destination.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Cannot create " + parent);
+        try (InputStream input = assets.open(assetPath);
+             OutputStream output = new FileOutputStream(destination)) {
+            byte[] buffer = new byte[16 * 1024];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        }
     }
 
     private void loadItems() {
