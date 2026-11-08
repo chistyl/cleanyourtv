@@ -237,6 +237,27 @@ default, press Follow theme, or push a theme again.
 
 **Your own walls with `weeb`.** Copy `themes/weeb` to a folder outside this checkout, so pictures you only have for your own use are never committed, put your pictures in its `wallpapers/` folder, then run `tools/theme.sh <that folder>`.
 
+## Independent wallpaper library
+
+The optional on-TV wallpaper library is stored separately from the active theme's `wallpapers/`
+collection. Sync the official collections from this checkout with:
+
+```bash
+TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh --all
+TV_HOST=192.168.1.50 bash tools/wallpaper-library.sh aerial
+```
+
+The sync tool copies each theme's `wallpapers/` collection and any single `wallpaper.jpg` into the launcher's
+`wallpaper-library/<theme>/` directory through ThemeProvider. It does not change the active theme,
+clear the active collection, or add wallpaper bytes to the launcher APK. Re-run it after updating the
+checkout to refresh the TV-side catalogue.
+
+Open Launcher settings > Wallpaper to browse the library on the TV. The browser groups images by
+theme, shows a three-column thumbnail grid, and opens a large preview before applying a picture.
+The selected library image is saved as a persistent relative path and survives theme pushes and resets;
+choose **Theme default** to return to the active theme's own wallpaper, or **None** to turn the wallpaper
+off. The browser is remote-control navigable and keeps the launcher's dark navy / teal focus styling.
+
 ## Reduced motion
 
 `"reduced_motion": true` keeps the look but calms the movement and draws far fewer frames: the

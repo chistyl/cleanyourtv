@@ -56,6 +56,19 @@ final class WallpaperRotation {
         return picked == null ? null : Collections.singletonList(picked);
     }
 
+    /** A persistent library choice is a validated relative path, not a theme-local filename. */
+    static List<File> libraryChoice(File appDirectory, String choice) {
+        if (appDirectory == null || choice == null || !choice.startsWith(ThemeFiles.WALLPAPER_LIBRARY + "/")) {
+            return null;
+        }
+        String[] parts = choice.split("/", -1);
+        if (parts.length != 3 || !choice.equals(ThemeFiles.path(Arrays.asList(parts)))) return null;
+        File image = new File(appDirectory, choice);
+        if (!image.isFile() || image.length() <= 0 || image.length() > 10 * 1024 * 1024
+                || !ThemeFiles.collectionImage(image.getName())) return null;
+        return Collections.singletonList(image);
+    }
+
     static File pick(List<File> images, String previous, Random random) {
         List<File> candidates = new ArrayList<>(images);
         if (candidates.size() > 1) candidates.removeIf(image -> image.getName().equals(previous));

@@ -161,4 +161,11 @@
     <string name="language_label">Launcher language</string>
     <string name="language_auto">Automatic (follow TV language)</string>
     <string name="language_state">Language: %1$s</string>
+    <string name="wallpaper_library_title">Wallpaper library</string>
+    <string name="wallpaper_library_hint">Browse official collections. Select a picture to preview and apply.</string>
+    <string name="wallpaper_library_category">Collection</string>
+    <string name="wallpaper_library_all">All collections</string>
+    <string name="wallpaper_library_empty">No library images found. Sync the official wallpaper collections first.</string>
+    <string name="wallpaper_library_preview">Preview wallpaper</string>
+    <string name="wallpaper_library_apply">Apply wallpaper</string>
 </resources>

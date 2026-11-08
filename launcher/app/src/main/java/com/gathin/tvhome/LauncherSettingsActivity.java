@@ -28,6 +28,7 @@ public final class LauncherSettingsActivity extends Activity {
     }
 
     static final String EXTRA_REORDER = "com.gathin.tvhome.extra.REORDER_FROM_SETTINGS";
+    private static final int REQUEST_WALLPAPER_LIBRARY = 731;
     private SharedPreferences choices;
     private final TextView[] columnChoices = new TextView[4];
     private final TextView[] rowChoices = new TextView[4];
@@ -128,7 +129,8 @@ public final class LauncherSettingsActivity extends Activity {
         languageChoice = findViewById(R.id.languageChoice);
         languageChoice.setOnClickListener(v -> showLanguagePicker());
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
-        wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
+        wallpaperChoice.setOnClickListener(v -> startActivityForResult(
+                new Intent(this, WallpaperLibraryActivity.class), REQUEST_WALLPAPER_LIBRARY));
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
             animations = !animations;
@@ -227,6 +229,21 @@ public final class LauncherSettingsActivity extends Activity {
             return getString(R.string.language_auto);
         Locale locale = Locale.forLanguageTag(choice);
         return locale.getDisplayName(locale);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_WALLPAPER_LIBRARY && resultCode == RESULT_OK) {
+            setResult(RESULT_OK);
+            refresh();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (wallpaperChoice != null) refresh();
     }
 
     private void showWallpaperPicker() {
@@ -359,10 +376,11 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
         String wallpaperCurrent = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
         languageChoice.setText(getString(R.string.language_state, languageLabel()));
-        wallpaperChoice.setText(getString(R.string.wallpaper_state,
-                "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
-                        : wallpaperCurrent != null ? wallpaperCurrent
-                        : getString(R.string.wallpaper_theme_default)));
+        String wallpaperLabel = "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
+                : wallpaperCurrent == null ? getString(R.string.wallpaper_theme_default)
+                : wallpaperCurrent.startsWith(ThemeFiles.WALLPAPER_LIBRARY + "/")
+                        ? wallpaperCurrent.substring(wallpaperCurrent.lastIndexOf('/') + 1) : wallpaperCurrent;
+        wallpaperChoice.setText(getString(R.string.wallpaper_state, wallpaperLabel));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }

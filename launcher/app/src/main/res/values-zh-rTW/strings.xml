@@ -100,4 +100,16 @@
     <string name="language_label">桌面語言</string>
     <string name="language_auto">自動（跟隨電視系統語言）</string>
     <string name="language_state">語言：%1$s</string>
+    <string name="wallpaper_label">桌布設定</string>
+    <string name="wallpaper_state">桌布：%1$s</string>
+    <string name="wallpaper_none">不使用桌布</string>
+    <string name="wallpaper_applied">桌布已變更</string>
+    <string name="wallpaper_theme_default">跟隨主題預設</string>
+    <string name="wallpaper_library_title">獨立桌布圖庫</string>
+    <string name="wallpaper_library_hint">瀏覽官方主題桌布，選取圖片可預覽並套用。</string>
+    <string name="wallpaper_library_category">桌布分類</string>
+    <string name="wallpaper_library_all">全部分類</string>
+    <string name="wallpaper_library_empty">尚無圖庫圖片，請先同步官方桌布。</string>
+    <string name="wallpaper_library_preview">桌布預覽</string>
+    <string name="wallpaper_library_apply">套用桌布</string>
 </resources>

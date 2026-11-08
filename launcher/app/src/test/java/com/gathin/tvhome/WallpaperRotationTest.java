@@ -113,6 +113,23 @@ public class WallpaperRotationTest {
     }
 
     @Test
+    public void persistentLibraryChoiceResolvesOnlyAnExistingSafeImage() throws IOException {
+        File root = Files.createTempDirectory("wallpaper-library").toFile();
+        File theme = new File(root, "wallpaper-library/aerial");
+        assertTrue(theme.mkdirs());
+        touch(theme, "sunrise.jpg", 128);
+        String choice = "wallpaper-library/aerial/sunrise.jpg";
+        assertEquals(Collections.singletonList(new File(theme, "sunrise.jpg")),
+                WallpaperRotation.libraryChoice(root, choice));
+        assertNull(WallpaperRotation.libraryChoice(root, "wallpaper-library/aerial/missing.jpg"));
+        assertNull(WallpaperRotation.libraryChoice(root, "wallpaper-library/../sunrise.jpg"));
+        assertNull(WallpaperRotation.libraryChoice(root, "wallpaper-library/aerial/notes.txt"));
+        assertNull(WallpaperRotation.libraryChoice(root, "wallpaper-library/aerial/sub/sunrise.jpg"));
+        assertNull(WallpaperRotation.libraryChoice(root, "wallpapers/sunrise.jpg"));
+        assertNull(WallpaperRotation.libraryChoice(root, null));
+    }
+
+    @Test
     public void homeRebuildsWhenTheSettingsRevisionMoved() {
         assertFalse(Config.settingsChanged(0, 0));
         assertFalse(Config.settingsChanged(3, 3));
