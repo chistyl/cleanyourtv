@@ -17,6 +17,15 @@ class WallpaperLibraryToolTest(unittest.TestCase):
         result = subprocess.run([bash, "-n", str(SCRIPT)], capture_output=True, text=True)
         self.assertEqual(0, result.returncode, result.stderr)
 
+    def test_invalid_theme_argument_is_rejected_before_any_tv_access(self):
+        bash = shutil.which("bash")
+        if not bash:
+            self.skipTest("bash is not installed")
+        result = subprocess.run([bash, str(SCRIPT), "bad theme"], capture_output=True, text=True)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("invalid theme name", result.stderr)
+        self.assertIn("Nothing was sent", result.stderr)
+
     def test_sync_targets_the_separate_allow_listed_library(self):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn("wallpaper-library/$theme/$name", source)
