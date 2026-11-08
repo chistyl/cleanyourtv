@@ -247,7 +247,7 @@ TV_HOST=192.168.1.50 tools/wallpaper-library.sh --all
 TV_HOST=192.168.1.50 tools/wallpaper-library.sh aerial
 ```
 
-The sync tool copies the repository's official `themes/*/wallpapers/` images into the launcher's
+The sync tool copies each theme's `wallpapers/` collection and any single `wallpaper.jpg` into the launcher's
 `wallpaper-library/<theme>/` directory through ThemeProvider. It does not change the active theme,
 clear the active collection, or add wallpaper bytes to the launcher APK. Re-run it after updating the
 checkout to refresh the TV-side catalogue.
