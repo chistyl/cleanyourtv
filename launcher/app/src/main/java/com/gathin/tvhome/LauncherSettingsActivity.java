@@ -229,6 +229,12 @@ public final class LauncherSettingsActivity extends Activity {
         return locale.getDisplayName(locale);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (wallpaperChoice != null) refresh();
+    }
+
     private void showWallpaperPicker() {
         File dir = Config.dir(this);
         List<File> images = new java.util.ArrayList<>(WallpaperRotation.images(
