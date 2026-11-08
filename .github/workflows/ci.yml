@@ -61,18 +61,27 @@ jobs:
         with:
           packages: platforms;android-34 build-tools;34.0.0
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Prepare optimized offline wallpaper assets
+        run: |
+          python3 -m pip install -q "Pillow>=11.0.0,<13"
+          python3 tools/package_wallpapers.py
       - name: Unit tests, lint and release build
         working-directory: launcher
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease
-      - name: The launcher stays small
+      - name: Report optimized wallpaper and APK size
         run: |
+          echo "wallpaper assets: $(find launcher/app/src/main/assets/wallpaper-library -type f -name '*.jpg' | wc -l) files"
+          du -sh launcher/app/src/main/assets/wallpaper-library
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
           echo "release APK: $size bytes ($((size / 1024)) KB)"
-          # 600 KiB is the hard ceiling, not a target. Any future ceiling increase
-          # requires a separate optimization review and documented justification.
-          test "$size" -lt 614400 || { echo "APK is over 600 KiB; optimize before requesting a higher limit"; exit 1; }
+          # Wallpaper packaging is intentional; retain the current 600 KiB gate until
+          # measured optimized output is reviewed and the documented ceiling is adjusted.
+          test "$size" -lt 614400 || { echo "APK exceeds current 600 KiB gate; review measured optimized payload before raising it"; exit 1; }
 
       - name: Upload release APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
