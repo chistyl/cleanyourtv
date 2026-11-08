@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /** Remote-friendly settings owned by the launcher; system settings stay one row away. */
 public final class LauncherSettingsActivity extends Activity {
@@ -35,6 +36,7 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView wallpaperChoice;
+    private TextView languageChoice;
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
@@ -123,6 +125,8 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(dockChoices);
             reverseRow(clockChoices);
         }
+        languageChoice = findViewById(R.id.languageChoice);
+        languageChoice.setOnClickListener(v -> showLanguagePicker());
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
         animationsChoice = findViewById(R.id.animationsChoice);
@@ -181,6 +185,48 @@ public final class LauncherSettingsActivity extends Activity {
         LinearLayout row = (LinearLayout) views[0].getParent();
         row.removeAllViews();
         for (int i = views.length - 1; i >= 0; i--) row.addView(views[i]);
+    }
+
+    private void showLanguagePicker() {
+        String[] tags = new String[LauncherLocale.SUPPORTED.length + 1];
+        String[] labels = new String[tags.length];
+        tags[0] = LauncherLocale.AUTO;
+        labels[0] = getString(R.string.language_auto);
+        Locale displayLocale = getResources().getConfiguration().getLocales().get(0);
+        for (int i = 0; i < LauncherLocale.SUPPORTED.length; i++) {
+            String tag = LauncherLocale.SUPPORTED[i];
+            tags[i + 1] = tag;
+            Locale language = Locale.forLanguageTag(tag);
+            String nativeName = language.getDisplayName(language);
+            String localName = language.getDisplayName(displayLocale);
+            labels[i + 1] = nativeName.equalsIgnoreCase(localName)
+                    ? nativeName : nativeName + " (" + localName + ")";
+        }
+        String current = LauncherLocale.saved(this);
+        int checked = 0;
+        for (int i = 1; i < tags.length; i++) {
+            if (tags[i].equalsIgnoreCase(current)) checked = i;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.language_label)
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    dialog.dismiss();
+                    String selected = tags[which];
+                    if (selected.equals(LauncherLocale.saved(this))) return;
+                    choices.edit().putString(LauncherLocale.LANGUAGE_KEY, selected).commit();
+                    changed();
+                    recreate();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private String languageLabel() {
+        String choice = LauncherLocale.saved(this);
+        if (choice == null || LauncherLocale.AUTO.equals(choice))
+            return getString(R.string.language_auto);
+        Locale locale = Locale.forLanguageTag(choice);
+        return locale.getDisplayName(locale);
     }
 
     private void showWallpaperPicker() {
@@ -312,6 +358,7 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
         String wallpaperCurrent = choices.getString(Config.WALLPAPER_CHOICE_KEY, null);
+        languageChoice.setText(getString(R.string.language_state, languageLabel()));
         wallpaperChoice.setText(getString(R.string.wallpaper_state,
                 "none".equals(wallpaperCurrent) ? getString(R.string.wallpaper_none)
                         : wallpaperCurrent != null ? wallpaperCurrent
