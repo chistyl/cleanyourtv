@@ -750,18 +750,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                if (!glassShown) return;
-                glassTargetY -= dy;
-                glassScrollShift -= dy;
-                glass.setTranslationY(glass.getTranslationY() - dy);
-                // single_row scrolls sideways: the same bookkeeping on the other axis.
-                if (dx != 0) {
-                    glassTargetX -= dx;
-                    glassScrollShiftX -= dx;
-                    glass.setTranslationX(glass.getTranslationX() - dx);
+                if (glassShown) {
+                    glassTargetY -= dy;
+                    glassScrollShift -= dy;
+                    glass.setTranslationY(glass.getTranslationY() - dy);
+                    // single_row scrolls sideways: the same bookkeeping on the other axis.
+                    if (dx != 0) {
+                        glassTargetX -= dx;
+                        glassScrollShiftX -= dx;
+                        glass.setTranslationX(glass.getTranslationX() - dx);
+                    }
                 }
+                updateAppRowsNearTopBar();
             }
         });
+        grid.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
+            @Override public void onChildViewAttachedToWindow(@NonNull View view) {
+                grid.post(MainActivity.this::updateAppRowsNearTopBar);
+            }
+            @Override public void onChildViewDetachedFromWindow(@NonNull View view) { }
+        });
+        grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
+                grid.post(this::updateAppRowsNearTopBar));
 
         // game_day: the panel above the dock rides up with the cards instead of being covered by them, and fades
         // out by the time it reaches the clock. The grid's own offset is read, so a jump (Home, a restored focus)
@@ -2696,6 +2706,35 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         grid.addOnScrollListener(pendingFocusScroll);
         grid.smoothScrollToPosition(pos);
+    }
+
+    /**
+     * Hide a complete app row once its top reaches the 30dp safety zone below the top-right controls.
+     * The first row is the dock row (the adapter's first COLUMNS positions), so it is hidden as one
+     * unit too. INVISIBLE preserves RecyclerView measurements; rows reappear automatically as they
+     * move back below the safety zone while scrolling down.
+     */
+    private void updateAppRowsNearTopBar() {
+        if (grid == null || grid.getAdapter() == null || grid.getChildCount() == 0) return;
+        View topButtons = findViewById(R.id.topButtons);
+        if (topButtons == null || topButtons.getHeight() == 0) return;
+
+        int[] buttonsLocation = new int[2];
+        topButtons.getLocationOnScreen(buttonsLocation);
+        int hideLine = buttonsLocation[1] + topButtons.getHeight() + Math.round(30f * density);
+
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View item = grid.getChildAt(i);
+            if (item.findViewById(R.id.card) == null) continue;
+
+            int[] itemLocation = new int[2];
+            item.getLocationOnScreen(itemLocation);
+            boolean hideRow = itemLocation[1] <= hideLine;
+            int wantedVisibility = hideRow ? View.INVISIBLE : View.VISIBLE;
+            if (item.getVisibility() != wantedVisibility) {
+                item.setVisibility(wantedVisibility);
+            }
+        }
     }
 
     // ---- top bar ---------------------------------------------------------------------------------
