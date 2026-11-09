@@ -30,7 +30,7 @@ BUILD_GRADLE = ROOT / "launcher/app/build.gradle"
 
 HEADING = "## 2. Improve the launcher"
 JOB_HEAD = re.compile(r"^  ([a-z][a-z0-9-]*):\s*$", re.M)
-ARTIFACT_PATH = re.compile(r"^\\s+path:\\s*(launcher/app/build/outputs/[^\\s]+\\.apk)\\s*$", re.M)
+ARTIFACT_PATH = re.compile(r"^\s+path:\s*(launcher/app/build/outputs/[^\s]+\.apk)\s*$", re.M)
 COMPILE_SDK = re.compile(r"^\s*compileSdk\s+(\d+)\s*$", re.M)
 
 # What the route needs to say, each with the reason it is on the list.
