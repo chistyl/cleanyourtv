@@ -19,6 +19,8 @@ import java.util.Random;
  */
 public final class ParticleEffectView extends View {
     private static final int HALO_COUNT = 108;
+    // R11 expands the spatial distribution and drift range to 300% of R10.
+    private static final float RANGE_SCALE = 3f;
 
     private static final class Halo {
         float baseX;
@@ -73,10 +75,10 @@ public final class ParticleEffectView extends View {
             // remain visually gathered around the main light cluster.
             float spreadX = (float) Math.pow(random.nextFloat() * 2f - 1f, 1.18);
             float spreadY = (float) Math.pow(random.nextFloat() * 2f - 1f, 1.18);
-            halo.baseX = spreadX * 145f;
-            halo.baseY = spreadY * 88f;
-            halo.travelX = 12f + random.nextFloat() * 30f;
-            halo.travelY = 9f + random.nextFloat() * 25f;
+            halo.baseX = spreadX * 145f * RANGE_SCALE;
+            halo.baseY = spreadY * 88f * RANGE_SCALE;
+            halo.travelX = (12f + random.nextFloat() * 30f) * RANGE_SCALE;
+            halo.travelY = (9f + random.nextFloat() * 25f) * RANGE_SCALE;
             halo.phaseX = random.nextFloat() * (float) (Math.PI * 2.0);
             halo.phaseY = random.nextFloat() * (float) (Math.PI * 2.0);
             halo.phaseB = random.nextFloat() * (float) (Math.PI * 2.0);
