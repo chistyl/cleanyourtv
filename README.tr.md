@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="442 TV modeli · 117 marka · 31 dil · 572 KB başlatıcı. Yer aldığı yayınlar: TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP ve 396 yayın daha: 54 ülkeden 412 makale. Önce: sponsorlu reklam içeren standart Google TV ana ekranı. Sonra: Clean Your TV başlatıcısı." width="800"></a>
+  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="442 TV modeli · 117 marka · 31 dil · küçük başlatıcı. Yer aldığı yayınlar: TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP ve 396 yayın daha: 54 ülkeden 412 makale. Önce: sponsorlu reklam içeren standart Google TV ana ekranı. Sonra: Clean Your TV başlatıcısı." width="800"></a>
 </p>
 
 ## Buradan başlayın
@@ -207,7 +207,7 @@ tools/theme.sh themes/aurora                                 # bir tema gönder;
 | [`tools/flamechart.py`](tools/flamechart.py) | Bir pull request için bu izlerden önce/sonra alev grafiği çizer: ortak bir zaman ölçeğinde iş parçacığı başına bir şerit; bir değişikliğin hedeflediği iş, toplamıyla birlikte macenta renkte. İz araçları gibi isteğe bağlıdır. [Kılavuz](tools/flamechart.md). |
 | [`tools/screendiff.py`](tools/screendiff.py) | Önce ve sonra ekran görüntülerini piksel piksel karşılaştırır; saati veya maskelediğiniz her şeyi dışarıda bırakır ve çifti Wi-Fi adınız bulanıklaştırılmış olarak yazar. İz araçları gibi isteğe bağlıdır. [Kılavuz](tools/screendiff.md). |
 | [`tools/race_calendar.py`](tools/race_calendar.py) | Yarış hafta sonu modu için bu sezonun F1 takvimini ücretsiz Jolpica API'sinden bir temaya yazar. |
-| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Küçültülmüş bir sürüm (yaklaşık 572 KB) derler, kurar, Ana ekranı değiştirir ve Ana ekran ona geçmezse geri alır. |
+| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Küçültülmüş bir sürüm (yaklaşık küçük) derler, kurar, Ana ekranı değiştirir ve Ana ekran ona geçmezse geri alır. |
 
 Betikler TV'yi asla Ana ekran uygulaması olmadan bırakmaz: yalnızca tanıdıkları standart bir başlatıcıyı devre
 dışı bırakırlar ve başka bir başlatıcı HOME'a yanıt verene kadar listedeki Ana ekran uygulamasını atlarlar.
@@ -272,7 +272,7 @@ açıklıyor.
 
 ## Başlatıcı
 
-Android TV için küçük, yerel bir ana ekran: **yaklaşık 572 KB**, düz Java, 1 GB RAM'li TV'ler için yapıldı.
+Android TV için küçük, yerel bir ana ekran: **yaklaşık küçük**, düz Java, 1 GB RAM'li TV'ler için yapıldı.
 Bulanıklık yok, video yok, ağ izni yok, arka plan hizmeti yok. **TV**'nin Android 8.0 (API 26) veya daha yeni
 olması gerekir; bu, [`launcher/app/build.gradle`](launcher/app/build.gradle) içindeki `minSdk` değeridir. Daha eski
 bir cihazda neyin kaldığı [Sorun giderme](docs/TROUBLESHOOTING.md) belgesindedir.
