@@ -142,13 +142,13 @@ class AgentsSizeTest(unittest.TestCase):
 
 
 class AgentsNumbersTest(unittest.TestCase):
-    def test_apk_gate_matches_ci(self):
-        gate = int(re.search(r'test "\$size" -lt (\d+)', CI.read_text(encoding="utf-8")).group(1))
-        stated = re.findall(r"([\d,]+) B \((\d+) KB\)", text())
-        self.assertTrue(stated, "AGENTS.md no longer states the APK gate as 'N B (N KB)'")
-        for size, kb in stated:
-            self.assertEqual(int(size.replace(",", "")), gate, "AGENTS.md and ci.yml disagree on the APK gate")
-            self.assertEqual(int(kb), gate // 1024, "the KB figure next to the gate is wrong")
+    def test_apk_has_no_file_size_gate(self):
+        ci = CI.read_text(encoding="utf-8")
+        agents = text()
+        for stale in ("APK size gate", "589,824", "576 KB", 'test "$size" -lt'):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, ci)
+                self.assertNotIn(stale, agents)
 
     def test_min_sdk_matches_build_gradle(self):
         min_sdk = re.search(r"^\s*minSdk\s+(\d+)", GRADLE.read_text(encoding="utf-8"), re.M).group(1)
