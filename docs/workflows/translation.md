@@ -1,47 +1,16 @@
-# Workflow: Add or fix a launcher translation
+# Workflow: Launcher language policy
 
-**When to use this:** a new launcher language, or strings missing from existing ones.
+The launcher ships **Traditional Chinese (Taiwan) only**. Its user interface and date/time formatting are fixed to the zh-TW locale.
 
-1. Create `launcher/app/src/main/res/values-<qualifier>/strings.xml` and translate every string in
-   `launcher/app/src/main/res/values/strings.xml`, skipping the ones marked `translatable="false"`. Keep
-   placeholders (`%1$s`, `%d`) and XML escapes intact. The folder suffix is the qualifier Android reads:
-   `de` for a language, `zh-rCN` for a language with a region, or the BCP-47 form the tree also uses,
-   `b+sr+Latn`, for a language with a script (`values-sr-Latn` is not a folder it reads).
-2. A language may also need one of the other files `values/` carries. Add it only when `values/` has the
-   same file, and only the names that file defines: `tests/test_translation_recipe_files.py` holds both.
-   - `bools.xml`: `date_single_line` false when the language's weekday and month names do not fit on one
-     line (`values-de`, `values-es`, `values-b+es+419`, `values-ast`, `values-pt`, `values-ru` and
-     `values-uk` set it), and `rtl_app_grid`/`rtl_menu_bar` true for a right-to-left language
-     (`values-iw`).
-   - `fonts.xml`: point `font_body`, `font_regular` and the other `font_*` at the system families when the
-     bundled Outfit has no glyphs for the language's letters (`values-vi`, #833).
-   - `lunar.xml`: the lunar date format, the leap-month wording and the stem and branch names, for a
-     language that names them itself (`values-zh-rCN`, `values-zh-rTW`, `values-vi`, `values-ko`). Keep
-     `lunar_stems` at ten items and `lunar_branches` at twelve: `Lunar.java` indexes both by position,
-     so a short list crashes the launcher on a TV running that language and nothing anywhere else.
-3. Add the locale to `launcher/app/src/main/res/xml/locales_config.xml`, in the tag form: a language
-   folder that is not registered there cannot be chosen for the launcher alone on Android 13+.
-4. Add the language to the Languages list in `docs/launcher.md`, in the name that list uses, and the same
-   name to the `NAMES` table in `tests/test_locales_registered.py`. That table is the only map from the
-   qualifier Android reads (`sr-Latn`) to the English name the page uses ("Serbian (Latin)"), so
-   `test_the_name_table_covers_every_folder` stays red until both are there: "a language has no English name
-   in this test's table". Step 3's `locales_config.xml` entry does not satisfy it.
-5. To fix a missing string in existing locales, add it to every `values-*` folder you can, in the same order as
-   the default `strings.xml`. A missing string falls back to English (`launcher/app/lint.xml`), but a new switch
-   needs its strings in every locale.
-6. Moving hard-coded text into resources is welcome; do not bundle unrelated build changes with it.
-7. Build the launcher and confirm the new language is included in the release APK. There is no APK file-size gate; do not remove translated strings to satisfy a size threshold.
-8. Build the launcher, set the TV's language (Android 13+: `tools/tv.py 'cmd locale set-app-locales com.gathin.tvhome --locales <tag>'`)
-   and attach a screenshot. Right-to-left languages mirror the layout like Hebrew; `tests/test_hebrew_resources.py`
-   checks that `layout-iw` keeps every view.
-9. The language count moves with the folder. `README.md`, `README.nl.md`, `README.de.md`, `README.uk.md` and
-   `README.tr.md` state it in the card's alt text and in the `| **N languages** |` row, and
-   `tools/readme_stats.py`'s `STATS` carries it for the pictures, so a language added without them leaves
-   those pages and the card claiming the old number.
-   `tests/test_gen_tables_translated_counts.py` fails on the translated page in the meantime ('355 tv-modellen ·
-   97 merken · 30 talen · ' != '… 29 talen · '). Run `python3 tools/gen_tables.py` after adding the folder: it
-   moves the number in the pages it writes and in `STATS`, prints that `docs/stats.png` and `docs/card.jpg` have
-   to be redrawn with the font (`--font Fredoka.ttf`), and its `--check` - what CI's "README tables" job runs -
-   exits 1 until they agree.
+Do not add language-qualified values-* resource folders, an Android localeConfig, a language picker, or per-language layout overrides. Put all launcher strings in launcher/app/src/main/res/values/strings.xml and calendar strings in values/lunar.xml. Keep placeholders such as %1$s and %1$d unchanged.
 
-Then run the tests: `python3 -m unittest discover -s tests -v`.
+The shared Chinese typography resources in layout-zh/ and drawable-zh/ are intentional and must remain; they are not alternate language packs.
+
+When adding or changing visible UI text:
+1. Write it in Taiwan Traditional Chinese.
+2. Add it to the default resource file and keep XML valid.
+3. Preserve formatting arguments and plural/resource names used by Java.
+4. Run python3 -m unittest discover -s tests -v.
+5. Build the release APK and verify the UI strings are included. CI has no APK file-size ceiling.
+
+Do not reintroduce multilingual UI support unless the project owner explicitly changes this policy.
