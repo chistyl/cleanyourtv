@@ -1803,8 +1803,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * Rows that have completely crossed the clearance line below the top-right controls are hidden as a unit.
-     * The 50dp buffer prevents icons from sliding underneath the controls. INVISIBLE keeps each row's measured
+     * A row is hidden as soon as its top edge enters the 50dp clearance zone below the top-right controls.
+     * Testing the top edge is essential: the first RecyclerView row cannot scroll completely past the grid's
+     * start boundary, so testing its bottom edge would leave that row visible. INVISIBLE keeps each row's measured
      * space intact, so scrolling back down restores the same positions without rebuilding or reordering apps.
      */
     private void updateAppRowsNearTopBar() {
@@ -1832,7 +1833,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int position = grid.getChildAdapterPosition(child);
             if (position == RecyclerView.NO_POSITION) continue;
 
-            boolean hide = child.getBottom() <= hideLine;
+            boolean hide = child.getTop() <= hideLine;
             int wantedVisibility = hide ? View.INVISIBLE : View.VISIBLE;
             if (child.getVisibility() != wantedVisibility) {
                 child.setVisibility(wantedVisibility);
