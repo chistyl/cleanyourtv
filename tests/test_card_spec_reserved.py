@@ -76,7 +76,8 @@ def ui_names(strings, java):
         if not match:
             raise AssertionError(f"values/strings.xml has no string named {name}")
         text = match.group(1).replace("\\'", "'").replace("&amp;", "&")
-        out[fold(text)] = text
+        if fold(text):
+            out[fold(text)] = text
     return out
 
 
@@ -89,6 +90,8 @@ def hardcoded(java):
     prefix = re.search(r'RESERVED_PREFIX = "([^"]+)"', java)
     if not prefix:
         raise AssertionError("Cards.RESERVED_PREFIX is gone; has it been rewritten?")
+    english = java.split("static Set<String> englishUiNames()", 1)[-1].split("\n    }", 1)[0]
+    names.update(fold(n) for n in re.findall(r'fold\("([^"]+)"\)', english))
     return names, fold(prefix.group(1))
 
 
