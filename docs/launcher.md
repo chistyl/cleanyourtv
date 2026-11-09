@@ -2,7 +2,7 @@
 
 [Back to the README](../README.md#the-launcher)
 
-A small native home screen for Android TV: **about 572 KB**, plain Java, built for TVs with 1 GB of RAM.
+A small native home screen for Android TV, written in plain Java and built for TVs with 1 GB of RAM.
 No blur, no video, no network permission, no background services. This page has the details the
 README leaves out: settings, languages, remote keys and building it yourself. Every key a theme can
 set is in [`themes/README.md`](../themes/README.md#keys), and the opt-in switches with their
@@ -54,6 +54,7 @@ The launcher's own page has these rows, top to bottom:
 - **Apps per row** 4, 5, 6 or 7; **Rows below dock** 0 to 3, how many rows of tiles stay visible under the
   dock band; **Dock band opacity** 100%, 70%, 50% or 30%. The last two only do anything while the dock is
   its own row (`dock_row`, on by default).
+- **Language**: **Automatic** follows the TV's language, or choose a language for the launcher without changing the TV's system language.
 - **Clock**: **System** follows the TV's 12- or 24-hour setting; **12-hour** or **24-hour** sets the launcher's
   clocks (Home and the clock screensaver) to that, whatever the TV uses (`clock_format` in a theme).
 - **Wallpaper**: one picture from the theme's collection (or its `wallpaper.jpg`), **None**, or **Theme
