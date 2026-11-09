@@ -187,6 +187,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private LinearLayout topButtons;
     /** True while the first (dock) row has scrolled above the top-bar clearance line. */
     private boolean dockRowHiddenByScroll;
+    /** Dock tile whose cinematic shelf was visible when the dock row scrolled away. */
+    private int dockHeroPosition = -1;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
     private TextView btnWifi;
@@ -1846,6 +1848,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (dockAttached && dockHidden != dockRowHiddenByScroll) {
             dockRowHiddenByScroll = dockHidden;
             if (dockHidden) {
+                // Remember the active dock shelf before moving focus away from a row that is disappearing.
+                dockHeroPosition = heroShown && focusedPosition >= 0 && focusedPosition < COLUMNS
+                        ? focusedPosition : -1;
                 hero.animate().cancel();
                 ambient.animate().cancel();
                 heroArt.animate().cancel();
@@ -1853,6 +1858,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 ambient.setAlpha(0f);
                 heroArt.setAlpha(0f);
                 heroShown = false;
+            } else {
+                // Scrolling the dock back into view must restore its shelf as well as its app tiles.
+                if (dockHeroPosition >= 0) {
+                    RecyclerView.ViewHolder holder = grid.findViewHolderForAdapterPosition(dockHeroPosition);
+                    View card = holder == null ? null : holder.itemView.findViewById(R.id.card);
+                    if (card != null && card.getWidth() > 0 && card.getVisibility() == View.VISIBLE) {
+                        Rect cardRect = new Rect(0, 0, card.getWidth(), card.getHeight());
+                        root.offsetDescendantRectToMyCoords(card, cardRect);
+                        showHero(dockHeroPosition, cardRect.top);
+                    }
+                }
+                dockHeroPosition = -1;
             }
         }
 
