@@ -184,7 +184,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View clockBlock;
     private View btnInputs;
     /** Top-right controls; app rows stay at least 50dp below their lower edge. */
-    private View topButtons;
+    private LinearLayout topButtons;
     /** True while the first (dock) row has scrolled above the top-bar clearance line. */
     private boolean dockRowHiddenByScroll;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
