@@ -1816,7 +1816,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         topButtons.getLocationInWindow(buttonsLocation);
         grid.getLocationInWindow(gridLocation);
         int hideLine = buttonsLocation[1] + topButtons.getHeight()
-                + Math.round(30 * density) - gridLocation[1];
+                + Math.round(50 * density) - gridLocation[1];
 
         View focused = grid.findFocus();
         View focusedItem = focused == null ? null : gridItemFor(focused);
