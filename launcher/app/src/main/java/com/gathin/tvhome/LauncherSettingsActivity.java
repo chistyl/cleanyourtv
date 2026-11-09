@@ -213,6 +213,7 @@ public final class LauncherSettingsActivity extends Activity {
         }
         // Keep the radio/check column and every language label on the left, including
         // Arabic and Hebrew. Text direction remains content-aware so RTL glyphs shape correctly.
+        // This adapter deliberately overrides locale-driven row mirroring for consistent TV focus.
         ArrayAdapter<String> languageAdapter = new ArrayAdapter<String>(
                 this, android.R.layout.simple_list_item_single_choice, labels) {
             @Override
