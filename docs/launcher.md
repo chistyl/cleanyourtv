@@ -61,6 +61,7 @@ The launcher's own page has these rows, top to bottom:
   Follow theme, or push the theme again.
 - **Animations** on or off, and **Advanced effects** (tile lift, icon zoom and smooth ambient-colour
   transitions; they may use more memory) once animations are on.
+- **Launcher language**: choose Automatic to follow the TV language, or select an available launcher language.
 - **Open on start**, only with `open_on_start_choice`: Off, or an app that opens instead of Home the first
   time Home comes up after the TV starts. Once per boot, so Home and Back still reach the launcher.
 - **Follow theme (reset on-TV choices)**, which clears every choice above. Pushing or resetting a theme
