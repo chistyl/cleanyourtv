@@ -146,6 +146,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private WallpaperPlayer wallpaperPlayer;
     private GlassView glass;
     private View ambient;
+    private ParticleEffectView particleEffect;
     private TextView heroName;
     /** The top shelf: heroName, plus the cinematic shelf's "Last opened" line and dock position dots. */
     private View hero;
@@ -518,6 +519,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         glass.setStyle(cfg.glassStyle);
         if (festive) glass.setAccent(festival.accentColor());
         ambient = findViewById(R.id.ambient);
+        particleEffect = findViewById(R.id.particleEffect);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
         // a fade renders it into a full-screen offscreen buffer first.
         ambient.forceHasOverlappingRendering(false);
@@ -683,6 +685,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewAttachedToWindow(@NonNull View v) {
                 v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
                 grid.post(MainActivity.this::updateAppRowsNearTopBar);
+                grid.post(MainActivity.this::updateParticleAnchor);
             }
 
             @Override
@@ -753,6 +756,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // padding, leaving the glass at the XML design size until a key is pressed.
             grid.post(this::refitGlass);
             grid.post(this::updateAppRowsNearTopBar);
+            grid.post(this::updateParticleAnchor);
         });
 
         // Keep the glass glued to its tile while the grid scrolls.
@@ -760,6 +764,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 updateAppRowsNearTopBar();
+                updateParticleAnchor();
                 if (!glassShown) return;
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
@@ -1989,6 +1994,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             revealRect.set(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
             grid.requestChildRectangleOnScreen(item, revealRect, reducedMotion);
         }
+    }
+
+    /** Keep the particle-light centre pinned to the first app tile, not the screen centre. */
+    private void updateParticleAnchor() {
+        if (particleEffect == null || grid == null || adapter == null || adapter.appCount() == 0
+                || root == null || grid.getWidth() == 0) return;
+        RecyclerView.ViewHolder holder = grid.findViewHolderForAdapterPosition(0);
+        View card = holder == null ? null : holder.itemView.findViewById(R.id.card);
+        if (card == null || card.getWidth() <= 0 || card.getVisibility() != View.VISIBLE) {
+            particleEffect.setAnchorVisible(false);
+            return;
+        }
+        // When the tile uses a standalone app icon, anchor to that image itself (not the full card,
+        // whose label area would pull the light down). Banner tiles use the card's visual centre.
+        View icon = card.findViewById(R.id.icon);
+        View anchor = icon != null && icon.getVisibility() == View.VISIBLE && icon.getWidth() > 0
+                ? icon : card;
+        Rect bounds = new Rect(0, 0, anchor.getWidth(), anchor.getHeight());
+        root.offsetDescendantRectToMyCoords(anchor, bounds);
+        particleEffect.setAnchor(bounds.exactCenterX(), bounds.exactCenterY(), adapter.ambientColorAt(0));
+        particleEffect.setAnchorVisible(true);
     }
 
     /** Refits the glass to the focused holder once the grid layout and tile dimensions settle. */
