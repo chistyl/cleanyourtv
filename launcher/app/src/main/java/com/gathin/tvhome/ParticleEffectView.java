@@ -5,46 +5,87 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
+import java.util.Random;
+
 /**
- * A gentle firefly field anchored to a fixed screen-space point above the first app icon.
- * The anchor itself never moves; individual lights drift slowly and pulse independently around it.
+ * A field of soft white firefly halos around one fixed screen-space anchor.
+ * Only the anchor is fixed; the individual halos drift and breathe independently.
  */
 public final class ParticleEffectView extends View {
-    // Stable per-firefly paths: elliptical drift, a little secondary sway, and independent twinkle.
-    private static final float[] PHASES = {
-            0.15f, 0.82f, 1.47f, 2.08f, 2.76f, 3.31f, 4.02f, 4.68f, 5.24f, 5.79f
-    };
-    private static final float[] SPEEDS = {
-            0.72f, 0.54f, 0.86f, 0.63f, 0.48f, 0.78f, 0.58f, 0.92f, 0.67f, 0.51f
-    };
-    private static final float[] RADII_X = {
-            28f, 49f, 65f, 38f, 73f, 55f, 24f, 82f, 43f, 61f
-    };
-    private static final float[] RADII_Y = {
-            22f, 34f, 18f, 52f, 43f, 26f, 61f, 31f, 47f, 56f
-    };
-    private static final float[] SIZES = {
-            1.1f, 1.5f, 1.0f, 1.7f, 1.2f, 0.9f, 1.4f, 1.1f, 1.6f, 1.0f
-    };
+    private static final int HALO_COUNT = 34;
+
+    private static final class Halo {
+        float baseX;
+        float baseY;
+        float travelX;
+        float travelY;
+        float phaseX;
+        float phaseY;
+        float phaseB;
+        float sizeDp;
+        float pulsePhase;
+        float pulseSpeed;
+        int driftSpeed;
+        int driftSpeedY;
+        float alpha;
+    }
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Halo[] halos = new Halo[HALO_COUNT];
+    private final float density;
+    private final RadialGradient whiteHalo;
     private float centerX = -1f;
     private float centerY = -1f;
-    private int fireflyColor = Color.rgb(232, 255, 194);
     private boolean anchorVisible = true;
-    private final float density;
-    private final float haloRadius;
     private ValueAnimator animator;
     private float animationPhase;
 
     public ParticleEffectView(Context context, AttributeSet attrs) {
         super(context, attrs);
         density = getResources().getDisplayMetrics().density;
-        haloRadius = 3.2f * density;
+
+        // White-only radial light: no colored tint, hard dot, outline, or visible particle core.
+        whiteHalo = new RadialGradient(
+                0f, 0f, 1f,
+                new int[] {
+                        Color.argb(34, 255, 255, 255),
+                        Color.argb(43, 255, 255, 255),
+                        Color.argb(31, 255, 255, 255),
+                        Color.argb(15, 255, 255, 255),
+                        Color.argb(4, 255, 255, 255),
+                        Color.argb(0, 255, 255, 255)
+                },
+                new float[] { 0f, 0.16f, 0.38f, 0.63f, 0.84f, 1f },
+                Shader.TileMode.CLAMP
+        );
+
+        // A fixed seed makes the composition stable between redraws and activity recreations.
+        Random random = new Random(0xF1E_F1A5L);
+        for (int i = 0; i < HALO_COUNT; i++) {
+            Halo halo = new Halo();
+            halo.baseX = (random.nextFloat() * 2f - 1f) * 105f;
+            halo.baseY = (random.nextFloat() * 2f - 1f) * 62f;
+            halo.travelX = 9f + random.nextFloat() * 29f;
+            halo.travelY = 7f + random.nextFloat() * 23f;
+            halo.phaseX = random.nextFloat() * (float) (Math.PI * 2.0);
+            halo.phaseY = random.nextFloat() * (float) (Math.PI * 2.0);
+            halo.phaseB = random.nextFloat() * (float) (Math.PI * 2.0);
+            // Deliberately broad size range so large and small soft halos are clearly distinguishable.
+            halo.sizeDp = 8f + random.nextFloat() * 29f;
+            halo.pulsePhase = random.nextFloat() * (float) (Math.PI * 2.0);
+            halo.pulseSpeed = 1f + random.nextInt(4);
+            halo.driftSpeed = 1 + random.nextInt(3);
+            halo.driftSpeedY = 1 + random.nextInt(3);
+            halo.alpha = 0.48f + random.nextFloat() * 0.52f;
+            halos[i] = halo;
+        }
+
         setWillNotDraw(false);
         setLayerType(View.LAYER_TYPE_HARDWARE, null);
         createAnimator();
@@ -52,24 +93,24 @@ public final class ParticleEffectView extends View {
 
     private void createAnimator() {
         animator = ValueAnimator.ofFloat(0f, 1f);
-        animator.setDuration(18000L);
+        animator.setDuration(26000L);
         animator.setRepeatCount(ValueAnimator.INFINITE);
         animator.setInterpolator(new LinearInterpolator());
         animator.addUpdateListener(valueAnimator -> {
+            // All motion frequencies are whole cycles, so the loop joins without a visible jump.
             animationPhase = (Float) valueAnimator.getAnimatedValue() * (float) (Math.PI * 2.0);
             invalidate();
         });
     }
 
+    /**
+     * Called by MainActivity once when the initial app layout is ready.
+     * The supplied accent is intentionally ignored: every halo remains pure white.
+     */
     public void setAnchor(float x, float y, int color) {
         if (centerX == x && centerY == y) return;
         centerX = x;
         centerY = y;
-        // Blend the app accent with a firefly-like pale green/gold light.
-        int r = (Color.red(color) * 55 + 232 * 45) / 100;
-        int g = (Color.green(color) * 55 + 255 * 45) / 100;
-        int b = (Color.blue(color) * 55 + 194 * 45) / 100;
-        fireflyColor = Color.rgb(r, g, b);
         invalidate();
     }
 
@@ -97,37 +138,35 @@ public final class ParticleEffectView extends View {
         super.onDraw(canvas);
         if (!anchorVisible || centerX < 0f || centerY < 0f) return;
 
+        // This translation is the sole anchor. Focus changes and halo animation never modify it.
         canvas.save();
         canvas.translate(centerX, centerY);
-
-        // A barely visible pool of light holds the composition together without a hard central dot.
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.argb(17, Color.red(fireflyColor), Color.green(fireflyColor), Color.blue(fireflyColor)));
-        canvas.drawCircle(0f, 0f, 27f * density, paint);
+        paint.setShader(whiteHalo);
 
-        for (int i = 0; i < PHASES.length; i++) {
-            float angle = animationPhase * SPEEDS[i] + PHASES[i];
-            float sway = 5f * density;
-            float x = (float) Math.cos(angle) * RADII_X[i] * density
-                    + (float) Math.cos(angle * 0.47f + PHASES[i]) * sway;
-            float y = (float) Math.sin(angle * 0.83f) * RADII_Y[i] * density
-                    + (float) Math.sin(angle * 0.61f + PHASES[i]) * sway;
-            float twinkle = 0.5f + 0.5f * (float) Math.sin(animationPhase * (1.4f + SPEEDS[i]) + PHASES[i]);
-            int alpha = 34 + Math.round(twinkle * 112f);
-            float size = SIZES[i] * density;
+        for (Halo halo : halos) {
+            float t = animationPhase;
+            float x = halo.baseX
+                    + (float) Math.sin(t * halo.driftSpeed + halo.phaseX) * halo.travelX
+                    + (float) Math.sin(t * (halo.driftSpeed + 2) + halo.phaseB) * halo.travelX * 0.19f;
+            float y = halo.baseY
+                    + (float) Math.sin(t * halo.driftSpeedY + halo.phaseY) * halo.travelY
+                    + (float) Math.cos(t * (halo.driftSpeedY + 1) + halo.phaseB) * halo.travelY * 0.22f;
 
-            // Soft outer aura, brighter inner glow, then a tiny luminous core.
-            paint.setColor(Color.argb(Math.max(8, alpha / 3), Color.red(fireflyColor),
-                    Color.green(fireflyColor), Color.blue(fireflyColor)));
-            canvas.drawCircle(x, y, haloRadius * (1.45f + twinkle * 0.55f), paint);
+            // Independent slow breathing makes the lights brighten, dim and gently change size.
+            float pulse = 0.5f + 0.5f * (float) Math.sin(t * halo.pulseSpeed + halo.pulsePhase);
+            float radius = halo.sizeDp * density * (0.78f + pulse * 0.34f);
+            int alpha = Math.round(halo.alpha * (42f + pulse * 76f));
 
-            paint.setColor(Color.argb(alpha, Color.red(fireflyColor),
-                    Color.green(fireflyColor), Color.blue(fireflyColor)));
-            canvas.drawCircle(x, y, size * 2.1f, paint);
-
-            paint.setColor(Color.argb(Math.min(245, alpha + 82), 245, 255, 218));
-            canvas.drawCircle(x, y, Math.max(0.8f * density, size * 0.72f), paint);
+            canvas.save();
+            canvas.translate(x * density, y * density);
+            canvas.scale(radius, radius);
+            paint.setAlpha(alpha);
+            canvas.drawCircle(0f, 0f, 1f, paint);
+            canvas.restore();
         }
+
+        paint.setShader(null);
         canvas.restore();
     }
 }
