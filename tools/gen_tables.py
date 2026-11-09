@@ -275,7 +275,7 @@ TRANSLATIONS = {"README.nl.md": ("tv-modellen", "merken", ("taal", "talen")),
                 "README.de.md": ("TV-Modelle", "Marken", ("Sprache", "Sprachen")),
                 "README.uk.md": (("модель телевізорів", "моделі телевізорів", "моделей телевізорів"),
                                  ("бренд", "бренди", "брендів"), ("мова", "мови", "мов")),
-                "README.tr.md": ("TV modeli", "marka", ("dil", "dil"))}
+                "README.tr.md": ("TV modeli", "marka", "dil")}
 
 
 def readme(text, entries, root, path, words=WORDS):
