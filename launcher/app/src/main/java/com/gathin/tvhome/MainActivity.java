@@ -183,6 +183,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView greeting;
     private View clockBlock;
     private View btnInputs;
+    /** Top-right controls; app rows stay at least 50dp below their lower edge. */
+    private View topButtons;
+    /** True while the first (dock) row has scrolled above the top-bar clearance line. */
+    private boolean dockRowHiddenByScroll;
     /** config show_inputs_pill: false keeps the Inputs pill hidden even when the TV has inputs. */
     private boolean showInputsPill = true;
     private TextView btnWifi;
@@ -604,6 +608,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         vpnApp = cfg.vpnApp;
         vpnPill = cfg.vpnPill && !cfg.topMenu;
         btnVpn = findViewById(R.id.btnVpn);
+        topButtons = findViewById(R.id.topButtons);
         moduleCards = cfg.moduleCards;
         hiddenApps = new HashSet<>(cfg.hiddenApps);
         libraryExcludedApps = new HashSet<>(cfg.libraryExcludedApps);
@@ -675,6 +680,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             @Override
             public void onChildViewAttachedToWindow(@NonNull View v) {
                 v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
+                grid.post(this::updateAppRowsNearTopBar);
             }
 
             @Override
@@ -744,12 +750,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Cold start or column count > 4: the first focus can run before the grid has its final width or
             // padding, leaving the glass at the XML design size until a key is pressed.
             grid.post(this::refitGlass);
+            grid.post(this::updateAppRowsNearTopBar);
         });
 
         // Keep the glass glued to its tile while the grid scrolls.
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                updateAppRowsNearTopBar();
                 if (!glassShown) return;
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
@@ -868,7 +876,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (!iconOnlyButtons) makeIconOnly((TextView) btnSettings);
             btnSettings.setOnClickListener(v -> showTopMenu());
             // The lone gear sits at the header's middle, not on its bottom line like the row of pills.
-            LinearLayout topButtons = findViewById(R.id.topButtons);
             RelativeLayout.LayoutParams tlp = (RelativeLayout.LayoutParams) topButtons.getLayoutParams();
             tlp.addRule(RelativeLayout.ALIGN_TOP, R.id.leftBlock);
             tlp.bottomMargin = 0;
@@ -1791,6 +1798,93 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }, libraryExcludedApps);
         openPopup = appLibrary.popup;
         appLibrary.show();
+    }
+
+    /**
+     * Rows that have completely crossed the clearance line below the top-right controls are hidden as a unit.
+     * The 50dp buffer prevents icons from sliding underneath the controls. INVISIBLE keeps each row's measured
+     * space intact, so scrolling back down restores the same positions without rebuilding or reordering apps.
+     */
+    private void updateAppRowsNearTopBar() {
+        if (grid == null || topButtons == null || adapter == null || singleRow
+                || grid.getHeight() == 0 || topButtons.getHeight() == 0) return;
+
+        int[] buttonsLocation = new int[2];
+        int[] gridLocation = new int[2];
+        topButtons.getLocationInWindow(buttonsLocation);
+        grid.getLocationInWindow(gridLocation);
+        int hideLine = buttonsLocation[1] + topButtons.getHeight()
+                + Math.round(50 * density) - gridLocation[1];
+
+        View focused = grid.findFocus();
+        View focusedItem = focused == null ? null : gridItemFor(focused);
+        int focusedPosition = focusedItem == null ? RecyclerView.NO_POSITION
+                : grid.getChildAdapterPosition(focusedItem);
+        boolean focusedWillHide = false;
+        boolean dockAttached = false;
+        boolean dockHidden = false;
+        boolean changed = false;
+
+        for (int i = 0; i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int position = grid.getChildAdapterPosition(child);
+            if (position == RecyclerView.NO_POSITION) continue;
+
+            boolean hide = child.getBottom() <= hideLine;
+            int wantedVisibility = hide ? View.INVISIBLE : View.VISIBLE;
+            if (child.getVisibility() != wantedVisibility) {
+                child.setVisibility(wantedVisibility);
+                changed = true;
+            }
+            if (child == focusedItem && hide) focusedWillHide = true;
+            if (dockRow && position < COLUMNS) {
+                dockAttached = true;
+                dockHidden |= hide;
+            }
+        }
+
+        if (dockAttached && dockHidden != dockRowHiddenByScroll) {
+            dockRowHiddenByScroll = dockHidden;
+            if (dockHidden) {
+                hero.animate().cancel();
+                ambient.animate().cancel();
+                heroArt.animate().cancel();
+                hero.setAlpha(0f);
+                ambient.setAlpha(0f);
+                heroArt.setAlpha(0f);
+                heroShown = false;
+            }
+        }
+
+        if (focusedWillHide) {
+            View nextFocus = null;
+            int nextPosition = Integer.MAX_VALUE;
+            for (int i = 0; i < grid.getChildCount(); i++) {
+                View child = grid.getChildAt(i);
+                int position = grid.getChildAdapterPosition(child);
+                if (position <= focusedPosition || position == RecyclerView.NO_POSITION
+                        || child.getVisibility() != View.VISIBLE) continue;
+                View card = child.findViewById(R.id.card);
+                if (card != null && card.isFocusable() && position < nextPosition) {
+                    nextPosition = position;
+                    nextFocus = card;
+                }
+            }
+            if (nextFocus != null) nextFocus.requestFocus();
+            else topButtons.requestFocus();
+        }
+
+        if (changed) grid.invalidateItemDecorations();
+    }
+
+    /** Finds the RecyclerView item containing a focused descendant, if there is one. */
+    private View gridItemFor(View descendant) {
+        View current = descendant;
+        while (current != null && current.getParent() != grid) {
+            if (!(current.getParent() instanceof View)) return null;
+            current = (View) current.getParent();
+        }
+        return current != null && current.getParent() == grid ? current : null;
     }
 
     @Override
