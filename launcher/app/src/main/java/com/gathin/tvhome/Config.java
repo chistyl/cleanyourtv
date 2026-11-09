@@ -673,7 +673,7 @@ final class Config {
         if (!wallpaperEnabled) wallpaper = null;
         int rotationMinutes = json == null ? 0 : integer(json, "wallpaper_rotation_minutes", 0, 0, 1440);
         int wallpaperDim = json == null ? 0 : integer(json, "wallpaper_dim", 0, 0, 90);
-        int dockOpacity = json == null ? 100 : integer(json, "dock_opacity", 100, 30, 100);
+        int dockOpacity = json == null ? 70 : integer(json, "dock_opacity", 70, 30, 100);
         dockOpacity = chosenDockOpacity(choices.getInt(DOCK_OPACITY_KEY, -1), dockOpacity);
         clockFormat = choices.getString(CLOCK_FORMAT_KEY, clockFormat);
         String wallpaperOrder = json == null ? WallpaperRotation.ORDER_SHUFFLE
