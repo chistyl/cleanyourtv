@@ -9,7 +9,11 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.CheckedTextView;
 import android.widget.TextView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -207,9 +211,23 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 1; i < tags.length; i++) {
             if (tags[i].equalsIgnoreCase(current)) checked = i;
         }
+        // Keep the radio/check column and every language label on the left, including
+        // Arabic and Hebrew. Text direction remains content-aware so RTL glyphs shape correctly.
+        // This adapter deliberately overrides locale-driven row mirroring for consistent TV focus.
+        ArrayAdapter<String> languageAdapter = new ArrayAdapter<String>(
+                this, android.R.layout.simple_list_item_single_choice, labels) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                CheckedTextView item = (CheckedTextView) super.getView(position, convertView, parent);
+                item.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+                item.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+                item.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+                return item;
+            }
+        };
         new AlertDialog.Builder(this)
                 .setTitle(R.string.language_label)
-                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                .setSingleChoiceItems(languageAdapter, checked, (dialog, which) -> {
                     dialog.dismiss();
                     String selected = tags[which];
                     if (selected.equals(LauncherLocale.saved(this))) return;
