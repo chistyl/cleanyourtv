@@ -1,12 +1,12 @@
 # How CleanYourTV PRs are reviewed
 
 CleanYourTV (Gathin23/cleanyourtv) is a prompt plus tools that debloat Android TV / Google TV / Fire TV over
-ADB and a tiny native launcher (`launcher/`, plain Java, ~572 KB, for 1 GB TVs). Contributors mostly add
+ADB and a tiny native launcher (`launcher/`, plain Java, for 1 GB TVs). Contributors mostly add
 tested TV lists under `examples/<tv>/`, translations, docs, small launcher options, themes, add-ons and tools.
 
 ## The policy: a small core plus a well-indexed hub
 The main repo stays small and simple: the prompt, tested TV lists, the safety rules and a small, stable
-launcher under the APK size gate (`.github/workflows/ci.yml`, currently 589,824 B). Bigger ideas live next to
+launcher with no APK file-size ceiling in CI. Bigger ideas live next to
 it, and every one of them gets a home. Pick the smallest home that fits (CONTRIBUTING, "Where does my idea go?"):
 
 | The idea | Where it goes | Verdict |
@@ -74,7 +74,7 @@ it, and every one of them gets a home. Pick the smallest home that fits (CONTRIB
   crypto, weather APIs were refused), no heavy libraries, no prebuilt binaries in the repo (not even as CI
   artifacts).
 - Changes to the safety rules in PROMPT.md, the Home-safety logic in the scripts, the China TCL rule,
-  CI/workflows or the APK size gate need the maintainer: **hold**.
+  CI/workflow changes need the maintainer: **hold**.
 - Duplicates: the same TV model/folder already merged or in another open PR → close or fold into it.
 - One design per feature: if two PRs do the same thing, keep one (merge or rework the other into it). The hold-OK
   tile menu family is one design (#464, with #746); other tile menus fold into it (#687's Menu-key trigger).
