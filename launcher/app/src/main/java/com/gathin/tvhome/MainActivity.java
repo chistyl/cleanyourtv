@@ -680,7 +680,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             @Override
             public void onChildViewAttachedToWindow(@NonNull View v) {
                 v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
-                grid.post(this::updateAppRowsNearTopBar);
+                grid.post(MainActivity.this::updateAppRowsNearTopBar);
             }
 
             @Override
