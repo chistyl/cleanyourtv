@@ -75,8 +75,7 @@
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/banner"
         android:theme="@style/Theme.TvHome"
-        android:allowBackup="false"
-        >
+        android:allowBackup="false">
 
         <activity
             android:name=".MainActivity"
