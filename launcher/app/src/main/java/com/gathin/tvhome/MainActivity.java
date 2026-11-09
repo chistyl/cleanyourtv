@@ -147,6 +147,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private GlassView glass;
     private View ambient;
     private ParticleEffectView particleEffect;
+    /** Set once after the first app tile is laid out; focus and scrolling never move this screen anchor. */
+    private boolean particleAnchorSet;
     private TextView heroName;
     /** The top shelf: heroName, plus the cinematic shelf's "Last opened" line and dock position dots. */
     private View hero;
@@ -685,7 +687,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewAttachedToWindow(@NonNull View v) {
                 v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
                 grid.post(MainActivity.this::updateAppRowsNearTopBar);
-                grid.post(MainActivity.this::updateParticleAnchor);
             }
 
             @Override
@@ -764,7 +765,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 updateAppRowsNearTopBar();
-                updateParticleAnchor();
                 if (!glassShown) return;
                 glassTargetY -= dy;
                 glassScrollShift -= dy;
@@ -1996,18 +1996,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    /** Keep the particle-light centre pinned to the first app tile, not the screen centre. */
+    /**
+     * Capture the first app icon's centre once after the initial grid layout. This is a screen-space
+     * anchor: focus changes, key presses and later grid scrolling must never drag the fireflies around.
+     */
     private void updateParticleAnchor() {
-        if (particleEffect == null || grid == null || adapter == null || adapter.appCount() == 0
-                || root == null || grid.getWidth() == 0) return;
+        if (particleAnchorSet || particleEffect == null || grid == null || adapter == null
+                || adapter.appCount() == 0 || root == null || grid.getWidth() == 0) return;
         RecyclerView.ViewHolder holder = grid.findViewHolderForAdapterPosition(0);
         View card = holder == null ? null : holder.itemView.findViewById(R.id.card);
-        if (card == null || card.getWidth() <= 0 || card.getVisibility() != View.VISIBLE) {
-            particleEffect.setAnchorVisible(false);
-            return;
-        }
-        // When the tile uses a standalone app icon, anchor to that image itself (not the full card,
-        // whose label area would pull the light down). Banner tiles use the card's visual centre.
+        if (card == null || card.getWidth() <= 0 || card.getVisibility() != View.VISIBLE) return;
+
+        // Prefer the actual app icon, excluding its title/label area. If the tile has no icon view,
+        // use the visual centre of the card.
         View icon = card.findViewById(R.id.icon);
         View anchor = icon != null && icon.getVisibility() == View.VISIBLE && icon.getWidth() > 0
                 ? icon : card;
@@ -2015,6 +2016,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root.offsetDescendantRectToMyCoords(anchor, bounds);
         particleEffect.setAnchor(bounds.exactCenterX(), bounds.exactCenterY(), adapter.ambientColorAt(0));
         particleEffect.setAnchorVisible(true);
+        particleAnchorSet = true;
     }
 
     /** Refits the glass to the focused holder once the grid layout and tile dimensions settle. */
