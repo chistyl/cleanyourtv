@@ -69,10 +69,14 @@ public final class ParticleEffectView extends View {
         Random random = new Random(0xF1E_F1A5L);
         for (int i = 0; i < HALO_COUNT; i++) {
             Halo halo = new Halo();
-            halo.baseX = (random.nextFloat() * 2f - 1f) * 105f;
-            halo.baseY = (random.nextFloat() * 2f - 1f) * 62f;
-            halo.travelX = 9f + random.nextFloat() * 29f;
-            halo.travelY = 7f + random.nextFloat() * 23f;
+            // A wider field with a mild centre bias: the outer reach grows, while most halos
+            // remain visually gathered around the main light cluster.
+            float spreadX = (float) Math.pow(random.nextFloat() * 2f - 1f, 1.18);
+            float spreadY = (float) Math.pow(random.nextFloat() * 2f - 1f, 1.18);
+            halo.baseX = spreadX * 145f;
+            halo.baseY = spreadY * 88f;
+            halo.travelX = 12f + random.nextFloat() * 30f;
+            halo.travelY = 9f + random.nextFloat() * 25f;
             halo.phaseX = random.nextFloat() * (float) (Math.PI * 2.0);
             halo.phaseY = random.nextFloat() * (float) (Math.PI * 2.0);
             halo.phaseB = random.nextFloat() * (float) (Math.PI * 2.0);
@@ -140,7 +144,8 @@ public final class ParticleEffectView extends View {
 
         // This translation is the sole anchor. Focus changes and halo animation never modify it.
         canvas.save();
-        canvas.translate(centerX, centerY);
+        // Keep the anchor screen-fixed, but place the whole firefly field 450dp lower.
+        canvas.translate(centerX, centerY + 450f * density);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(whiteHalo);
 
