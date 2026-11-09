@@ -687,6 +687,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewAttachedToWindow(@NonNull View v) {
                 v.setAlpha(tileAlpha(grid.getChildAdapterPosition(v)));
                 grid.post(MainActivity.this::updateAppRowsNearTopBar);
+                // If the initial layout callback ran before position 0 had a holder, retry only
+                // when that first tile attaches. Once captured, the screen anchor is never changed.
+                if (!particleAnchorSet && grid.getChildAdapterPosition(v) == 0) {
+                    grid.post(MainActivity.this::updateParticleAnchor);
+                }
             }
 
             @Override
