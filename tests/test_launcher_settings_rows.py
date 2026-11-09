@@ -135,7 +135,18 @@ class ScreenRows(unittest.TestCase):
 
     def test_screen_rows_are_read(self):
         """The screen has its rows, and each one resolved to the label the TV shows."""
-        self.assertGreaterEqual(len(self.rows), 9, self.rows)
+        # R3 intentionally removes the wallpaper, animation, advanced-effects,
+        # follow-theme, default-home and TV-system-settings rows. Keep the
+        # remaining settings rows explicit so this test guards the new screen.
+        expected_ids = [
+            "reorderChoice",
+            "columns_label",
+            "rows_below_dock_label",
+            "dock_opacity_label",
+            "dream_name",
+            "openOnStartChoice",
+        ]
+        self.assertEqual([row_id for row_id, _ in self.rows], expected_ids, self.rows)
         labels = [label for _, label in self.rows]
         self.assertEqual(len(labels), len(set(labels)), labels)
         for row_id, label in self.rows:
