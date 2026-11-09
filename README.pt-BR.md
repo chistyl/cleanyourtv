@@ -202,7 +202,7 @@ tools/theme.sh themes/aurora                                 # aplica um tema; -
 | [`tools/flamechart.py`](tools/flamechart.py) | Gera um flame chart comparando os traces de antes e depois, útil em um pull request: uma faixa por thread em uma escala de tempo compartilhada, com o trabalho que a alteração busca modificar destacado em magenta e seu tempo total. Opcional, assim como as ferramentas de trace. [Guia](tools/flamechart.md). |
 | [`tools/screendiff.py`](tools/screendiff.py) | Compara uma captura de tela anterior e outra posterior, pixel por pixel, ignorando o relógio ou qualquer área que você queira mascarar. Também salva o par de imagens com o nome da sua rede Wi-Fi desfocado. Opcional, assim como as ferramentas de trace. [Guia](tools/screendiff.md). |
 | [`tools/race_calendar.py`](tools/race_calendar.py) | Adiciona o calendário da temporada atual de F1 a um tema para o modo de fim de semana de corrida, usando a API gratuita Jolpica. |
-| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Compila uma versão otimizada para distribuição (cerca de 572 KB), instala, define como tela inicial e reverte a alteração se o launcher não assumir essa função. |
+| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Compila uma versão otimizada para distribuição, instala, define como tela inicial e reverte a alteração se o launcher não assumir essa função. |
 
 Os scripts nunca deixam a TV sem um aplicativo de tela inicial: eles só desativam um launcher original que
 reconhecem e ignoram esse aplicativo na lista até que outro launcher responda ao botão HOME. Suas próprias
@@ -273,7 +273,7 @@ por trás de cada recurso: [docs/privacy.md](docs/privacy.md) explica o motivo.
 
 ## O launcher
 
-Uma tela inicial nativa e leve para Android TV: **cerca de 572 KB**, feita em Java puro e projetada para TVs
+Uma tela inicial nativa e leve para Android TV: **compacta**, feita em Java puro e projetada para TVs
 com 1 GB de RAM. Sem blur, sem vídeo, sem permissão de rede e sem serviços em segundo plano. A **TV** precisa
 ter Android 8.0 (API 26) ou superior, conforme o `minSdk` em
 [`launcher/app/build.gradle`](launcher/app/build.gradle). O que ainda funciona em modelos mais antigos está
