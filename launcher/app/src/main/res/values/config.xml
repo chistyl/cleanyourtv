@@ -257,12 +257,6 @@
     <!-- The date (with the Shamsi and lunar lines) on its own line under the clock instead of beside it, for a top bar
          whose pills leave the date too little room. Can also be set with "date_below_clock" in a theme. -->
     <bool name="date_below_clock">false</bool>
-    <!-- The language the launcher shows itself in, as a language tag ("vi", "pt-BR", "ar-EG-u-nu-latn"
-         for Arabic with Western digits), instead of the TV's. For firmware
-         that has no menu entry for the owner's language although the launcher is translated into it (a China-market
-         Xiaomi offers Chinese and English only). Empty, the default, follows the TV. A theme can set it ("locale"). -->
-    <string name="locale" translatable="false"></string>
-
     <!-- A name after the greeting: "Mr. Trịnh" shows GOOD MORNING, MR. TRỊNH. Empty: the greeting alone. -->
     <string name="greeting_name" translatable="false"></string>
     <!-- The greeting above the clock ("Good evening"). false hides it. Can also be set with "show_greeting" in a theme. -->
