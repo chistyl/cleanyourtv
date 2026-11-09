@@ -144,8 +144,8 @@ public final class ParticleEffectView extends View {
 
         // This translation is the sole anchor. Focus changes and halo animation never modify it.
         canvas.save();
-        // Keep the anchor screen-fixed, but place the whole firefly field 450dp lower.
-        canvas.translate(centerX, centerY + 250f * density);
+        // R9 moves the complete firefly field another 200dp upward from R8.
+        canvas.translate(centerX, centerY + 50f * density);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(whiteHalo);
 
