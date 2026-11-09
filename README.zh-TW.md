@@ -300,14 +300,7 @@ TV_HOST=192.168.1.50 tools/theme.sh --reset
 
 ### 語言、螢幕保護程式與遙控器
 
-- **語言：**啟動器預設跟隨電視的系統語言，已包含正體中文（臺灣）。可在 `config.xml` 或主題的 `locale` 指定語言標籤，例如 `zh-TW`；留空則使用系統語言。Android 13 以上也可透過系統為啟動器單獨設定語言；如要使用系統設定，請先清空內建設定與目前主題的 `locale`，並重新建置或推送所需的設定：
-
-  ```bash
-  tools/venv/bin/python -I tools/tv.py 'cmd locale set-app-locales com.gathin.tvhome --locales zh-TW'
-  ```
-
-  查詢系統的應用程式語言設定可用 `cmd locale get-app-locales com.gathin.tvhome`；改為英文時將 `zh-TW` 換成 `en`。Android 12 以下沒有此系統指令，可使用上述 `locale` 設定或變更電視系統語言。
-
+- **語言：**桌面固定使用台灣正體中文，與電視系統語言無關；日期與時間格式也固定使用 zh-TW，不提供應用程式語言切換。
 - **時鐘螢幕保護程式：**在電視的螢幕保護程式設定中選擇「時鐘（Clock）」，或執行：
 
   ```bash
