@@ -2006,8 +2006,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             particleEffect.setAnchorVisible(false);
             return;
         }
-        Rect bounds = new Rect(0, 0, card.getWidth(), card.getHeight());
-        root.offsetDescendantRectToMyCoords(card, bounds);
+        // When the tile uses a standalone app icon, anchor to that image itself (not the full card,
+        // whose label area would pull the light down). Banner tiles use the card's visual centre.
+        View icon = card.findViewById(R.id.icon);
+        View anchor = icon != null && icon.getVisibility() == View.VISIBLE && icon.getWidth() > 0
+                ? icon : card;
+        Rect bounds = new Rect(0, 0, anchor.getWidth(), anchor.getHeight());
+        root.offsetDescendantRectToMyCoords(anchor, bounds);
         particleEffect.setAnchor(bounds.exactCenterX(), bounds.exactCenterY(), adapter.ambientColorAt(0));
         particleEffect.setAnchorVisible(true);
     }
