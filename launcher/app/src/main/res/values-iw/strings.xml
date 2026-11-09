@@ -152,4 +152,7 @@
     <string name="clock_format_system">מערכת</string>
     <string name="clock_format_12">12 שעות</string>
     <string name="clock_format_24">24 שעות</string>
+    <string name="language_label">שפת הממשק</string>
+    <string name="language_auto">אוטומטי (לפי שפת הטלוויזיה)</string>
+    <string name="language_state">שפה: %1$s</string>
 </resources>
