@@ -241,18 +241,10 @@ class ShippedStringsTest(unittest.TestCase):
         self.assertTrue(default_plurals, "the plurals were not read")
         self.assertTrue(any(specifiers(body) for body in default_strings.values()),
                         "no specifier was read out of values/strings.xml")
+        # The launcher is intentionally single-language: every visible string is in values/,
+        # so a translated values-* overlay would be a regression rather than a test fixture.
         folders = [p for p in RES.iterdir() if p.is_dir() and p.name.startswith("values-")]
-        self.assertGreaterEqual(len(folders), 30, "the language folders were not read")
-        pairs = with_specifiers = 0
-        for folder in folders:
-            strings, _ = catalog(folder / "strings.xml")
-            for name, body in strings.items():
-                if name in default_strings:
-                    pairs += 1
-                    if specifiers(default_strings[name]):
-                        with_specifiers += 1
-        self.assertGreaterEqual(pairs, 3000, "the translated strings were not read")
-        self.assertGreaterEqual(with_specifiers, 500, "the strings with specifiers were not found")
+        self.assertEqual([], folders, "single-language launcher must not ship language overlays")
         calls = call_sites()
         self.assertGreaterEqual(len(calls), 40, "the call sites were not read")
         # The call reader has to count arguments, not only find calls: several calls in the launcher hand
