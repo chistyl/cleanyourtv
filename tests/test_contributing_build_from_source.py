@@ -12,9 +12,9 @@ to be a full 17, because a JRE answers `java -version` as a 17 but has no `jlink
 Gradle plugin needs (#1255). #1721 is a reader who reported exactly this - "not able to build the
 launcher from my laptop" - after following the pages.
 
-Nothing is copied into the test: the command, the APK path and the working directory come from
-`.github/workflows/ci.yml`'s `launcher` job, the platform from `launcher/app/build.gradle`'s `compileSdk`,
-so a page left behind by a CI or Gradle change fails here instead of misleading the next reader.
+Nothing is copied into the test: the command and working directory come from `.github/workflows/ci.yml`'s
+`launcher` job, the release APK path from its upload step, and the platform from
+`launcher/app/build.gradle`'s `compileSdk`, so a page left behind by a CI or Gradle change fails here.
 
 Run from the repository root: python3 -m unittest discover -s tests -v
 """
@@ -30,6 +30,7 @@ BUILD_GRADLE = ROOT / "launcher/app/build.gradle"
 
 HEADING = "## 2. Improve the launcher"
 JOB_HEAD = re.compile(r"^  ([a-z][a-z0-9-]*):\s*$", re.M)
+ARTIFACT_PATH = re.compile(r"^\\s+path:\\s*(launcher/app/build/outputs/[^\\s]+\\.apk)\\s*$", re.M)
 COMPILE_SDK = re.compile(r"^\s*compileSdk\s+(\d+)\s*$", re.M)
 
 # What the route needs to say, each with the reason it is on the list.
@@ -97,9 +98,9 @@ def launcher_job(ci_text):
 
 
 def apk_path(ci_text):
-    m = STAT_LINE.search(ci_text)
+    m = ARTIFACT_PATH.search(ci_text)
     if not m:
-        raise AssertionError("ci.yml no longer measures the release APK: the page points at a path nothing builds")
+        raise AssertionError("ci.yml no longer uploads the release APK: the page points at a path nothing builds")
     return m.group(1)
 
 
