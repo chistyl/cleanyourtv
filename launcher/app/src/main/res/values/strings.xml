@@ -124,7 +124,7 @@
     <string name="race_kicker">第 %1$d 站 · %2$s · %3$s</string>
     <string name="race_kicker_no_place">第 %1$d 站 · %2$s</string>
     <string name="race_next">%1$s 將於 %2$s 後開始</string>
-    <string name="race_lights_out">%1$s 將於 %2$s 後起跑</string>
+    <string name="race_lights_out">距離起跑還有 %1$s</string>
     <string name="race_live">%1$s · 直播中</string>
     <string name="race_finished">賽事結束</string>
     <string name="race_practice_1">第一次自由練習</string>
