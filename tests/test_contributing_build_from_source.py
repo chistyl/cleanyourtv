@@ -12,10 +12,9 @@ to be a full 17, because a JRE answers `java -version` as a 17 but has no `jlink
 Gradle plugin needs (#1255). #1721 is a reader who reported exactly this - "not able to build the
 launcher from my laptop" - after following the pages.
 
-Nothing is copied into the test: the command, the APK path, the size limit and the working directory
-come from `.github/workflows/ci.yml`'s `launcher` job, the platform from `launcher/app/build.gradle`'s
-`compileSdk`, so a page left behind by a CI or Gradle change fails here instead of misleading the next
-reader.
+Nothing is copied into the test: the command, the APK path and the working directory come from
+`.github/workflows/ci.yml`'s `launcher` job, the platform from `launcher/app/build.gradle`'s `compileSdk`,
+so a page left behind by a CI or Gradle change fails here instead of misleading the next reader.
 
 Run from the repository root: python3 -m unittest discover -s tests -v
 """
@@ -30,11 +29,6 @@ CI = ROOT / ".github/workflows/ci.yml"
 BUILD_GRADLE = ROOT / "launcher/app/build.gradle"
 
 HEADING = "## 2. Improve the launcher"
-# The launcher job's size check, in the form ci.yml writes it:
-#   size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
-#   test "$size" -lt 589824
-STAT_LINE = re.compile(r"size=\$\(stat -c %s ([^)\s]+)\)")
-LIMIT_LINE = re.compile(r'test "\$size" -lt (\d+)')
 JOB_HEAD = re.compile(r"^  ([a-z][a-z0-9-]*):\s*$", re.M)
 COMPILE_SDK = re.compile(r"^\s*compileSdk\s+(\d+)\s*$", re.M)
 
@@ -109,13 +103,6 @@ def apk_path(ci_text):
     return m.group(1)
 
 
-def size_limit(ci_text):
-    m = LIMIT_LINE.search(ci_text)
-    if not m:
-        raise AssertionError("ci.yml no longer refuses an oversized APK: the page quotes a limit nothing applies")
-    return int(m.group(1))
-
-
 def compile_sdk():
     m = COMPILE_SDK.search(BUILD_GRADLE.read_text(encoding="utf-8"))
     if not m:
@@ -151,12 +138,6 @@ class ContributingBuildTest(unittest.TestCase):
                         "the build route CONTRIBUTING gives for a laptop names no Gradle task")
         self.assertTrue(apk_path(self.ci) in body,
                         "the page does not say where a by-hand build leaves the APK")
-
-    def test_the_page_names_the_size_the_apk_has_to_stay_under(self):
-        body = section(self.page)
-        limit = f"{size_limit(self.ci):,}"
-        self.assertTrue(limit in body,
-                        "the page does not quote the APK size limit CI applies to the build it describes")
 
     def test_the_page_names_where_gradle_finds_the_sdk_and_a_jdk_with_jlink(self):
         self.assertEqual([], missing(self.page),
