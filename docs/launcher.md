@@ -54,7 +54,7 @@ The launcher's own page has these rows, top to bottom:
 - **Apps per row** 4, 5, 6 or 7; **Rows below dock** 0 to 3, how many rows of tiles stay visible under the
   dock band; **Dock band opacity** 100%, 70%, 50% or 30%. The last two only do anything while the dock is
   its own row (`dock_row`, on by default).
-- **Language**: **Automatic** follows the TV's language, or choose a language for the launcher without changing the TV's system language.
+- **Language**: fixed to **Traditional Chinese (Taiwan)**, independent of the TV's system language. Date and time formatting use the same locale.
 - **Clock**: **System** follows the TV's 12- or 24-hour setting; **12-hour** or **24-hour** sets the launcher's
   clocks (Home and the clock screensaver) to that, whatever the TV uses (`clock_format` in a theme).
 - **Wallpaper**: one picture from the theme's collection (or its `wallpaper.jpg`), **None**, or **Theme
@@ -77,24 +77,7 @@ home picker.
 
 ## Languages
 
-English, German, Danish, Spanish, Latin American Spanish, Catalan, French, Russian, Serbian (Latin), Polish, Czech, Italian, Portuguese,
-Turkish, Arabic, Hebrew, Simplified Chinese, Traditional Chinese (Taiwan), Thai, Finnish, Vietnamese,
-Bangla, Indonesian, Norwegian Bokmål, Swedish, Dutch, Uzbek (Latin), Ukrainian, Korean and Asturian. The launcher follows the TV's language. Android 13+ can set it for the launcher
-alone: `tools/tv.py 'cmd locale set-app-locales com.gathin.tvhome --locales ca'`.
-
-Hebrew mirrors the layout:
-
-- menu buttons on the left, date and clock on the right with the greeting above;
-- dock and app rows starting on the right, with matching remote navigation;
-- the input selector's icons and labels on the right;
-- dates with the month prefix ב (for example, 19 באוקטובר).
-
-| ![Hebrew Home: the buttons on the left, the greeting, clock and date on the right](hebrew-home.png) | ![Dock and grid: both rows start on the right](hebrew-apps.png) |
-|---|---|
-| ![The Inputs menu: source names and icons on the right, what is not connected on the left](hebrew-inputs.png) | ![The Clock screensaver, the date under the time, right of centre](hebrew-screensaver.png) |
-
-The Clock screensaver right-aligns its date and time. Russian covers every screen, including race
-weekends, festival greetings and the Shamsi date. Other languages keep their original layouts.
+The launcher UI is fixed to Traditional Chinese (Taiwan). It does not follow the TV's system language and does not expose Android's per-app language picker. All translated strings and date-format resources are in the default values resource set. Chinese-specific layout and drawable resources remain for correct typography.
 
 ## Module cards
 
