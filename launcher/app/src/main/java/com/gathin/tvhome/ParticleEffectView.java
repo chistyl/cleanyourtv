@@ -18,7 +18,7 @@ import java.util.Random;
  * Only the anchor is fixed; the individual halos drift and breathe independently.
  */
 public final class ParticleEffectView extends View {
-    private static final int HALO_COUNT = 34;
+    private static final int HALO_COUNT = 108;
 
     private static final class Halo {
         float baseX;
@@ -144,8 +144,8 @@ public final class ParticleEffectView extends View {
 
         // This translation is the sole anchor. Focus changes and halo animation never modify it.
         canvas.save();
-        // R9 moves the complete firefly field another 200dp upward from R8.
-        canvas.translate(centerX, centerY + 50f * density);
+        // R10 moves the complete R9 firefly field 50dp right and 50dp down.
+        canvas.translate(centerX + 50f * density, centerY + 100f * density);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(whiteHalo);
 
