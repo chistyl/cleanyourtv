@@ -207,7 +207,7 @@ tools/theme.sh themes/aurora                                 # bir tema gönder;
 | [`tools/flamechart.py`](tools/flamechart.py) | Bir pull request için bu izlerden önce/sonra alev grafiği çizer: ortak bir zaman ölçeğinde iş parçacığı başına bir şerit; bir değişikliğin hedeflediği iş, toplamıyla birlikte macenta renkte. İz araçları gibi isteğe bağlıdır. [Kılavuz](tools/flamechart.md). |
 | [`tools/screendiff.py`](tools/screendiff.py) | Önce ve sonra ekran görüntülerini piksel piksel karşılaştırır; saati veya maskelediğiniz her şeyi dışarıda bırakır ve çifti Wi-Fi adınız bulanıklaştırılmış olarak yazar. İz araçları gibi isteğe bağlıdır. [Kılavuz](tools/screendiff.md). |
 | [`tools/race_calendar.py`](tools/race_calendar.py) | Yarış hafta sonu modu için bu sezonun F1 takvimini ücretsiz Jolpica API'sinden bir temaya yazar. |
-| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Küçültülmüş bir sürüm (yaklaşık küçük) derler, kurar, Ana ekranı değiştirir ve Ana ekran ona geçmezse geri alır. |
+| [`launcher/build-and-install.sh`](launcher/build-and-install.sh) | Küçültülmüş bir sürüm (küçük) derler, kurar, Ana ekranı değiştirir ve Ana ekran ona geçmezse geri alır. |
 
 Betikler TV'yi asla Ana ekran uygulaması olmadan bırakmaz: yalnızca tanıdıkları standart bir başlatıcıyı devre
 dışı bırakırlar ve başka bir başlatıcı HOME'a yanıt verene kadar listedeki Ana ekran uygulamasını atlarlar.
