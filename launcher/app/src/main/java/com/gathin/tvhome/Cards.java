@@ -343,7 +343,13 @@ final class Cards {
         int[] ids = {R.string.app_name, R.string.settings, R.string.inputs, R.string.choose_input, R.string.wifi,
                 R.string.live_tv, R.string.home_settings, R.string.app_library, R.string.dream_name};
         Set<String> out = new HashSet<>();
-        for (int id : ids) out.add(fold(res.getString(id)));
+        for (int id : ids) {
+            String folded = fold(res.getString(id));
+            if (!folded.isEmpty()) out.add(folded);
+        }
+        // Module labels are ASCII-only. Keep the English UI names reserved as well, so a label
+        // cannot become valid merely because this launcher build uses a non-English UI locale.
+        out.addAll(englishUiNames());
         return out;
     }
 
@@ -830,7 +836,7 @@ final class Cards {
     /** The folded forms of the English UI names, for callers without resources (tests). */
     static Set<String> englishUiNames() {
         return new HashSet<>(Arrays.asList(fold("Home"), fold("Settings"), fold("Inputs"), fold("Wi-Fi"),
-                fold("Live TV"), fold("Default home"), fold("Clock")));
+                fold("Live TV"), fold("App library"), fold("Choose default home"), fold("Default home"), fold("Clock")));
     }
 
     // ---- self-check ------------------------------------------------------------------------------
