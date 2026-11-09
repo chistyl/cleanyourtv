@@ -72,7 +72,7 @@ EXAMPLES = f"""# Examples
 Notes for models that have no tested list yet: hand-written.
 """
 
-STATS = 'STATS = [("2", "TV MODELS"), ("2", "BRANDS"), ("2", "LANGUAGES"), ("1 KB", "LAUNCHER")]\n'
+STATS = 'STATS = [("2", "TV MODELS"), ("2", "BRANDS"), ("2", "LANGUAGE"), ("1 KB", "LAUNCHER")]\n'
 
 
 def tree(tmp, lists):
@@ -237,7 +237,7 @@ class GeneratorTest(unittest.TestCase):
                 "|  |  |  |  |"])
             self.assertIn('"3 TV models · 2 brands · 3 languages · 1 KB launcher"', readme)
             self.assertIn("| **3 languages** | yes |", readme)
-            self.assertIn('("3", "TV MODELS"), ("2", "BRANDS"), ("3", "LANGUAGES")',
+            self.assertIn('("3", "TV MODELS"), ("2", "BRANDS"), ("3", "LANGUAGE")',
                           (root / "tools/readme_stats.py").read_text(encoding="utf-8"))
             self.assertTrue(readme.endswith("Hand-written text stays.\n"))
             self.assertTrue(examples.endswith("Notes for models that have no tested list yet: hand-written.\n"))
