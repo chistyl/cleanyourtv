@@ -177,6 +177,7 @@ public final class LauncherSettingsActivity extends Activity {
             rowsBelowDock = current.rowsBelowDock;
             dockOpacity = current.dockOpacity;
             clockFormat = current.clockFormat;
+            showDockAppNames = current.showDockAppNames;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
             changed();
