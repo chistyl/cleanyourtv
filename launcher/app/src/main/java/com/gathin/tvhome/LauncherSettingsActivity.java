@@ -41,6 +41,8 @@ public final class LauncherSettingsActivity extends Activity {
     private String clockFormat;
     private TextView showAppNamesChoice;
     private boolean showAppNames;
+    private TextView simplifiedToTraditionalChoice;
+    private boolean simplifiedToTraditional;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -59,6 +61,7 @@ public final class LauncherSettingsActivity extends Activity {
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
         showAppNames = choices.getBoolean(Config.SHOW_APP_NAMES_KEY, true);
+        simplifiedToTraditional = choices.getBoolean(Config.SIMPLIFIED_TO_TRADITIONAL_KEY, false);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -112,6 +115,13 @@ public final class LauncherSettingsActivity extends Activity {
         showAppNamesChoice.setOnClickListener(v -> {
             showAppNames = !showAppNames;
             choices.edit().putBoolean(Config.SHOW_APP_NAMES_KEY, showAppNames).apply();
+            changed();
+            refresh();
+        });
+        simplifiedToTraditionalChoice = findViewById(R.id.simplifiedToTraditionalChoice);
+        simplifiedToTraditionalChoice.setOnClickListener(v -> {
+            simplifiedToTraditional = !simplifiedToTraditional;
+            choices.edit().putBoolean(Config.SIMPLIFIED_TO_TRADITIONAL_KEY, simplifiedToTraditional).apply();
             changed();
             refresh();
         });
@@ -260,6 +270,9 @@ public final class LauncherSettingsActivity extends Activity {
         showAppNamesChoice.setText(getString(R.string.show_app_names_state,
                 getString(showAppNames ? R.string.on : R.string.off)));
         showAppNamesChoice.setSelected(showAppNames);
+        simplifiedToTraditionalChoice.setText(getString(R.string.simplified_to_traditional_state,
+                getString(simplifiedToTraditional ? R.string.on : R.string.off)));
+        simplifiedToTraditionalChoice.setSelected(simplifiedToTraditional);
     }
 
     private boolean hasOnTvChoices() {
