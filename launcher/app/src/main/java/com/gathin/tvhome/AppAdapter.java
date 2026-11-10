@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
+import android.icu.text.Transliterator;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
@@ -189,6 +190,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** config always_show_names: the alpha of an unfocused tile's name (0 hides it). */
     private final float restNameAlpha;
     private final boolean showAppNames;
+    private final boolean convertSimplifiedToTraditional;
+    private static final Transliterator SIMPLIFIED_TO_TRADITIONAL =
+            Transliterator.getInstance("Simplified-Traditional");
     /** cinematic_home: only then does a launch record the last-opened app the shelf uses. */
     private final boolean cinematic;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
@@ -223,7 +227,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Set<String> iconTiles;
     private final List<Entry> items = new ArrayList<>();
 
-    AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg, boolean showAppNames) {
+    AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg, boolean showAppNames, boolean convertSimplifiedToTraditional) {
         this.ctx = ctx;
         this.listener = listener;
         this.dockSize = dockSize;
@@ -242,6 +246,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.dockRow = cfg.dockRow;
         this.singleRow = cfg.singleRow;
         this.showAppNames = showAppNames;
+        this.convertSimplifiedToTraditional = convertSimplifiedToTraditional;
         this.restNameAlpha = showAppNames ? 0.75f : 0f;
         this.cinematic = cfg.cinematicHome;
         this.launchActions = cfg.launchActions;
@@ -487,7 +492,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
-        h.name.setText(e.name);
+        h.name.setText(convertSimplifiedToTraditional ? SIMPLIFIED_TO_TRADITIONAL.transliterate(e.name) : e.name);
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
