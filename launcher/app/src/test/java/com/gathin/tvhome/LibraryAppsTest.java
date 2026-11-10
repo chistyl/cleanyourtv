@@ -74,12 +74,18 @@ public class LibraryAppsTest {
         assertFalse(LibraryApps.recent(0, now));
         assertFalse(LibraryApps.recent(now + 1, now));
     }
-    @Test public void themeAndTvDefaultsStayInPlaceUntilTheOwnerChoosesAnApp() {
+    @Test public void tvAndOrdinaryLaunchableAppsAreVisibleWithoutLibraryAddition() {
+        // AppAdapter combines LEANBACK_LAUNCHER and LAUNCHER query results.
         assertTrue(LibraryApps.visible(true, false, false));
-        assertFalse(LibraryApps.visible(true, true, false));
         assertFalse(LibraryApps.visible(false, false, false));
         assertTrue(LibraryApps.visible(false, false, true));
         assertTrue(LibraryApps.visible(true, true, true));
+    }
+
+    @Test public void themeHiddenAndExplicitlyRemovedAppsStayOffHome() {
+        assertFalse(LibraryApps.visible(true, true, false));
+        assertFalse(LibraryApps.visible(true, false, false, true));
+        assertFalse(LibraryApps.visible(true, false, true, true));
     }
 
     @Test public void undoingAnAdditionRestoresDefaultVisibilityAndKeepsOtherChoices() {
