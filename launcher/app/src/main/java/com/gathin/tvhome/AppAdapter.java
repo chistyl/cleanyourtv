@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
+import android.os.Build;
 import android.icu.text.Transliterator;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -467,6 +468,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     private static String toTraditional(String value) {
+        // Platform Transliterator is only available from API 29; keep older Android TV devices safe.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return value;
         try {
             return Transliterator.getInstance("Simplified-Traditional").transliterate(value);
         } catch (RuntimeException ignored) {
