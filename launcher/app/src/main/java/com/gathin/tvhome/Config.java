@@ -694,6 +694,10 @@ final class Config {
             wallpaper = chosen.isEmpty() ? null : chosen.get(0);
             wallpaperEnabled = !chosen.isEmpty();
         }
+        // The requested desktop appearance is a solid black canvas, not a theme wallpaper.
+        wallpaperEnabled = false;
+        wallpaper = null;
+        wallpapers.clear();
         // A festive skin comes only from a theme; config.xml has no festival. seasonal_skin names one the same way
         // but launchers before it ignore the key, so a theme can carry it without older ones showing the diya skin.
         Festival festival = json == null ? Festival.NONE : Festival.parse(festivalName(json),
