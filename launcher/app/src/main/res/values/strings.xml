@@ -70,6 +70,7 @@
     <string name="show_app_names_state">Show app names: %1$s</string>
     <string name="simplified_traditional_state">Simplified to Traditional Chinese: %1$s</string>
     <string name="app_display">App display</string>
+    <string name="app_display_saved">App display updated</string>
     <string name="app_display_requires_library">Enable the app library in the theme to manage app display.</string>
     <string name="quick_picture">Display</string>
     <string name="quick_network">Network</string>
