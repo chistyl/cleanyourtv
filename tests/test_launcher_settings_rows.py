@@ -145,7 +145,6 @@ class ScreenRows(unittest.TestCase):
             "dock_opacity_label",
             "dream_name",
             "showAppNamesChoice",
-            "showDockAppNamesChoice",
             "openOnStartChoice",
         ]
         self.assertEqual([row_id for row_id, _ in self.rows], expected_ids, self.rows)
