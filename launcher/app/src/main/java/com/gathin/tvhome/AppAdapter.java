@@ -502,7 +502,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(convertSimplifiedToTraditional ? traditionalizeAppName(e.name) : e.name);
-        // Dock tiles never show a name below the icon. The shared setting controls regular app labels only.
+        // Dock tiles never show a name below the icon. The shared setting controls regular app labels only (R15 layout rule).
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
         h.name.setVisibility(!dockKind && showAppNames ? View.VISIBLE : View.INVISIBLE);
         h.inDock = dockKind;
