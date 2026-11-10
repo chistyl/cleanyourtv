@@ -44,6 +44,7 @@
     <string name="show_app_names_state">顯示應用名稱：%1$s</string>
     <string name="simplified_traditional_state">簡體轉繁體：%1$s</string>
     <string name="app_display">應用顯示</string>
+    <string name="app_display_saved">應用顯示設定已更新</string>
     <string name="app_display_requires_library">請先在主題設定中啟用應用程式庫，才能管理應用顯示。</string>
     <string name="on">開</string>
     <string name="off">關</string>
