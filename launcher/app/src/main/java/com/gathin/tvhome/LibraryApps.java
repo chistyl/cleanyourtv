@@ -94,12 +94,14 @@ final class LibraryApps {
         }
     }
 
-    static boolean visible(boolean tvApp, boolean themeHidden, boolean explicitlyAdded) {
-        return visible(tvApp, themeHidden, explicitlyAdded, false);
+    static boolean visible(boolean launchableApp, boolean themeHidden, boolean explicitlyAdded) {
+        return visible(launchableApp, themeHidden, explicitlyAdded, false);
     }
 
-    static boolean visible(boolean tvApp, boolean themeHidden, boolean explicitlyAdded, boolean removedFromHome) {
-        return !removedFromHome && (explicitlyAdded || (tvApp && !themeHidden));
+    static boolean visible(boolean launchableApp, boolean themeHidden, boolean explicitlyAdded, boolean removedFromHome) {
+        // A discovered launchable activity is eligible by default, whether it is a TV or ordinary Android app.
+        // Explicit removal always wins; theme hiding can be overridden by an explicit library addition.
+        return !removedFromHome && (explicitlyAdded || (launchableApp && !themeHidden));
     }
 
     /** The pill after the last Home row: show_library_pill false hides it only while the top-bar button is a way in. */
