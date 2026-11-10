@@ -155,7 +155,13 @@ public final class LauncherSettingsActivity extends Activity {
             }
         });
         dockNamesChoice = findViewById(R.id.dockNamesChoice);
-        dockNamesChoice.setOnClickListener(v -> {\n            showDockAppNames = !showDockAppNames;\n            choices.edit().putBoolean("show_dock_app_names", showDockAppNames).apply();\n            changed();\n            refresh();\n        });\n        openOnStartChoice = findViewById(R.id.openOnStartChoice);
+        dockNamesChoice.setOnClickListener(v -> {
+            showDockAppNames = !showDockAppNames;
+            choices.edit().putBoolean("show_dock_app_names", showDockAppNames).apply();
+            changed();
+            refresh();
+        });
+        openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
             openOnStartChoice.setOnClickListener(v -> showOpenOnStartPicker());
@@ -368,7 +374,8 @@ public final class LauncherSettingsActivity extends Activity {
                         : wallpaperCurrent != null ? wallpaperCurrent
                         : getString(R.string.wallpaper_theme_default)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
-        dockNamesChoice.setText(getString(R.string.dock_app_names_state,\n                getString(showDockAppNames ? R.string.on : R.string.off)));
+        dockNamesChoice.setText(getString(R.string.dock_app_names_state,
+                getString(showDockAppNames ? R.string.on : R.string.off)));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 
