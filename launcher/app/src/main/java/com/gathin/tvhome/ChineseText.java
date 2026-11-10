@@ -1,15 +1,15 @@
 package com.gathin.tvhome;
 
-import android.os.Build;
+import com.github.houbb.opencc4j.util.ZhTwConverterUtil;
 
-/** Converts Simplified Chinese app labels to Traditional Chinese on supported Android versions. */
+/** Converts Simplified Chinese app labels to Taiwan-standard Traditional Chinese. */
 final class ChineseText {
     private ChineseText() {}
 
     static String toTraditional(String value) {
-        if (value == null || value.isEmpty() || Build.VERSION.SDK_INT < 24) return value;
+        if (value == null || value.isEmpty()) return value;
         try {
-            return android.icu.text.Transliterator.getInstance("Hans-Hant").transliterate(value);
+            return ZhTwConverterUtil.toTraditional(value);
         } catch (RuntimeException ignored) {
             return value;
         }
