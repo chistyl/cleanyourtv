@@ -64,8 +64,7 @@ public final class LauncherSettingsActivity extends Activity {
         appDisplayChoice.setVisibility(config.appLibrary ? View.VISIBLE : View.GONE);
         appDisplayChoice.setOnClickListener(v -> {
             Intent library = new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_APP_LIBRARY);
-            open(library);
-            finish();
+            if (open(library)) finish();
         });
         appNamesChoice = findViewById(R.id.appNamesChoice);
         appNamesChoice.setOnClickListener(v -> {
@@ -275,11 +274,13 @@ public final class LauncherSettingsActivity extends Activity {
                 || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(OpenOnStart.KEY);
     }
 
-    private void open(Intent intent) {
+    private boolean open(Intent intent) {
         try {
             startActivity(intent);
+            return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(this, R.string.not_available, Toast.LENGTH_LONG).show();
+            return false;
         }
     }
 }
