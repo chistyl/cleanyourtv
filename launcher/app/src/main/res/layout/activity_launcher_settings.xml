@@ -136,6 +136,11 @@
             android:textSize="14sp" />
 
         <TextView
+            android:id="@+id/dockNamesChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="28dp" />
+
+        <TextView
             android:id="@+id/openOnStartChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="28dp"

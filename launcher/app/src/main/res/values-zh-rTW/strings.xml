@@ -100,4 +100,5 @@
     <string name="language_label">桌面語言</string>
     <string name="language_auto">自動（跟隨電視系統語言）</string>
     <string name="language_state">語言：%1$s</string>
+    <string name="dock_app_names_state">Dock APP 名稱：%1$s</string>
 </resources>
