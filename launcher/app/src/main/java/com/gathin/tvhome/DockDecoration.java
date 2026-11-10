@@ -20,7 +20,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
-    /** Extra band below the tiles for their names (always_show_names), in px. */
+    /** Fixed 22dp name-label area below the dock tiles; retained when labels are hidden. */
     private final float namesRoom;
     /** Light glass like the top bar's pills (config.xml dock_glass): a white tint that fades downwards. */
     private final boolean lightGlass;
@@ -51,7 +51,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         this.singleRow = singleRow;
         this.bandAll = singleRow && bandAll;
         this.density = density;
-        this.namesRoom = names ? 22 * density : 0;
+        this.namesRoom = 22 * density;
         this.lightGlass = lightGlass;
         this.evenPadding = evenPadding;
         this.bandVisible = bandVisible;
