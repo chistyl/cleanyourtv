@@ -161,4 +161,5 @@
     <string name="language_label">Launcher language</string>
     <string name="language_auto">Automatic (follow TV language)</string>
     <string name="language_state">Language: %1$s</string>
+    <string name="dock_app_names_state">Dock app names: %1$s</string>
 </resources>
