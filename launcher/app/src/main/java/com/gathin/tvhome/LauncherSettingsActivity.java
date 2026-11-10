@@ -35,6 +35,7 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
+    private TextView showAppNamesChoice;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -115,6 +116,7 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(dockChoices);
             reverseRow(clockChoices);
         }
+        showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
         openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
@@ -246,6 +248,8 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        showAppNamesChoice.setText(getString(R.string.show_app_names_state,
+                getString(choices.getBoolean("show_app_names", true) ? R.string.on : R.string.off)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
     }
 

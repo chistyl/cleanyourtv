@@ -48,6 +48,8 @@ The launcher's own page has these rows, top to bottom:
 - **Reorder apps（調整應用程式順序）**, only with `launcher_settings_button`, the same as the menu's.
 - **Apps per row（每列 app 數量）** 4, 5, 6 or 7; **Rows below dock（Dock 下方列數）** 0 to 3, how many rows of tiles stay visible under the dock band; **Dock band opacity（Dock 列不透明度）** 100%, 70%, 50% or 30%. The last two only do anything while the dock is its own row (`dock_row`, on by default).
 - **Clock（時鐘）**: **System（系統）** follows the TV's 12- or 24-hour setting; **12-hour（12 小時制）** or **24-hour（24 小時制）** sets the launcher's clocks (Home and the clock screensaver) to that, whatever the TV uses (`clock_format` in a theme).
+- **Show app names（顯示應用名稱）**: on by default; independently shows or hides names below apps outside the Dock.
+- **Dock app names（Dock APP 名稱）**: off by default; independently shows or hides names below Dock apps. The label area stays reserved either way, so changing this does not move or resize Dock tiles.
 - **Wallpaper（桌布：）**: one picture from the theme's collection (or its `wallpaper.jpg`), **None（無）**, or **Theme default（主題預設）**. A pick holds that picture and stops the rotation until you choose Theme default, press Follow theme, or push the theme again.
 - **Animations（動畫效果：）** on or off, and **Advanced effects（進階效果：）** (tile lift, icon zoom and smooth ambient-colour transitions; they may use more memory) once animations are on.
 - **Open on start（開機時開啟：）**, only with `open_on_start_choice`: Off, or an app that opens instead of Home the first time Home comes up after the TV starts. Once per boot, so Home and Back still reach the launcher.
