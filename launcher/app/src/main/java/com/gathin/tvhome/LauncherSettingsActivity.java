@@ -41,6 +41,8 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView advancedChoice;
     private TextView followThemeChoice;
     private TextView openOnStartChoice;
+    private TextView dockNamesChoice;
+    private boolean showDockAppNames;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -66,6 +68,7 @@ public final class LauncherSettingsActivity extends Activity {
         clockFormat = config.clockFormat;
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
+        showDockAppNames = config.showDockAppNames;
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -151,7 +154,8 @@ public final class LauncherSettingsActivity extends Activity {
                         .show();
             }
         });
-        openOnStartChoice = findViewById(R.id.openOnStartChoice);
+        dockNamesChoice = findViewById(R.id.dockNamesChoice);
+        dockNamesChoice.setOnClickListener(v -> {\n            showDockAppNames = !showDockAppNames;\n            choices.edit().putBoolean("show_dock_app_names", showDockAppNames).apply();\n            changed();\n            refresh();\n        });\n        openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
             openOnStartChoice.setOnClickListener(v -> showOpenOnStartPicker());
@@ -364,6 +368,7 @@ public final class LauncherSettingsActivity extends Activity {
                         : wallpaperCurrent != null ? wallpaperCurrent
                         : getString(R.string.wallpaper_theme_default)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
+        dockNamesChoice.setText(getString(R.string.dock_app_names_state,\n                getString(showDockAppNames ? R.string.on : R.string.off)));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 
