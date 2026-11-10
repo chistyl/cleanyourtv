@@ -52,6 +52,8 @@
     <string name="columns_label">每列 app 數量</string>
     <string name="rows_below_dock_label">Dock 下方列數</string>
     <string name="dock_opacity_label">Dock 列不透明度</string>
+    <string name="show_app_names_state">顯示應用名稱：%1$s</string>
+    <string name="show_dock_app_names_state">Dock APP 名稱：%1$s</string>
     <string name="wallpaper_label">桌布</string>
     <string name="wallpaper_state">桌布：%1$s</string>
     <string name="wallpaper_none">無</string>
