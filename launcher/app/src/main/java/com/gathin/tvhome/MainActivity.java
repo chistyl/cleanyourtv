@@ -696,7 +696,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         android.content.SharedPreferences launcherChoices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         boolean showAppNames = launcherChoices.getBoolean("show_app_names", true);
         boolean convertSimplifiedToTraditional = launcherChoices.getBoolean("convert_simplified_traditional", false);
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, showAppNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
+        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, false, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
                 singleRow, cfg.dockBandAll));
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
