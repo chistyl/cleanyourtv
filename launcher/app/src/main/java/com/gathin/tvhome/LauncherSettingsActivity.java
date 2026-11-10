@@ -37,6 +37,7 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView openOnStartChoice;
     private TextView showAppNamesChoice;
     private boolean showAppNames;
+    private boolean convertSimplifiedToTraditional;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -59,6 +60,7 @@ public final class LauncherSettingsActivity extends Activity {
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
         showAppNames = choices.getBoolean("show_app_names", true);
+        convertSimplifiedToTraditional = choices.getBoolean("convert_simplified_traditional", false);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -119,6 +121,13 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(clockChoices);
         }
         showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
+        TextView convertNamesChoice = findViewById(R.id.convertNamesChoice);
+        convertNamesChoice.setOnClickListener(v -> {
+            convertSimplifiedToTraditional = !convertSimplifiedToTraditional;
+            choices.edit().putBoolean("convert_simplified_traditional", convertSimplifiedToTraditional).apply();
+            changed();
+            refresh();
+        });
         showAppNamesChoice.setOnClickListener(v -> {
             showAppNames = !showAppNames;
             choices.edit().putBoolean("show_app_names", showAppNames).apply();
@@ -259,6 +268,10 @@ public final class LauncherSettingsActivity extends Activity {
         showAppNamesChoice.setText(getString(R.string.show_app_names_state,
                 getString(showAppNames ? R.string.on : R.string.off)));
         showAppNamesChoice.setSelected(showAppNames);
+        TextView convertNamesChoice = findViewById(R.id.convertNamesChoice);
+        convertNamesChoice.setText(getString(R.string.convert_simplified_traditional_state,
+                getString(convertSimplifiedToTraditional ? R.string.on : R.string.off)));
+        convertNamesChoice.setSelected(convertSimplifiedToTraditional);
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
     }
 
