@@ -36,7 +36,6 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
     private TextView showAppNamesChoice;
-    private TextView showDockAppNamesChoice;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -118,19 +117,6 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(clockChoices);
         }
         showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
-        showDockAppNamesChoice = findViewById(R.id.showDockAppNamesChoice);
-        showAppNamesChoice.setOnClickListener(v -> {
-            boolean next = !choices.getBoolean("show_app_names", true);
-            choices.edit().putBoolean("show_app_names", next).apply();
-            changed();
-            refresh();
-        });
-        showDockAppNamesChoice.setOnClickListener(v -> {
-            boolean next = !choices.getBoolean("show_dock_app_names", false);
-            choices.edit().putBoolean("show_dock_app_names", next).apply();
-            changed();
-            refresh();
-        });
         openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
@@ -264,8 +250,6 @@ public final class LauncherSettingsActivity extends Activity {
         }
         showAppNamesChoice.setText(getString(R.string.show_app_names_state,
                 getString(choices.getBoolean("show_app_names", true) ? R.string.on : R.string.off)));
-        showDockAppNamesChoice.setText(getString(R.string.show_dock_app_names_state,
-                getString(choices.getBoolean("show_dock_app_names", false) ? R.string.on : R.string.off)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
     }
 
