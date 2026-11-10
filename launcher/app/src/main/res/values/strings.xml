@@ -60,6 +60,8 @@
     <string name="animations_state">動畫效果：%1$s</string>
     <string name="advanced_effects">進階效果</string>
     <string name="advanced_effects_state">進階效果：%1$s</string>
+    <string name="app_display_management">應用顯示</string>
+    <string name="show_app_names_state">顯示應用名稱：%1$s</string>
     <string name="open_on_start_label">開機時開啟</string>
     <string name="open_on_start_state">開機時開啟：%1$s</string>
     <string name="advanced_effects_warning">加上圖塊浮起、圖示放大與背景顏色漸變。可能會多用一些記憶體，實際差異視電視而定。</string>

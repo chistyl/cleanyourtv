@@ -35,6 +35,9 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
+    private TextView appNamesChoice;
+    private TextView appDisplayChoice;
+    private boolean showAppNames;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -56,6 +59,20 @@ public final class LauncherSettingsActivity extends Activity {
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
+        showAppNames = choices.getBoolean("show_app_names", true);
+        appDisplayChoice = findViewById(R.id.appDisplayChoice);
+        appDisplayChoice.setVisibility(config.appLibrary ? View.VISIBLE : View.GONE);
+        appDisplayChoice.setOnClickListener(v -> {
+            Intent library = new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_APP_LIBRARY);
+            if (open(library)) finish();
+        });
+        appNamesChoice = findViewById(R.id.appNamesChoice);
+        appNamesChoice.setOnClickListener(v -> {
+            showAppNames = !showAppNames;
+            choices.edit().putBoolean("show_app_names", showAppNames).apply();
+            changed();
+            refresh();
+        });
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -246,6 +263,7 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        appNamesChoice.setText(getString(R.string.show_app_names_state, showAppNames ? getString(R.string.on) : getString(R.string.off)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
     }
 
@@ -256,11 +274,13 @@ public final class LauncherSettingsActivity extends Activity {
                 || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(OpenOnStart.KEY);
     }
 
-    private void open(Intent intent) {
+    private boolean open(Intent intent) {
         try {
             startActivity(intent);
+            return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(this, R.string.not_available, Toast.LENGTH_LONG).show();
+            return false;
         }
     }
 }
