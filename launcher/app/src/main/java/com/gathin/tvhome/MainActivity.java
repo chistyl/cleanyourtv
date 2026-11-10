@@ -693,7 +693,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
+        boolean showAppNames = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
+                .getBoolean("show_app_names", true);
+        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, showAppNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
                 singleRow, cfg.dockBandAll));
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
         // Reduced motion: the tiles are simply there, with no entrance (reloadApps skips it there too).
@@ -730,7 +732,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
             // A single row never shows the names under its tiles (the title above the row names the app), so the
             // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
-            if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
+            if (singleRow && !showAppNames) want += (int) (29 * density);
             // Move the complete app area up by another 5dp from the 38dp-lower position, preserving tile sizes and spacing.
             want += (int) (33 * density);
             if (grid.getPaddingTop() != want) {
