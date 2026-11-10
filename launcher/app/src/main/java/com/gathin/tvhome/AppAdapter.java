@@ -307,6 +307,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // redraw the tile name as something else (#117).
             String label = card != null ? card.label : Cards.cleanLabel(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+            if (ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                    .getBoolean("convert_simplified_traditional", true)) {
+                label = ChineseText.toTraditional(label);
+            }
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = null;
             // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
