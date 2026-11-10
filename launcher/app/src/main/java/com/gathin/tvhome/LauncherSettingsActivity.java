@@ -35,6 +35,10 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
+    private TextView showAppNamesChoice;
+    private TextView convertTraditionalChoice;
+    private boolean showAppNames;
+    private boolean convertTraditional;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -56,6 +60,22 @@ public final class LauncherSettingsActivity extends Activity {
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
+        showAppNames = choices.getBoolean("show_app_names", true);
+        convertTraditional = choices.getBoolean("convert_simplified_traditional", true);
+        showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
+        showAppNamesChoice.setOnClickListener(v -> {
+            showAppNames = !showAppNames;
+            choices.edit().putBoolean("show_app_names", showAppNames).apply();
+            changed();
+            refresh();
+        });
+        convertTraditionalChoice = findViewById(R.id.convertTraditionalChoice);
+        convertTraditionalChoice.setOnClickListener(v -> {
+            convertTraditional = !convertTraditional;
+            choices.edit().putBoolean("convert_simplified_traditional", convertTraditional).apply();
+            changed();
+            refresh();
+        });
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -247,6 +267,8 @@ public final class LauncherSettingsActivity extends Activity {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
+        showAppNamesChoice.setText(getString(R.string.show_app_names_state, getString(showAppNames ? R.string.on : R.string.off)));
+        convertTraditionalChoice.setText(getString(R.string.convert_simplified_traditional_state, getString(convertTraditional ? R.string.on : R.string.off)));
     }
 
     private boolean hasOnTvChoices() {
