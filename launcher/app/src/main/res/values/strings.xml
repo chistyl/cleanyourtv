@@ -54,6 +54,8 @@
     <string name="dock_opacity_label">Dock 列不透明度</string>
     <string name="show_app_names_label">顯示應用名稱</string>
     <string name="show_app_names_state">顯示應用名稱：%1$s</string>
+    <string name="simplified_to_traditional_label">簡體轉繁體</string>
+    <string name="simplified_to_traditional_state">簡體轉繁體：%1$s</string>
     <string name="wallpaper_label">桌布</string>
     <string name="wallpaper_state">桌布：%1$s</string>
     <string name="wallpaper_none">無</string>

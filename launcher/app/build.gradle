@@ -13,7 +13,7 @@ android {
         applicationId providers.gradleProperty('launcherApplicationId').getOrElse('com.gathin.tvhome')
         minSdk 26
         targetSdk 34
-        versionCode 13
+        versionCode 14
         versionName '3.4'
     }
 
@@ -45,6 +45,8 @@ android {
 dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    // Pure-Java OpenCC conversion; supports Android API 26+ without platform ICU dependencies.
+    implementation 'com.github.houbb:opencc4j:1.14.0'
     // Test only (never in the APK): plain JVM tests for the module card validators, src/test.
     testImplementation 'junit:junit:4.13.2'
 }

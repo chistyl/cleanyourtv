@@ -218,6 +218,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Map<String, String> appLabels, appBanners;
     /** Every app tile is its icon on a card tinted from that icon, never its banner (config.xml, uniform_tiles). */
     private final boolean uniformTiles;
+    /** Convert simplified-Chinese app labels to traditional Chinese when enabled. */
+    private final boolean simplifiedToTraditional;
     /** Packages drawn from their icon and name even when they have a banner (config.xml icon_tiles). */
     private final Set<String> iconTiles;
     private final List<Entry> items = new ArrayList<>();
@@ -248,6 +250,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.appLabels = cfg.appLabels;
         this.appBanners = cfg.appBanners;
         this.uniformTiles = cfg.uniformTiles;
+        this.simplifiedToTraditional = ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Config.SIMPLIFIED_TO_TRADITIONAL_KEY, false);
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
@@ -306,6 +310,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // redraw the tile name as something else (#117).
             String label = card != null ? card.label : Cards.cleanLabel(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+            if (simplifiedToTraditional) label = SimplifiedTraditional.convert(label);
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = null;
             // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.

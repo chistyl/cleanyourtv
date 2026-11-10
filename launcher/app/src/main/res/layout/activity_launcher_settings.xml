@@ -107,10 +107,70 @@
             <TextView android:id="@+id/clock24" style="@style/SettingsColumnChoice" android:text="@string/clock_format_24" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/showAppNamesChoice"
-            style="@style/SettingsRow"
-            android:layout_marginTop="28dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="28dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/showAppNamesChoice"
+                android:tag="SettingsRow"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/settings_choice_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/show_app_names_label"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="18sp" />
+
+                <Switch
+                    android:id="@+id/showAppNamesSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:focusable="true"
+                    android:clickable="true" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/simplifiedToTraditionalChoice"
+                android:tag="SettingsRow"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/settings_choice_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="18dp"
+                android:paddingEnd="14dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/simplified_to_traditional_label"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="18sp" />
+
+                <Switch
+                    android:id="@+id/simplifiedToTraditionalSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:focusable="true"
+                    android:clickable="true" />
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/openOnStartChoice"

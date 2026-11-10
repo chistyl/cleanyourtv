@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Switch;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -39,8 +40,10 @@ public final class LauncherSettingsActivity extends Activity {
     private int rowsBelowDock;
     private int dockOpacity;
     private String clockFormat;
-    private TextView showAppNamesChoice;
+    private Switch showAppNamesSwitch;
     private boolean showAppNames;
+    private Switch simplifiedToTraditionalSwitch;
+    private boolean simplifiedToTraditional;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -59,6 +62,7 @@ public final class LauncherSettingsActivity extends Activity {
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
         showAppNames = choices.getBoolean(Config.SHOW_APP_NAMES_KEY, true);
+        simplifiedToTraditional = choices.getBoolean(Config.SIMPLIFIED_TO_TRADITIONAL_KEY, false);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -108,12 +112,19 @@ public final class LauncherSettingsActivity extends Activity {
                 refresh();
             });
         }
-        showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
-        showAppNamesChoice.setOnClickListener(v -> {
-            showAppNames = !showAppNames;
+        showAppNamesSwitch = findViewById(R.id.showAppNamesSwitch);
+        showAppNamesSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (showAppNames == checked) return;
+            showAppNames = checked;
             choices.edit().putBoolean(Config.SHOW_APP_NAMES_KEY, showAppNames).apply();
             changed();
-            refresh();
+        });
+        simplifiedToTraditionalSwitch = findViewById(R.id.simplifiedToTraditionalSwitch);
+        simplifiedToTraditionalSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (simplifiedToTraditional == checked) return;
+            simplifiedToTraditional = checked;
+            choices.edit().putBoolean(Config.SIMPLIFIED_TO_TRADITIONAL_KEY, simplifiedToTraditional).apply();
+            changed();
         });
         // Mirror text alignment without globally opting the launcher into RTL. Numeric rows
         // still need explicit ordering in Android's no-supportsRtl compatibility mode.
@@ -257,9 +268,8 @@ public final class LauncherSettingsActivity extends Activity {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
-        showAppNamesChoice.setText(getString(R.string.show_app_names_state,
-                getString(showAppNames ? R.string.on : R.string.off)));
-        showAppNamesChoice.setSelected(showAppNames);
+        showAppNamesSwitch.setChecked(showAppNames);
+        simplifiedToTraditionalSwitch.setChecked(simplifiedToTraditional);
     }
 
     private boolean hasOnTvChoices() {
