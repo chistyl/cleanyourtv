@@ -40,6 +40,11 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
+    private TextView showAppNamesChoice;
+    private TextView simplifiedTraditionalChoice;
+    private TextView appDisplayChoice;
+    private boolean showAppNames;
+    private boolean simplifiedTraditional;
     private TextView openOnStartChoice;
     private int columns;
     private int rowsBelowDock;
@@ -66,6 +71,8 @@ public final class LauncherSettingsActivity extends Activity {
         clockFormat = config.clockFormat;
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
+        showAppNames = choices.getBoolean(AppAdapter.SHOW_APP_NAMES_KEY, true);
+        simplifiedTraditional = choices.getBoolean(AppAdapter.SIMPLIFIED_TRADITIONAL_KEY, true);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -176,6 +183,32 @@ public final class LauncherSettingsActivity extends Activity {
                 open(new Intent(this, HomeSettingsActivity.class)));
         findViewById(R.id.tvSettingsChoice).setOnClickListener(v ->
                 open(SystemSettings.intent(this, Settings.ACTION_SETTINGS)));
+
+        showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
+        showAppNamesChoice.setOnClickListener(v -> {
+            showAppNames = !showAppNames;
+            choices.edit().putBoolean(AppAdapter.SHOW_APP_NAMES_KEY, showAppNames).apply();
+            changed();
+            refresh();
+        });
+        simplifiedTraditionalChoice = findViewById(R.id.simplifiedTraditionalChoice);
+        simplifiedTraditionalChoice.setOnClickListener(v -> {
+            simplifiedTraditional = !simplifiedTraditional;
+            choices.edit().putBoolean(AppAdapter.SIMPLIFIED_TRADITIONAL_KEY, simplifiedTraditional).apply();
+            changed();
+            refresh();
+        });
+        appDisplayChoice = findViewById(R.id.appDisplayChoice);
+        appDisplayChoice.setOnClickListener(v -> {
+            if (!Config.load(this).appLibrary) {
+                Toast.makeText(this, R.string.app_display_requires_library, Toast.LENGTH_LONG).show();
+                return;
+            }
+            Intent intent = new Intent(this, MainActivity.class)
+                    .setAction(MainActivity.ACTION_APP_LIBRARY)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            open(intent);
+        });
         refresh();
         if (config.launcherSettingsButton) reorderChoice.requestFocus();
         else columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
@@ -365,6 +398,10 @@ public final class LauncherSettingsActivity extends Activity {
                         : getString(R.string.wallpaper_theme_default)));
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
         followThemeChoice.setSelected(!hasOnTvChoices());
+        showAppNamesChoice.setText(getString(R.string.show_app_names_state,
+                getString(showAppNames ? R.string.on : R.string.off)));
+        simplifiedTraditionalChoice.setText(getString(R.string.simplified_traditional_state,
+                getString(simplifiedTraditional ? R.string.on : R.string.off)));
     }
 
     private boolean hasOnTvChoices() {
