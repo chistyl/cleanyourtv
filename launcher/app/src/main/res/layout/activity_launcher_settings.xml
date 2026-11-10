@@ -108,6 +108,12 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/appDisplayChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="18dp"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/appNamesChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="18dp" />
