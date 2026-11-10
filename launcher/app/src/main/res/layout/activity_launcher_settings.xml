@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF101419"
+    android:background="#FF000000"
     android:fillViewport="true">
 
     <LinearLayout
@@ -174,5 +174,21 @@
             style="@style/SettingsRow"
             android:layout_marginTop="18dp"
             android:text="@string/tv_settings" />
+
+        <TextView
+            android:id="@+id/showAppNamesChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="28dp" />
+
+        <TextView
+            android:id="@+id/simplifiedTraditionalChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp" />
+
+        <TextView
+            android:id="@+id/appDisplayChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp"
+            android:text="@string/app_display" />
     </LinearLayout>
 </ScrollView>
