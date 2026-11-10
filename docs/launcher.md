@@ -104,3 +104,6 @@ Up and Down move one row. The top buttons never fall through to tiles, and Down 
 dock tile you came from. The last focused app is remembered, and installing or removing an app refreshes
 the tiles while Home is open. App banners load at xhdpi or better, so low-density TV UIs do not downsample
 them before the focus zoom.
+
+
+The launcher settings page uses a pure black background. **Show app names（顯示應用名稱）** is on by default and controls names for regular apps and Dock apps together; hiding names keeps their original layout positions.
