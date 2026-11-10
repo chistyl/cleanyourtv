@@ -1,13 +1,11 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
-import android.icu.text.Transliterator;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -31,6 +29,8 @@ import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.github.houbb.opencc4j.util.ZhTwConverterUtil;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -228,10 +228,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private String displayAppName(String name) {
         if (!ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
                 .getBoolean("convert_app_names", true)) return name;
-        // Android's built-in ICU transliterator is available from API 29.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return name;
         try {
-            return Transliterator.getInstance("Simplified-Traditional").transliterate(name);
+            return ZhTwConverterUtil.toTraditional(name);
         } catch (RuntimeException ignored) {
             return name;
         }
