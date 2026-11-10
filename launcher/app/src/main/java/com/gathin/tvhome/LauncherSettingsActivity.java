@@ -35,6 +35,7 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
+    private TextView appNamesChoice, convertTraditionalChoice, appDisplayChoice;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -115,6 +116,20 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(dockChoices);
             reverseRow(clockChoices);
         }
+        appNamesChoice = findViewById(R.id.appNamesChoice);
+        convertTraditionalChoice = findViewById(R.id.convertTraditionalChoice);
+        appDisplayChoice = findViewById(R.id.appDisplayChoice);
+        appNamesChoice.setOnClickListener(v -> {
+            choices.edit().putBoolean("show_app_names", !choices.getBoolean("show_app_names", true)).apply();
+            changed();
+            refresh();
+        });
+        convertTraditionalChoice.setOnClickListener(v -> {
+            choices.edit().putBoolean("convert_app_names", !choices.getBoolean("convert_app_names", true)).apply();
+            changed();
+            refresh();
+        });
+        appDisplayChoice.setOnClickListener(v -> showAppDisplayPicker());
         openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
             openOnStartChoice.setVisibility(View.VISIBLE);
@@ -160,6 +175,45 @@ public final class LauncherSettingsActivity extends Activity {
                 })
                 .setNeutralButton(R.string.wallpaper_theme_default, (dialog, which) -> {
                     choices.edit().remove(Config.WALLPAPER_CHOICE_KEY).apply();
+                    changed();
+                    refresh();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /** Choose which TV-launchable apps appear on the home screen. */
+    private void showAppDisplayPicker() {
+        PackageManager pm = getPackageManager();
+        List<String[]> apps = new ArrayList<>();
+        Intent tv = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
+        for (ResolveInfo r : pm.queryIntentActivities(tv, 0)) {
+            String pkg = r.activityInfo.packageName;
+            if (pkg.equals(getPackageName())) continue;
+            boolean seen = false;
+            for (String[] item : apps) seen |= item[1].equals(pkg);
+            if (!seen) apps.add(new String[]{r.loadLabel(pm).toString(), pkg});
+        }
+        Collections.sort(apps, (a, b) -> a[0].compareToIgnoreCase(b[0]));
+        if (apps.isEmpty()) {
+            Toast.makeText(this, "沒有偵測到可啟動的電視 APP", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] labels = new String[apps.size()];
+        boolean[] checked = new boolean[apps.size()];
+        java.util.Set<String> hidden = new java.util.HashSet<>(
+                choices.getStringSet("user_hidden_apps", Collections.emptySet()));
+        for (int i = 0; i < apps.size(); i++) {
+            labels[i] = apps.get(i)[0];
+            checked[i] = !hidden.contains(apps.get(i)[1]);
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("應用顯示（勾選表示顯示）")
+                .setMultiChoiceItems(labels, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    java.util.Set<String> updatedHidden = new java.util.HashSet<>();
+                    for (int i = 0; i < apps.size(); i++) if (!checked[i]) updatedHidden.add(apps.get(i)[1]);
+                    choices.edit().putStringSet("user_hidden_apps", updatedHidden).apply();
                     changed();
                     refresh();
                 })
@@ -246,6 +300,9 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        appNamesChoice.setText("顯示應用名稱：" + (choices.getBoolean("show_app_names", true) ? "開啟" : "關閉"));
+        convertTraditionalChoice.setText("簡體轉繁體：" + (choices.getBoolean("convert_app_names", true) ? "啟用" : "停用"));
+        appDisplayChoice.setText("應用顯示");
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
     }
 
