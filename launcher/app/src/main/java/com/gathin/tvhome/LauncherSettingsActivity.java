@@ -39,6 +39,8 @@ public final class LauncherSettingsActivity extends Activity {
     private int rowsBelowDock;
     private int dockOpacity;
     private String clockFormat;
+    private TextView showAppNamesChoice;
+    private boolean showAppNames;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -56,6 +58,7 @@ public final class LauncherSettingsActivity extends Activity {
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
+        showAppNames = choices.getBoolean(Config.SHOW_APP_NAMES_KEY, true);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -105,6 +108,13 @@ public final class LauncherSettingsActivity extends Activity {
                 refresh();
             });
         }
+        showAppNamesChoice = findViewById(R.id.showAppNamesChoice);
+        showAppNamesChoice.setOnClickListener(v -> {
+            showAppNames = !showAppNames;
+            choices.edit().putBoolean(Config.SHOW_APP_NAMES_KEY, showAppNames).apply();
+            changed();
+            refresh();
+        });
         // Mirror text alignment without globally opting the launcher into RTL. Numeric rows
         // still need explicit ordering in Android's no-supportsRtl compatibility mode.
         if (getResources().getBoolean(R.bool.rtl_menu_bar))
@@ -247,6 +257,9 @@ public final class LauncherSettingsActivity extends Activity {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
+        showAppNamesChoice.setText(getString(R.string.show_app_names_state,
+                getString(showAppNames ? R.string.on : R.string.off)));
+        showAppNamesChoice.setSelected(showAppNames);
     }
 
     private boolean hasOnTvChoices() {
