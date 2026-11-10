@@ -37,7 +37,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
 
     /**
      * @param translucent the cinematic shelf's band: the artwork and the glow show through it.
-     * @param names       retained for call-site compatibility; dock labels are intentionally hidden.
+     * @param names       the dock tiles show their names, so the band reaches down over them.
      * @param opacity     the plain band's opacity in percent (dock_opacity), so a wallpaper can show through it.
      * @param lightGlass  a light frosted band like the pills, for a sky or wallpaper behind it.
      * @param evenPadding the band's padding is the gap between the tiles on all four sides (dock_even_padding).
