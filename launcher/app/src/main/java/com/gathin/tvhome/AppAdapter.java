@@ -1,7 +1,6 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
-import android.icu.text.Transliterator;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
@@ -191,8 +190,18 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final float restNameAlpha;
     private final boolean showAppNames;
     private final boolean convertSimplifiedToTraditional;
-    private static final Transliterator SIMPLIFIED_TO_TRADITIONAL =
-            Transliterator.getInstance("Simplified-Traditional");
+    private static String traditionalizeAppName(String value) {
+        // Resolve Android ICU lazily: the local JVM unit-test runtime does not implement android.icu.
+        // On Android releases that expose Transliterator, convert only the app label; otherwise keep it unchanged.
+        try {
+            Class<?> type = Class.forName("android.icu.text.Transliterator");
+            Object converter = type.getMethod("getInstance", String.class)
+                    .invoke(null, "Simplified-Traditional");
+            return (String) type.getMethod("transliterate", String.class).invoke(converter, value);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            return value;
+        }
+    }
     /** cinematic_home: only then does a launch record the last-opened app the shelf uses. */
     private final boolean cinematic;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
@@ -492,7 +501,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
-        h.name.setText(convertSimplifiedToTraditional ? SIMPLIFIED_TO_TRADITIONAL.transliterate(e.name) : e.name);
+        h.name.setText(convertSimplifiedToTraditional ? traditionalizeAppName(e.name) : e.name);
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
