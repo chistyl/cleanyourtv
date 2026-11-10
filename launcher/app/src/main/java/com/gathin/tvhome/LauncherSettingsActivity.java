@@ -35,6 +35,8 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
+    private final TextView[] appNameChoices = new TextView[2];
+    private boolean showAppNames;
     private int columns;
     private int rowsBelowDock;
     private int dockOpacity;
@@ -56,6 +58,7 @@ public final class LauncherSettingsActivity extends Activity {
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
+        showAppNames = choices.getBoolean("show_app_names", config.alwaysShowNames);
 
         int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
         for (int i = 0; i < ids.length; i++) {
@@ -93,6 +96,11 @@ public final class LauncherSettingsActivity extends Activity {
                 refresh();
             });
         }
+        appNameChoices[0] = findViewById(R.id.appNamesShow);
+        appNameChoices[1] = findViewById(R.id.appNamesHide);
+        appNameChoices[0].setOnClickListener(v -> setShowAppNames(true));
+        appNameChoices[1].setOnClickListener(v -> setShowAppNames(false));
+
         int[] clockIds = {R.id.clockSystem, R.id.clock12, R.id.clock24};
         for (int i = 0; i < clockIds.length; i++) {
             final String value = CLOCK_FORMATS[i];
@@ -114,6 +122,7 @@ public final class LauncherSettingsActivity extends Activity {
             reverseRow(rowChoices);
             reverseRow(dockChoices);
             reverseRow(clockChoices);
+            reverseRow(appNameChoices);
         }
         openOnStartChoice = findViewById(R.id.openOnStartChoice);
         if (config.openOnStartChoice) {
@@ -246,14 +255,25 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        appNameChoices[0].setSelected(showAppNames);
+        appNameChoices[1].setSelected(!showAppNames);
         openOnStartChoice.setText(getString(R.string.open_on_start_state, openOnStartLabel()));
+    }
+
+    private void setShowAppNames(boolean show) {
+        if (showAppNames == show) return;
+        showAppNames = show;
+        choices.edit().putBoolean("show_app_names", show).apply();
+        changed();
+        refresh();
     }
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains(Config.ROWS_BELOW_DOCK_KEY)
                 || choices.contains("animations") || choices.contains("advanced_effects")
                 || choices.contains(Config.WALLPAPER_CHOICE_KEY) || choices.contains(Config.DOCK_OPACITY_KEY)
-                || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(OpenOnStart.KEY);
+                || choices.contains(Config.CLOCK_FORMAT_KEY) || choices.contains(OpenOnStart.KEY)
+                || choices.contains("show_app_names");
     }
 
     private void open(Intent intent) {
