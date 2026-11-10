@@ -64,10 +64,10 @@ def row_labels(layout_text, activity_text, strings):
         if text.startswith("@string/"):
             # A row that carries its own label (a settings row), or the 20sp caption of a group of
             # numbered choices. The hints under a row are 14sp and the title is 34sp, so neither is a row.
-            if not (style.endswith("SettingsRow") or attr(view, "textSize") == "20sp"):
+            if not (style.endswith("SettingsRow") or style.endswith("SettingsColumnChoice") or attr(view, "textSize") == "20sp"):
                 continue
             name = text[len("@string/"):]
-        elif style.endswith("SettingsRow"):
+        elif style.endswith("SettingsRow") or style.endswith("SettingsColumnChoice"):
             # A row whose label the code writes: `<id>.setText(getString(R.string.<name>` in the activity.
             view_id = attr(view, "id").split("/")[-1]
             found = re.search(r"\b%s\.setText\(\s*getString\(R\.string\.([a-z_0-9]+)"
@@ -144,6 +144,11 @@ class ScreenRows(unittest.TestCase):
             "rows_below_dock_label",
             "dock_opacity_label",
             "dream_name",
+            "clockSystem",
+            "clock12",
+            "clock24",
+            "showAppNamesChoice",
+            "convertNamesChoice",
             "openOnStartChoice",
         ]
         self.assertEqual([row_id for row_id, _ in self.rows], expected_ids, self.rows)

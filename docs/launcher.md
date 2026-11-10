@@ -50,6 +50,8 @@ The launcher's own page has these rows, top to bottom:
 - **Clock（時鐘）**: **System（系統）** follows the TV's 12- or 24-hour setting; **12-hour（12 小時制）** or **24-hour（24 小時制）** sets the launcher's clocks (Home and the clock screensaver) to that, whatever the TV uses (`clock_format` in a theme).
 - **Wallpaper（桌布：）**: one picture from the theme's collection (or its `wallpaper.jpg`), **None（無）**, or **Theme default（主題預設）**. A pick holds that picture and stops the rotation until you choose Theme default, press Follow theme, or push the theme again.
 - **Animations（動畫效果：）** on or off, and **Advanced effects（進階效果：）** (tile lift, icon zoom and smooth ambient-colour transitions; they may use more memory) once animations are on.
+- **Show app names（顯示應用名稱：）**, on by default; controls regular app names only; Dock app names are always hidden beneath the icons.
+- **Convert Simplified to Traditional（簡體轉繁體：）**, off by default; converts only regular app names on Home, not Dock labels or other interface text.
 - **Open on start（開機時開啟：）**, only with `open_on_start_choice`: Off, or an app that opens instead of Home the first time Home comes up after the TV starts. Once per boot, so Home and Back still reach the launcher.
 - **Follow theme (reset on-TV choices)（跟隨主題（重設電視上的選擇））**, which clears every choice above. Pushing or resetting a theme clears them too.
 - **Choose default home（選擇預設主畫面）** opens Android's home picker, and **TV system settings（電視系統設定）** the TV's own settings page.
@@ -104,3 +106,6 @@ Up and Down move one row. The top buttons never fall through to tiles, and Down 
 dock tile you came from. The last focused app is remembered, and installing or removing an app refreshes
 the tiles while Home is open. App banners load at xhdpi or better, so low-density TV UIs do not downsample
 them before the focus zoom.
+
+
+The launcher settings page uses a pure black background. **Show app names（顯示應用名稱）** is on by default and controls names for regular apps and Dock apps together; hiding names keeps their original layout positions.
