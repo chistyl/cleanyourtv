@@ -67,6 +67,10 @@
     <string name="follow_theme">Follow theme (reset on-TV choices)</string>
     <string name="follow_theme_hint">Uses the current theme or built-in layout and motion settings. Pushing or resetting a theme also clears your on-TV choices.</string>
     <string name="tv_settings">TV system settings</string>
+    <string name="show_app_names_state">Show app names: %1$s</string>
+    <string name="simplified_traditional_state">Simplified to Traditional Chinese: %1$s</string>
+    <string name="app_display">App display</string>
+    <string name="app_display_requires_library">Enable the app library in the theme to manage app display.</string>
     <string name="quick_picture">Display</string>
     <string name="quick_network">Network</string>
     <string name="quick_apps">Apps</string>
