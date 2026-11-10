@@ -17,6 +17,8 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Locale;
 
@@ -199,16 +201,7 @@ public final class LauncherSettingsActivity extends Activity {
             refresh();
         });
         appDisplayChoice = findViewById(R.id.appDisplayChoice);
-        appDisplayChoice.setOnClickListener(v -> {
-            if (!Config.load(this).appLibrary) {
-                Toast.makeText(this, R.string.app_display_requires_library, Toast.LENGTH_LONG).show();
-                return;
-            }
-            Intent intent = new Intent(this, MainActivity.class)
-                    .setAction(MainActivity.ACTION_APP_LIBRARY)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            open(intent);
-        });
+        appDisplayChoice.setOnClickListener(v -> showAppDisplayPicker());
         refresh();
         if (config.launcherSettingsButton) reorderChoice.requestFocus();
         else columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
@@ -218,6 +211,44 @@ public final class LauncherSettingsActivity extends Activity {
         LinearLayout row = (LinearLayout) views[0].getParent();
         row.removeAllViews();
         for (int i = views.length - 1; i >= 0; i--) row.addView(views[i]);
+    }
+
+    /** Choose which TV apps appear on Home; this is independent of the optional App library. */
+    private void showAppDisplayPicker() {
+        PackageManager pm = getPackageManager();
+        Intent tv = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
+        List<ResolveInfo> resolved = pm.queryIntentActivities(tv, 0);
+        List<String[]> apps = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (ResolveInfo info : resolved) {
+            if (info.activityInfo == null) continue;
+            String pkg = info.activityInfo.packageName;
+            if (pkg.equals(getPackageName()) || !seen.add(pkg)) continue;
+            apps.add(new String[]{String.valueOf(info.loadLabel(pm)), pkg});
+        }
+        Collections.sort(apps, (a, b) -> a[0].compareToIgnoreCase(b[0]));
+        String[] labels = new String[apps.size()];
+        boolean[] checked = new boolean[apps.size()];
+        Set<String> hidden = new HashSet<>(choices.getStringSet(AppAdapter.USER_HIDDEN_APPS_KEY,
+                Collections.emptySet()));
+        for (int i = 0; i < apps.size(); i++) {
+            labels[i] = apps.get(i)[0];
+            checked[i] = !hidden.contains(apps.get(i)[1]);
+        }
+        Set<String> nextHidden = new HashSet<>(hidden);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_display)
+                .setMultiChoiceItems(labels, checked, (dialog, which, visible) -> {
+                    String pkg = apps.get(which)[1];
+                    if (visible) nextHidden.remove(pkg); else nextHidden.add(pkg);
+                })
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    choices.edit().putStringSet(AppAdapter.USER_HIDDEN_APPS_KEY, nextHidden).apply();
+                    changed();
+                    Toast.makeText(this, R.string.app_display_saved, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void showLanguagePicker() {
