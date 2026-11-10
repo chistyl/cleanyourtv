@@ -246,7 +246,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.singleRow = cfg.singleRow;
         android.content.SharedPreferences settings = ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE);
         boolean showNames = settings.getBoolean(SHOW_APP_NAMES_KEY, true);
-        this.restNameAlpha = !showNames ? -1f : (cfg.alwaysShowNames ? 0.75f : 0f);
+        this.restNameAlpha = showNames ? 0.75f : -1f;
         this.cinematic = cfg.cinematicHome;
         this.launchActions = cfg.launchActions;
         this.iconTiles = new HashSet<>(Arrays.asList(ctx.getResources().getStringArray(R.array.icon_tiles)));
