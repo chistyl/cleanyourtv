@@ -81,3 +81,14 @@ jobs:
           path: launcher/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Create complete source archive
+        run: git archive --format=zip --prefix=CleanYourTV-v3.4/ HEAD -o CleanYourTV-v3.4-complete-source.zip
+
+      - name: Upload complete source ZIP
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cleanyourtv-v3.4-complete-source
+          path: CleanYourTV-v3.4-complete-source.zip
+          if-no-files-found: error
+          retention-days: 14
