@@ -502,10 +502,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(convertSimplifiedToTraditional ? traditionalizeAppName(e.name) : e.name);
-        // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
-        // In a single row every tile is the dock's kind: the big title above names it.
+        // Dock tiles never show a name below the icon. The shared setting controls regular app labels only.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
-        h.name.setVisibility(showAppNames ? View.VISIBLE : View.INVISIBLE);
+        h.name.setVisibility(!dockKind && showAppNames ? View.VISIBLE : View.INVISIBLE);
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
