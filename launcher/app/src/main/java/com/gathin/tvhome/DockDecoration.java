@@ -92,6 +92,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         int cardWidth = 0;
         for (int i = 0; i < parent.getChildCount(); i++) {
             View child = parent.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE) continue;
             int pos = parent.getChildAdapterPosition(child);
             if (pos < 0 || (!bandAll && pos >= dockSize)) continue;
             RecyclerView.ViewHolder vh = parent.getChildViewHolder(child);
