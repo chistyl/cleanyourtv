@@ -53,6 +53,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     static final String SHOW_APP_NAMES_KEY = "show_app_names";
     static final String SIMPLIFIED_TRADITIONAL_KEY = "simplified_traditional";
+    static final String USER_HIDDEN_APPS_KEY = "user_hidden_apps";
 
     interface TileListener {
         void onTileFocused(int position, View card);
@@ -233,6 +234,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.favourites = cfg.dockApps;
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
+        this.hidden.addAll(ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                .getStringSet(USER_HIDDEN_APPS_KEY, Collections.emptySet()));
         this.libraryPreload = new HashSet<>(cfg.libraryApps);
         this.animations = cfg.animations;
         this.advancedEffects = cfg.animations && cfg.advancedEffects;
