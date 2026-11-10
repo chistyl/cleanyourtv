@@ -478,13 +478,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(e.name);
-        // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
-        // In a single row every tile is the dock's kind: the big title above names it.
+        // Dock names have their own switch. INVISIBLE preserves the TextView's original 22dp layout bounds.
+        // Non-dock tiles continue to follow always_show_names exactly as before.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
-        h.name.setVisibility(dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
+        h.name.setVisibility(dockKind ? (showDockAppNames ? View.VISIBLE : View.INVISIBLE)
+                : (restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE));
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
-        h.name.setAlpha(focused ? 1f : restNameAlpha);
+        h.name.setAlpha(focused ? 1f : (dockKind ? 0.75f : restNameAlpha));
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
         h.card.setTranslationY(focused && advancedEffects && !dockKind ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
