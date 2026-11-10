@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -227,6 +228,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private String displayAppName(String name) {
         if (!ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
                 .getBoolean("convert_app_names", true)) return name;
+        // Android's built-in ICU transliterator is available from API 29.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return name;
         try {
             return Transliterator.getInstance("Simplified-Traditional").transliterate(name);
         } catch (RuntimeException ignored) {
