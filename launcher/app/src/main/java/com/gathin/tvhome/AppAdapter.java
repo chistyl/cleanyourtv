@@ -265,7 +265,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         List<ResolveInfo> found = new ArrayList<>(leanback);
         Set<String> tvPackages = new HashSet<>();
         for (ResolveInfo ri : found) {
-            if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
+            // Only public TV entry points count as launchable; a private TV activity must not
+            // suppress a separate exported ordinary LAUNCHER activity in the same package.
+            if (ri.activityInfo != null && ri.activityInfo.exported) {
+                tvPackages.add(ri.activityInfo.packageName);
+            }
         }
         leanbackPackages = tvPackages;
 
