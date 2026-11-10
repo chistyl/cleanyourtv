@@ -36,6 +36,7 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView openOnStartChoice;
     private TextView appNamesChoice;
+    private TextView appDisplayChoice;
     private boolean showAppNames;
     private int columns;
     private int rowsBelowDock;
@@ -59,6 +60,13 @@ public final class LauncherSettingsActivity extends Activity {
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
         showAppNames = choices.getBoolean("show_app_names", true);
+        appDisplayChoice = findViewById(R.id.appDisplayChoice);
+        appDisplayChoice.setVisibility(config.appLibrary ? View.VISIBLE : View.GONE);
+        appDisplayChoice.setOnClickListener(v -> {
+            Intent library = new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_APP_LIBRARY);
+            open(library);
+            finish();
+        });
         appNamesChoice = findViewById(R.id.appNamesChoice);
         appNamesChoice.setOnClickListener(v -> {
             showAppNames = !showAppNames;
