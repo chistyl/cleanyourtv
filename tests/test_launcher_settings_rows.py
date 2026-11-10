@@ -61,7 +61,14 @@ def row_labels(layout_text, activity_text, strings):
     for view in ET.fromstring(layout_text).iter():
         text = attr(view, "text")
         style = view.get("style") or ""
-        if text.startswith("@string/"):
+        is_switch_card = attr(view, "tag") == "SettingsRow"
+        if is_switch_card:
+            label_view = next((child for child in view.iter()
+                               if attr(child, "text").startswith("@string/")), None)
+            if label_view is None:
+                continue
+            name = attr(label_view, "text")[len("@string/"):]
+        elif text.startswith("@string/"):
             # A row that carries its own label (a settings row), or the 20sp caption of a group of
             # numbered choices. The hints under a row are 14sp and the title is 34sp, so neither is a row.
             if not (style.endswith("SettingsRow") or attr(view, "textSize") == "20sp"):
