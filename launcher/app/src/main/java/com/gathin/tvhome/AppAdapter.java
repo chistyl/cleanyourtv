@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
+import android.os.Build;
+import android.icu.text.Transliterator;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -49,6 +51,10 @@ import java.util.Set;
  * (by label), the rest is alphabetical.
  */
 public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    static final String SHOW_APP_NAMES_KEY = "show_app_names";
+    static final String SIMPLIFIED_TRADITIONAL_KEY = "simplified_traditional";
+    static final String USER_HIDDEN_APPS_KEY = "user_hidden_apps";
 
     interface TileListener {
         void onTileFocused(int position, View card);
@@ -229,6 +235,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.favourites = cfg.dockApps;
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
+        this.hidden.addAll(ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                .getStringSet(USER_HIDDEN_APPS_KEY, Collections.emptySet()));
         this.libraryPreload = new HashSet<>(cfg.libraryApps);
         this.animations = cfg.animations;
         this.advancedEffects = cfg.animations && cfg.advancedEffects;
@@ -240,7 +248,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.dockTitle = cfg.dockTitle;
         this.dockRow = cfg.dockRow;
         this.singleRow = cfg.singleRow;
-        this.restNameAlpha = cfg.alwaysShowNames ? 0.75f : 0f;
+        android.content.SharedPreferences settings = ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE);
+        boolean showNames = settings.getBoolean(SHOW_APP_NAMES_KEY, true);
+        this.restNameAlpha = showNames ? 0.75f : -1f;
         this.cinematic = cfg.cinematicHome;
         this.launchActions = cfg.launchActions;
         this.iconTiles = new HashSet<>(Arrays.asList(ctx.getResources().getStringArray(R.array.icon_tiles)));
@@ -295,6 +305,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // redraw the tile name as something else (#117).
             String label = card != null ? card.label : Cards.cleanLabel(
                     appLabels.containsKey(pkg) ? appLabels.get(pkg) : String.valueOf(ri.loadLabel(pm)), pkg);
+            if (ctx.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                    .getBoolean(SIMPLIFIED_TRADITIONAL_KEY, true)) label = toTraditional(label);
             if (!seen.add(pkg + '\n' + label)) continue;
             Drawable banner = null;
             // uniform_tiles draws the icon, so an app's banner is never loaded. A module card keeps its banner.
@@ -455,6 +467,16 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, focusOvershoot);
     }
 
+    private static String toTraditional(String value) {
+        // Platform Transliterator is only available from API 29; keep older Android TV devices safe.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return value;
+        try {
+            return Transliterator.getInstance("Simplified-Traditional").transliterate(value);
+        } catch (RuntimeException ignored) {
+            return value;
+        }
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
@@ -478,7 +500,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // The dock has no labels, unless always_show_names asks for them (DockDecoration then makes room in the band).
         // In a single row every tile is the dock's kind: the big title above names it.
         boolean dockKind = DockSlots.inDockRow(dockRow, singleRow, position, dockSize);
-        h.name.setVisibility(dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
+        h.name.setVisibility(restNameAlpha < 0f ? View.GONE
+                : dockKind && restNameAlpha == 0f ? View.INVISIBLE : View.VISIBLE);
         h.inDock = dockKind;
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
         h.name.setAlpha(focused ? 1f : restNameAlpha);
