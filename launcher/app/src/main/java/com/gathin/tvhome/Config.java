@@ -45,6 +45,7 @@ final class Config {
     static final String DOCK_OPACITY_KEY = "dock_opacity";
     static final String CLOCK_FORMAT_KEY = "clock_format";
     static final String SHOW_APP_NAMES_KEY = "show_app_names";
+    static final String SIMPLIFIED_TO_TRADITIONAL_KEY = "simplified_to_traditional";
     /**
      * Counts the changes made in Launcher settings. Home remembers the count it was built with and rebuilds on
      * resume when it differs, however the settings were left (see MainActivity#onResume).
