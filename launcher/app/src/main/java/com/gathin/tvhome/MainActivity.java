@@ -693,8 +693,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        boolean showAppNames = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
-                .getBoolean("show_app_names", true);
+        android.content.SharedPreferences launcherChoices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        boolean showAppNames = launcherChoices.getBoolean("show_app_names", true);
+        boolean convertSimplifiedToTraditional = launcherChoices.getBoolean("convert_simplified_traditional", false);
         if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, showAppNames, cfg.dockOpacity, cfg.dockGlass, cfg.dockEvenPadding, cfg.dockBand,
                 singleRow, cfg.dockBandAll));
         if (cfg.fadeRows) TopFade.attach(grid, 48 * density);
@@ -703,7 +704,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             grid.setLayoutAnimation(new LayoutAnimationController(
                     AnimationUtils.loadAnimation(this, R.anim.tile_enter), 0.06f));
         }
-        adapter = new AppAdapter(this, this, COLUMNS, cfg, showAppNames);
+        adapter = new AppAdapter(this, this, COLUMNS, cfg, showAppNames, convertSimplifiedToTraditional);
         dockApps = cfg.dockApps;
         fillDockLeavesSlots = !cfg.fillDock;
         Order savedOrder = Order.load(Order.file(this));
